@@ -1,39 +1,51 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
-const Navbar = () => (
-  <nav className="sticky top-0 z-50 bg-background border-b px-4 py-3">
-    <div className="max-w-6xl mx-auto flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-          <Play className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
-        </div>
-        <div>
-          <h2 className="font-bold text-lg leading-tight">BEHT JAMAA</h2>
-          <p className="text-xs text-muted-foreground">Podcast Ministry</p>
+const Navbar = () => {
+  const { user, signOut, isAdmin } = useAuth();
+
+  return (
+    <nav className="sticky top-0 z-50 bg-background border-b px-4 py-3">
+      <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+            <Play className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
+          </div>
+          <div>
+            <h2 className="font-bold text-lg leading-tight">BEHT JAMAA</h2>
+            <p className="text-xs text-muted-foreground">Podcast Ministry</p>
+          </div>
+        </Link>
+        <div className="hidden md:flex items-center gap-6">
+          <Link to="/live" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Calendar className="h-4 w-4" />
+            Live
+            <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded">LIVE</span>
+          </Link>
+          <Link to="/prayer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Heart className="h-4 w-4" />
+            Prayer
+          </Link>
+          <Link to="/members" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Users className="h-4 w-4" />
+            Members
+          </Link>
+          {user ? (
+            <button onClick={signOut} className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-9 px-4 hover:bg-primary/90 transition-colors">
+              <LogOut className="h-4 w-4 mr-2" /> Sign Out
+            </button>
+          ) : (
+            <Link to="/auth" className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-9 px-4 hover:bg-primary/90 transition-colors">
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
-      <div className="hidden md:flex items-center gap-6">
-        <a href="/live" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <Calendar className="h-4 w-4" />
-          Live
-          <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded">LIVE</span>
-        </a>
-        <a href="/prayer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <Heart className="h-4 w-4" />
-          Prayer
-        </a>
-        <a href="/members" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <Users className="h-4 w-4" />
-          Members
-        </a>
-        <a href="/auth" className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-9 px-4 hover:bg-primary/90 transition-colors">
-          Sign In
-        </a>
-      </div>
-    </div>
-  </nav>
-);
+    </nav>
+  );
+};
 
 const HeroSection = () => (
   <section className="relative py-20 px-4 gradient-hero text-primary-foreground overflow-hidden">
@@ -135,7 +147,7 @@ const QuickLinks = () => (
     <div className="max-w-6xl mx-auto">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
         {quickLinks.map((link) => (
-          <a key={link.href} className="group" href={link.href}>
+          <Link key={link.href} className="group" to={link.href}>
             <div className={`rounded-lg border bg-card text-card-foreground shadow-sm text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 ${link.borderColor}`}>
               <div className="p-6 pt-8 pb-6">
                 <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center transition-colors ${link.iconBg}`}>
@@ -145,7 +157,7 @@ const QuickLinks = () => (
                 <p className="text-muted-foreground text-sm">{link.desc}</p>
               </div>
             </div>
-          </a>
+          </Link>
         ))}
       </div>
     </div>
