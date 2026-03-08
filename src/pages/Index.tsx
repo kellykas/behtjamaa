@@ -1,10 +1,14 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 const Navbar = () => {
   const { user, signOut, isAdmin } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <nav className="sticky top-0 z-50 bg-background border-b px-4 py-3">
@@ -18,6 +22,8 @@ const Navbar = () => {
             <p className="text-xs text-muted-foreground">Podcast Ministry</p>
           </div>
         </Link>
+
+        {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">
           <Link to="/live" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <Calendar className="h-4 w-4" />
@@ -42,7 +48,37 @@ const Navbar = () => {
             </Link>
           )}
         </div>
+
+        {/* Mobile hamburger */}
+        <button className="md:hidden p-2" onClick={() => setMobileOpen(!mobileOpen)}>
+          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="md:hidden border-t mt-3 pt-3 space-y-3">
+          <Link to="/live" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-2 py-2" onClick={() => setMobileOpen(false)}>
+            <Calendar className="h-4 w-4" /> Live
+            <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded">LIVE</span>
+          </Link>
+          <Link to="/prayer" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-2 py-2" onClick={() => setMobileOpen(false)}>
+            <Heart className="h-4 w-4" /> Prayer
+          </Link>
+          <Link to="/members" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-2 py-2" onClick={() => setMobileOpen(false)}>
+            <Users className="h-4 w-4" /> Members
+          </Link>
+          {user ? (
+            <button onClick={() => { signOut(); setMobileOpen(false); }} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-2 py-2 w-full">
+              <LogOut className="h-4 w-4" /> Sign Out
+            </button>
+          ) : (
+            <Link to="/auth" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-2 py-2" onClick={() => setMobileOpen(false)}>
+              <LogIn className="h-4 w-4" /> Sign In
+            </Link>
+          )}
+        </div>
+      )}
     </nav>
   );
 };
@@ -59,14 +95,14 @@ const HeroSection = () => (
         Join us on a journey of faith through powerful sermons, inspiring testimonies, and life-changing Bible teachings that will strengthen your walk with Christ.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <button className="inline-flex items-center justify-center gap-2 h-11 rounded-md bg-brand-accent hover:bg-brand-accent/90 text-brand-accent-foreground font-semibold px-8 py-3 transition-colors">
+        <a href="#featured" className="inline-flex items-center justify-center gap-2 h-11 rounded-md bg-brand-accent hover:bg-brand-accent/90 text-brand-accent-foreground font-semibold px-8 py-3 transition-colors">
           <Play className="mr-2 h-5 w-5" />
           Start Listening
-        </button>
-        <button className="inline-flex items-center justify-center gap-2 h-11 rounded-md border border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary bg-transparent font-medium px-8 py-3 transition-colors">
+        </a>
+        <a href="#daily-scripture" className="inline-flex items-center justify-center gap-2 h-11 rounded-md border border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary bg-transparent font-medium px-8 py-3 transition-colors">
           <Bell className="mr-2 h-5 w-5" />
           Get Daily Scripture
-        </button>
+        </a>
       </div>
     </div>
   </section>
@@ -115,24 +151,99 @@ const DailyScripture = () => {
   );
 };
 
-const FeaturedEpisodes = () => (
-  <section className="py-16 px-4">
-    <div className="max-w-6xl mx-auto">
-      <div className="text-center mb-12">
-        <h2 className="text-4xl font-bold text-foreground mb-4">Featured Episodes</h2>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Discover our latest sermons, testimonies, and Bible teachings designed to strengthen your faith and deepen your relationship with Christ.
-        </p>
-      </div>
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <div className="col-span-full text-center py-12">
-          <p className="text-muted-foreground text-lg">No episodes available yet.</p>
-          <p className="text-muted-foreground">Check back soon for new content!</p>
+const AudioPlayer = ({ episode }: { episode: Tables<"episodes"> }) => {
+  const [playing, setPlaying] = useState(false);
+  const [audio] = useState(() => episode.audio_url ? new Audio(episode.audio_url) : null);
+
+  useEffect(() => {
+    if (!audio) return;
+    const onEnd = () => setPlaying(false);
+    audio.addEventListener("ended", onEnd);
+    return () => {
+      audio.removeEventListener("ended", onEnd);
+      audio.pause();
+    };
+  }, [audio]);
+
+  const toggle = () => {
+    if (!audio) return;
+    if (playing) {
+      audio.pause();
+    } else {
+      audio.play();
+    }
+    setPlaying(!playing);
+  };
+
+  return (
+    <div className="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-all duration-300">
+      <div className="p-6">
+        {episode.thumbnail_url && (
+          <img src={episode.thumbnail_url} alt={episode.title} className="w-full h-40 object-cover rounded-md mb-4" />
+        )}
+        <div className="flex items-center gap-2 mb-2">
+          <Badge className="bg-blue-100 text-blue-800 border-transparent text-xs">{episode.category}</Badge>
+          {episode.featured && <Badge className="bg-amber-100 text-amber-800 border-transparent text-xs">Featured</Badge>}
         </div>
+        <h3 className="font-semibold text-lg mb-1">{episode.title}</h3>
+        {episode.description && (
+          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{episode.description}</p>
+        )}
+        {episode.duration && <p className="text-xs text-muted-foreground mb-3">Duration: {episode.duration}</p>}
+        {episode.audio_url ? (
+          <button
+            onClick={toggle}
+            className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-primary-foreground transition-colors w-full"
+          >
+            {playing ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+            {playing ? "Pause" : "Play Episode"}
+          </button>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">Audio coming soon</p>
+        )}
       </div>
     </div>
-  </section>
-);
+  );
+};
+
+const FeaturedEpisodes = () => {
+  const [episodes, setEpisodes] = useState<Tables<"episodes">[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("episodes")
+      .select("*")
+      .eq("published", true)
+      .order("published_at", { ascending: false })
+      .limit(6)
+      .then(({ data }) => setEpisodes(data || []));
+  }, []);
+
+  return (
+    <section id="featured" className="py-16 px-4 scroll-mt-20">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-foreground mb-4">Featured Episodes</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Discover our latest sermons, testimonies, and Bible teachings designed to strengthen your faith and deepen your relationship with Christ.
+          </p>
+        </div>
+        {episodes.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground text-lg">No episodes available yet.</p>
+            <p className="text-muted-foreground">Check back soon for new content!</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {episodes.map((ep) => (
+              <AudioPlayer key={ep.id} episode={ep} />
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
 
 const quickLinks = [
   { href: "/auth", icon: LogIn, title: "Sign In", desc: "Login or create account", borderColor: "border-indigo-200 hover:border-indigo-300", iconBg: "bg-indigo-100 group-hover:bg-indigo-200", iconColor: "text-indigo-600" },
