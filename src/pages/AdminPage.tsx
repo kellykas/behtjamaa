@@ -73,11 +73,63 @@ const AdminPage = () => {
     if (isAdmin) fetchAll();
   }, [isAdmin]);
 
-  const resetEpForm = () => { setEpTitle(""); setEpDesc(""); setEpAudioUrl(""); setEpCategory("sermon"); setEpPublished(false); setEpFeatured(false); setEditingEpId(null); };
+  const resetEpForm = () => { setEpTitle(""); setEpDesc(""); setEpAudioUrl(""); setEpThumbnailUrl(""); setEpCategory("sermon"); setEpPublished(false); setEpFeatured(false); setEditingEpId(null); setAudioProgress(0); };
   const resetEvForm = () => { setEvTitle(""); setEvDesc(""); setEvStreamUrl(""); setEvScheduledAt(""); setEvIsLive(false); setEditingEvId(null); };
 
+  const uploadFile = async (file: File, bucket: "episode-audio" | "episode-thumbnails") => {
+    const ext = file.name.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from(bucket).upload(fileName, file, { cacheControl: "3600", upsert: false });
+    if (error) throw error;
+    const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 100 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Audio must be under 100MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingAudio(true);
+    setAudioProgress(10);
+    const progressInterval = setInterval(() => setAudioProgress((p) => Math.min(p + 10, 90)), 300);
+    try {
+      const url = await uploadFile(file, "episode-audio");
+      setAudioProgress(100);
+      setEpAudioUrl(url);
+      toast({ title: "Audio uploaded" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      clearInterval(progressInterval);
+      setUploadingAudio(false);
+      setTimeout(() => setAudioProgress(0), 1000);
+    }
+  };
+
+  const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be under 5MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingThumb(true);
+    try {
+      const url = await uploadFile(file, "episode-thumbnails");
+      setEpThumbnailUrl(url);
+      toast({ title: "Thumbnail uploaded" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingThumb(false);
+    }
+  };
+
   const handleSaveEpisode = async () => {
-    const payload = { title: epTitle, description: epDesc, audio_url: epAudioUrl || null, category: epCategory, published: epPublished, featured: epFeatured, published_at: epPublished ? new Date().toISOString() : null };
+    const payload = { title: epTitle, description: epDesc, audio_url: epAudioUrl || null, thumbnail_url: epThumbnailUrl || null, category: epCategory, published: epPublished, featured: epFeatured, published_at: epPublished ? new Date().toISOString() : null };
     if (editingEpId) {
       await supabase.from("episodes").update(payload).eq("id", editingEpId);
     } else {
@@ -100,6 +152,7 @@ const AdminPage = () => {
     setEpTitle(ep.title);
     setEpDesc(ep.description || "");
     setEpAudioUrl(ep.audio_url || "");
+    setEpThumbnailUrl(ep.thumbnail_url || "");
     setEpCategory(ep.category || "sermon");
     setEpPublished(ep.published || false);
     setEpFeatured(ep.featured || false);
