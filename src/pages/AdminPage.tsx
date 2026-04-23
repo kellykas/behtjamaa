@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield } 
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
