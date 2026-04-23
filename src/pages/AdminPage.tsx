@@ -13,6 +13,7 @@ import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield } 
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -30,11 +31,15 @@ const AdminPage = () => {
   const [epTitle, setEpTitle] = useState("");
   const [epDesc, setEpDesc] = useState("");
   const [epAudioUrl, setEpAudioUrl] = useState("");
+  const [epThumbnailUrl, setEpThumbnailUrl] = useState("");
   const [epCategory, setEpCategory] = useState("sermon");
   const [epPublished, setEpPublished] = useState(false);
   const [epFeatured, setEpFeatured] = useState(false);
   const [epDialogOpen, setEpDialogOpen] = useState(false);
   const [editingEpId, setEditingEpId] = useState<string | null>(null);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
 
   // Event form
   const [evTitle, setEvTitle] = useState("");
@@ -69,11 +74,63 @@ const AdminPage = () => {
     if (isAdmin) fetchAll();
   }, [isAdmin]);
 
-  const resetEpForm = () => { setEpTitle(""); setEpDesc(""); setEpAudioUrl(""); setEpCategory("sermon"); setEpPublished(false); setEpFeatured(false); setEditingEpId(null); };
+  const resetEpForm = () => { setEpTitle(""); setEpDesc(""); setEpAudioUrl(""); setEpThumbnailUrl(""); setEpCategory("sermon"); setEpPublished(false); setEpFeatured(false); setEditingEpId(null); setAudioProgress(0); };
   const resetEvForm = () => { setEvTitle(""); setEvDesc(""); setEvStreamUrl(""); setEvScheduledAt(""); setEvIsLive(false); setEditingEvId(null); };
 
+  const uploadFile = async (file: File, bucket: "episode-audio" | "episode-thumbnails") => {
+    const ext = file.name.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from(bucket).upload(fileName, file, { cacheControl: "3600", upsert: false });
+    if (error) throw error;
+    const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
+    return data.publicUrl;
+  };
+
+  const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 100 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Audio must be under 100MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingAudio(true);
+    setAudioProgress(10);
+    const progressInterval = setInterval(() => setAudioProgress((p) => Math.min(p + 10, 90)), 300);
+    try {
+      const url = await uploadFile(file, "episode-audio");
+      setAudioProgress(100);
+      setEpAudioUrl(url);
+      toast({ title: "Audio uploaded" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      clearInterval(progressInterval);
+      setUploadingAudio(false);
+      setTimeout(() => setAudioProgress(0), 1000);
+    }
+  };
+
+  const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be under 5MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingThumb(true);
+    try {
+      const url = await uploadFile(file, "episode-thumbnails");
+      setEpThumbnailUrl(url);
+      toast({ title: "Thumbnail uploaded" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingThumb(false);
+    }
+  };
+
   const handleSaveEpisode = async () => {
-    const payload = { title: epTitle, description: epDesc, audio_url: epAudioUrl || null, category: epCategory, published: epPublished, featured: epFeatured, published_at: epPublished ? new Date().toISOString() : null };
+    const payload = { title: epTitle, description: epDesc, audio_url: epAudioUrl || null, thumbnail_url: epThumbnailUrl || null, category: epCategory, published: epPublished, featured: epFeatured, published_at: epPublished ? new Date().toISOString() : null };
     if (editingEpId) {
       await supabase.from("episodes").update(payload).eq("id", editingEpId);
     } else {
@@ -96,6 +153,7 @@ const AdminPage = () => {
     setEpTitle(ep.title);
     setEpDesc(ep.description || "");
     setEpAudioUrl(ep.audio_url || "");
+    setEpThumbnailUrl(ep.thumbnail_url || "");
     setEpCategory(ep.category || "sermon");
     setEpPublished(ep.published || false);
     setEpFeatured(ep.featured || false);
@@ -177,18 +235,41 @@ const AdminPage = () => {
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Episode</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>{editingEpId ? "Edit" : "New"} Episode</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2"><Label>Title</Label><Input value={epTitle} onChange={(e) => setEpTitle(e.target.value)} required /></div>
                     <div className="space-y-2"><Label>Description</Label><Textarea value={epDesc} onChange={(e) => setEpDesc(e.target.value)} rows={3} /></div>
-                    <div className="space-y-2"><Label>Audio URL</Label><Input value={epAudioUrl} onChange={(e) => setEpAudioUrl(e.target.value)} placeholder="https://..." /></div>
+
+                    <div className="space-y-2">
+                      <Label>Audio File</Label>
+                      <Input type="file" accept="audio/*" onChange={handleAudioUpload} disabled={uploadingAudio} />
+                      {uploadingAudio && <Progress value={audioProgress} className="h-2" />}
+                      {epAudioUrl && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground truncate">{epAudioUrl}</p>
+                          <audio controls src={epAudioUrl} className="w-full h-8" />
+                        </div>
+                      )}
+                      <Input value={epAudioUrl} onChange={(e) => setEpAudioUrl(e.target.value)} placeholder="...or paste URL" className="text-xs" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Thumbnail Image</Label>
+                      <Input type="file" accept="image/*" onChange={handleThumbUpload} disabled={uploadingThumb} />
+                      {uploadingThumb && <p className="text-xs text-muted-foreground">Uploading...</p>}
+                      {epThumbnailUrl && (
+                        <img src={epThumbnailUrl} alt="thumbnail preview" className="w-24 h-24 object-cover rounded-md border" />
+                      )}
+                      <Input value={epThumbnailUrl} onChange={(e) => setEpThumbnailUrl(e.target.value)} placeholder="...or paste URL" className="text-xs" />
+                    </div>
+
                     <div className="space-y-2"><Label>Category</Label><Input value={epCategory} onChange={(e) => setEpCategory(e.target.value)} /></div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2"><Switch checked={epPublished} onCheckedChange={setEpPublished} /><Label>Published</Label></div>
                       <div className="flex items-center gap-2"><Switch checked={epFeatured} onCheckedChange={setEpFeatured} /><Label>Featured</Label></div>
                     </div>
-                    <Button onClick={handleSaveEpisode} className="w-full">{editingEpId ? "Update" : "Create"} Episode</Button>
+                    <Button onClick={handleSaveEpisode} disabled={uploadingAudio || uploadingThumb} className="w-full">{editingEpId ? "Update" : "Create"} Episode</Button>
                   </div>
                 </DialogContent>
               </Dialog>
