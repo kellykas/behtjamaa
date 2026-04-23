@@ -30,11 +30,15 @@ const AdminPage = () => {
   const [epTitle, setEpTitle] = useState("");
   const [epDesc, setEpDesc] = useState("");
   const [epAudioUrl, setEpAudioUrl] = useState("");
+  const [epThumbnailUrl, setEpThumbnailUrl] = useState("");
   const [epCategory, setEpCategory] = useState("sermon");
   const [epPublished, setEpPublished] = useState(false);
   const [epFeatured, setEpFeatured] = useState(false);
   const [epDialogOpen, setEpDialogOpen] = useState(false);
   const [editingEpId, setEditingEpId] = useState<string | null>(null);
+  const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [uploadingThumb, setUploadingThumb] = useState(false);
+  const [audioProgress, setAudioProgress] = useState(0);
 
   // Event form
   const [evTitle, setEvTitle] = useState("");
