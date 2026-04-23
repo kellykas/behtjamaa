@@ -234,18 +234,41 @@ const AdminPage = () => {
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Episode</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>{editingEpId ? "Edit" : "New"} Episode</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2"><Label>Title</Label><Input value={epTitle} onChange={(e) => setEpTitle(e.target.value)} required /></div>
                     <div className="space-y-2"><Label>Description</Label><Textarea value={epDesc} onChange={(e) => setEpDesc(e.target.value)} rows={3} /></div>
-                    <div className="space-y-2"><Label>Audio URL</Label><Input value={epAudioUrl} onChange={(e) => setEpAudioUrl(e.target.value)} placeholder="https://..." /></div>
+
+                    <div className="space-y-2">
+                      <Label>Audio File</Label>
+                      <Input type="file" accept="audio/*" onChange={handleAudioUpload} disabled={uploadingAudio} />
+                      {uploadingAudio && <Progress value={audioProgress} className="h-2" />}
+                      {epAudioUrl && (
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground truncate">{epAudioUrl}</p>
+                          <audio controls src={epAudioUrl} className="w-full h-8" />
+                        </div>
+                      )}
+                      <Input value={epAudioUrl} onChange={(e) => setEpAudioUrl(e.target.value)} placeholder="...or paste URL" className="text-xs" />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Thumbnail Image</Label>
+                      <Input type="file" accept="image/*" onChange={handleThumbUpload} disabled={uploadingThumb} />
+                      {uploadingThumb && <p className="text-xs text-muted-foreground">Uploading...</p>}
+                      {epThumbnailUrl && (
+                        <img src={epThumbnailUrl} alt="thumbnail preview" className="w-24 h-24 object-cover rounded-md border" />
+                      )}
+                      <Input value={epThumbnailUrl} onChange={(e) => setEpThumbnailUrl(e.target.value)} placeholder="...or paste URL" className="text-xs" />
+                    </div>
+
                     <div className="space-y-2"><Label>Category</Label><Input value={epCategory} onChange={(e) => setEpCategory(e.target.value)} /></div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2"><Switch checked={epPublished} onCheckedChange={setEpPublished} /><Label>Published</Label></div>
                       <div className="flex items-center gap-2"><Switch checked={epFeatured} onCheckedChange={setEpFeatured} /><Label>Featured</Label></div>
                     </div>
-                    <Button onClick={handleSaveEpisode} className="w-full">{editingEpId ? "Update" : "Create"} Episode</Button>
+                    <Button onClick={handleSaveEpisode} disabled={uploadingAudio || uploadingThumb} className="w-full">{editingEpId ? "Update" : "Create"} Episode</Button>
                   </div>
                 </DialogContent>
               </Dialog>
