@@ -49,8 +49,7 @@ const team = [
   { name: "Dieudonne Sangano", role: "Co-Founder", initials: "DS" },
   { name: "Danny Mani", role: "Co-Founder", initials: "DM" },
   { name: "Fabrice Muhindo", role: "Co-Founder", initials: "FM" },
-  { name: "Lwenga Rajabu", role: "Co-Founder", initials: "LR" },
-  { name: "Reagan Lescot", role: "Secretary", initials: "RL" },
+  { name: "Lwenga Rajabu", role: "Co-Founder & Secretary", subtitle: "aka Reagan Lescot", initials: "LR" },
 ];
 
 const AboutPage = () => {
@@ -199,6 +198,7 @@ const AboutPage = () => {
                     <span className="text-lg font-bold text-primary-foreground">{m.initials}</span>
                   </div>
                   <h3 className="font-bold">{m.name}</h3>
+                  {m.subtitle && <p className="text-xs text-muted-foreground italic">{m.subtitle}</p>}
                   <p className="text-sm text-primary font-medium">{m.role}</p>
                 </CardContent>
               </Card>
