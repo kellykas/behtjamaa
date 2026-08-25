@@ -20,6 +20,7 @@ const PrayerPage = () => {
   const [request, setRequest] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [prayedThisSession, setPrayedThisSession] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -33,13 +34,42 @@ const PrayerPage = () => {
 
   useEffect(() => {
     fetchRequests();
+
+    // Realtime updates when others pray or post
+    const channel = supabase
+      .channel("prayer-requests-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "prayer_requests" },
+        () => fetchRequests()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const prayedIds: string[] = JSON.parse(localStorage.getItem("prayed_request_ids") || "[]");
+
+  const handlePray = async (id: string, currentCount: number) => {
+    if (prayedIds.includes(id)) return;
+    const { error } = await supabase
+      .from("prayer_requests")
+      .update({ prayed_count: currentCount + 1 })
+      .eq("id", id);
+    if (!error) {
+      localStorage.setItem("prayed_request_ids", JSON.stringify([...prayedIds, id]));
+      setPrayedThisSession((prev) => new Set(prev).add(id));
+      fetchRequests();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast({ title: "Please sign in", description: "You need to be signed in to submit a prayer request.", variant: "destructive" });
-      navigate("/auth");
+      navigate("/auth?returnTo=/prayer");
       return;
     }
     setSubmitting(true);
@@ -59,11 +89,6 @@ const PrayerPage = () => {
       setIsAnonymous(false);
       fetchRequests();
     }
-  };
-
-  const handlePray = async (id: string, currentCount: number) => {
-    await supabase.from("prayer_requests").update({ prayed_count: currentCount + 1 }).eq("id", id);
-    fetchRequests();
   };
 
   return (
@@ -122,8 +147,19 @@ const PrayerPage = () => {
                       <p className="font-semibold">{pr.is_anonymous ? "Anonymous" : pr.name}</p>
                       <p className="text-xs text-muted-foreground">{format(new Date(pr.created_at), "PPP")}</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => handlePray(pr.id, pr.prayed_count || 0)} className="text-blue-600 border-blue-300 hover:bg-blue-50">
-                      <Heart className="h-4 w-4 mr-1" /> Prayed ({pr.prayed_count || 0})
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={prayedIds.includes(pr.id) && prayedThisSession.has(pr.id)}
+                      onClick={() => handlePray(pr.id, pr.prayed_count || 0)}
+                      className={prayedIds.includes(pr.id) ? "text-pink-600 border-pink-300 bg-pink-50" : "text-blue-600 border-blue-300 hover:bg-blue-50"}
+                    >
+                      <Heart className={`h-4 w-4 mr-1 ${prayedIds.includes(pr.id) ? "fill-pink-600" : ""}`} />
+                      {prayedIds.includes(pr.id)
+                        ? prayedThisSession.has(pr.id)
+                          ? `You Prayed (${pr.prayed_count || 0})`
+                          : `Prayed (${pr.prayed_count || 0})`
+                        : `Pray for This (${pr.prayed_count || 0})`}
                     </Button>
                   </div>
                   <p className="text-muted-foreground">{pr.request}</p>

@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -26,6 +27,8 @@ const AdminPage = () => {
   const [prayers, setPrayers] = useState<Tables<"prayer_requests">[]>([]);
   const [events, setEvents] = useState<Tables<"live_events">[]>([]);
   const [profiles, setProfiles] = useState<Tables<"profiles">[]>([]);
+  const [roleMap, setRoleMap] = useState<Record<string, string>>({});
+  const [epSearch, setEpSearch] = useState("");
 
   // Episode form
   const [epTitle, setEpTitle] = useState("");
@@ -68,6 +71,15 @@ const AdminPage = () => {
     setPrayers(pr.data || []);
     setEvents(ev.data || []);
     setProfiles(prof.data || []);
+
+    const { data: roles } = await supabase.from("user_roles").select("*");
+    if (roles) {
+      const map: Record<string, string> = {};
+      roles.forEach((r) => {
+        map[r.user_id] = r.role;
+      });
+      setRoleMap(map);
+    }
   };
 
   useEffect(() => {
@@ -195,6 +207,34 @@ const AdminPage = () => {
     toast({ title: "Prayer request deleted" });
   };
 
+  const handlePrayerStatus = async (id: string, status: string) => {
+    await supabase.from("prayer_requests").update({ status }).eq("id", id);
+    fetchAll();
+    toast({ title: `Marked as ${status}` });
+  };
+
+  const handleSetRole = async (userId: string, role: string) => {
+    if (!role || role === "user") {
+      // Revoke special roles back to default 'user'
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId);
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+    } else {
+      const { data: existing } = await supabase.from("user_roles").select("id").eq("user_id", userId).maybeSingle();
+      const { error } = existing
+        ? await supabase.from("user_roles").update({ role: role as "admin" | "moderator" }).eq("id", existing.id)
+        : await supabase.from("user_roles").insert({ user_id: userId, role: role as "admin" | "moderator" });
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+        return;
+      }
+    }
+    setRoleMap((prev) => ({ ...prev, [userId]: role }));
+    toast({ title: `Role updated to ${role}` });
+  };
+
   if (authLoading) return <div className="min-h-screen gradient-subtle flex items-center justify-center">Loading...</div>;
   if (!isAdmin) return null;
 
@@ -229,8 +269,13 @@ const AdminPage = () => {
           </TabsList>
 
           <TabsContent value="episodes">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center mb-4">
               <h2 className="text-xl font-semibold">Episodes</h2>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-56">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input value={epSearch} onChange={(e) => setEpSearch(e.target.value)} placeholder="Search episodes..." className="pl-9" />
+                </div>
               <Dialog open={epDialogOpen} onOpenChange={(o) => { setEpDialogOpen(o); if (!o) resetEpForm(); }}>
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Episode</Button>
@@ -272,13 +317,21 @@ const AdminPage = () => {
                     <Button onClick={handleSaveEpisode} disabled={uploadingAudio || uploadingThumb} className="w-full">{editingEpId ? "Update" : "Create"} Episode</Button>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+              </div>
             </div>
-            {episodes.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">No episodes yet. Add your first one!</CardContent></Card>
-            ) : (
+            {(() => {
+              const filtered = episodes.filter((ep) => ep.title.toLowerCase().includes(epSearch.toLowerCase()));
+              if (filtered.length === 0) {
+                return (
+                  <Card><CardContent className="py-8 text-center text-muted-foreground">
+                    {episodes.length === 0 ? "No episodes yet. Add your first one!" : "No episodes match your search."}
+                  </CardContent></Card>
+                );
+              }
+              return (
               <div className="grid gap-3">
-                {episodes.map((ep) => (
+                {filtered.map((ep) => (
                   <Card key={ep.id}>
                     <CardContent className="flex items-center justify-between p-4">
                       <div>
@@ -297,7 +350,8 @@ const AdminPage = () => {
                   </Card>
                 ))}
               </div>
-            )}
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="prayers">
@@ -314,7 +368,17 @@ const AdminPage = () => {
                         <p className="text-sm text-muted-foreground line-clamp-1">{pr.request}</p>
                         <p className="text-xs text-muted-foreground">{format(new Date(pr.created_at), "PP")} • {pr.prayed_count} prayers</p>
                       </div>
-                      <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeletePrayer(pr.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <div className="flex items-center gap-2">
+                        <Select value={pr.status || "pending"} onValueChange={(v) => handlePrayerStatus(pr.id, v)}>
+                          <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="praying">Praying</SelectItem>
+                            <SelectItem value="answered">Answered</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeletePrayer(pr.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
                     </CardContent>
                   </Card>
                 ))}
@@ -375,13 +439,31 @@ const AdminPage = () => {
               <div className="grid gap-3">
                 {profiles.map((p) => (
                   <Card key={p.id}>
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
-                        {p.display_name ? p.display_name[0].toUpperCase() : "?"}
+                    <CardContent className="flex items-center justify-between gap-4 p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
+                          {p.display_name ? p.display_name[0].toUpperCase() : "?"}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{p.display_name || "Unnamed"}</p>
+                          <p className="text-xs text-muted-foreground">Joined {format(new Date(p.created_at), "PP")}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold">{p.display_name || "Unnamed"}</p>
-                        <p className="text-xs text-muted-foreground">Joined {format(new Date(p.created_at), "PP")}</p>
+                      <div className="flex items-center gap-2">
+                        {roleMap[p.user_id] === "admin" && <Badge className="bg-purple-100 text-purple-800 border-transparent">Admin</Badge>}
+                        {roleMap[p.user_id] === "moderator" && <Badge className="bg-blue-100 text-blue-800 border-transparent">Mod</Badge>}
+                        <Select
+                          value={roleMap[p.user_id] || "user"}
+                          onValueChange={(v) => handleSetRole(p.user_id, v)}
+                          disabled={p.user_id === user?.id}
+                        >
+                          <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="moderator">Moderator</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </CardContent>
                   </Card>

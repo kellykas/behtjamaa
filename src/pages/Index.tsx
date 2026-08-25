@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { getDailyVerse } from "@/lib/dailyScripture";
 
 const Navbar = () => {
   const { user, signOut, isAdmin } = useAuth();
@@ -116,6 +117,7 @@ const DailyScripture = () => {
     month: "long",
     day: "numeric",
   });
+  const verse = getDailyVerse(today);
 
   return (
     <section id="daily-scripture" className="py-8 px-4 scroll-mt-20">
@@ -131,9 +133,9 @@ const DailyScripture = () => {
           </div>
           <div className="p-6 pt-0 text-center space-y-6">
             <blockquote className="text-lg md:text-xl italic text-foreground/70 leading-relaxed max-w-3xl mx-auto">
-              "For I know the plans I have for you, declares the Lord, plans for welfare and not for evil, to give you a future and a hope."
+              "{verse.text}"
             </blockquote>
-            <p className="text-blue-600 font-semibold text-lg">— Jeremiah 29:11</p>
+            <p className="text-blue-600 font-semibold text-lg">— {verse.ref}</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border bg-background hover:bg-blue-50 h-10 px-4 py-2 border-blue-300 text-blue-700 transition-colors">
                 <Heart className="mr-2 h-4 w-4" />

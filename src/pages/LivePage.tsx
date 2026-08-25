@@ -9,6 +9,30 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
+const Countdown = ({ target }: { target: string }) => {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const diff = new Date(target).getTime() - now;
+  if (diff <= 0) return null;
+
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+
+  return (
+    <span className="inline-flex items-center gap-1 text-sm font-semibold text-red-600">
+      <Clock className="h-4 w-4" />
+      Starts in {days > 0 && `${days}d `}{hours}h {mins}m {secs}s
+    </span>
+  );
+};
+
 const LivePage = () => {
   const [events, setEvents] = useState<Tables<"live_events">[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +51,12 @@ const LivePage = () => {
   }, []);
 
   const liveNow = events.find((e) => e.is_live);
+  const now = Date.now();
+  const sorted = [...events].sort(
+    (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
+  );
+  const upcomingEvents = sorted.filter((e) => !e.is_live && new Date(e.scheduled_at).getTime() >= now);
+  const pastEvents = sorted.filter((e) => !e.is_live && new Date(e.scheduled_at).getTime() < now).reverse();
 
   return (
     <div className="min-h-screen gradient-subtle">
@@ -68,7 +98,7 @@ const LivePage = () => {
 
         {loading ? (
           <p className="text-muted-foreground">Loading events...</p>
-        ) : events.filter((e) => !e.is_live).length === 0 ? (
+        ) : upcomingEvents.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Radio className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -78,21 +108,47 @@ const LivePage = () => {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {events.filter((e) => !e.is_live).map((event) => (
+            {upcomingEvents.map((event) => (
               <Card key={event.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="flex items-center justify-between p-6">
+                <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between p-6 gap-3">
                   <div>
                     <h3 className="font-semibold text-lg">{event.title}</h3>
                     {event.description && <p className="text-muted-foreground text-sm">{event.description}</p>}
                   </div>
-                  <div className="text-right flex items-center gap-2 text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-sm">{format(new Date(event.scheduled_at), "PPP 'at' p")}</span>
+                  <div className="flex flex-col items-start sm:items-end gap-1">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      <span className="text-sm">{format(new Date(event.scheduled_at), "PPP 'at' p")}</span>
+                    </div>
+                    <Countdown target={event.scheduled_at} />
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            ))
+            }
           </div>
+        )}
+
+        {pastEvents.length > 0 && (
+          <>
+            <h2 className="text-2xl font-semibold mt-12 mb-4 text-muted-foreground">Past Events</h2>
+            <div className="grid gap-3 opacity-75">
+              {pastEvents.map((event) => (
+                <Card key={event.id}>
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div>
+                      <h3 className="font-semibold">{event.title}</h3>
+                      {event.description && <p className="text-muted-foreground text-sm">{event.description}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                      <Clock className="h-4 w-4" />
+                      <span>{format(new Date(event.scheduled_at), "PPP 'at' p")}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
