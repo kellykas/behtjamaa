@@ -44,23 +44,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (user) {
-      // Try the has_role RPC first, fall back to direct table query
-      supabase.rpc("has_role", { _user_id: user.id, _role: "admin" }).then(({ data, error }) => {
-        if (error || data === null) {
-          // RPC failed or doesn't exist, query user_roles directly
-          supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", user.id)
-            .eq("role", "admin")
-            .maybeSingle()
-            .then(({ data: roleData }) => {
-              setIsAdmin(!!roleData);
-            });
-        } else {
-          setIsAdmin(!!data);
-        }
-      });
+      // Check admin status by querying user_roles directly
+      // RLS policy "Users can view own roles" allows auth.uid() = user_id
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Admin check failed:", error);
+            setIsAdmin(false);
+          } else {
+            setIsAdmin(!!data);
+          }
+        });
     } else {
       setIsAdmin(false);
     }
