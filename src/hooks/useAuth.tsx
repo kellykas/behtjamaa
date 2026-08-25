@@ -44,21 +44,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (user) {
-      // Fetch all roles for this user (RLS allows viewing own roles)
-      // Then check in JS to avoid enum comparison issues
-      supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .then(({ data, error }) => {
-          if (error) {
-            console.error("Admin check query error:", error);
-            setIsAdmin(false);
-          } else {
-            const roles = data?.map((r) => r.role) ?? [];
-            setIsAdmin(roles.includes("admin"));
+      const checkAdmin = async () => {
+        // Method 1: Try the has_role RPC (SECURITY DEFINER, bypasses RLS)
+        try {
+          const { data: rpcData, error: rpcError } = await supabase.rpc("has_role", {
+            _user_id: user.id,
+            _role: "admin",
+          });
+          console.log("[AdminCheck] RPC result:", rpcData, "error:", rpcError);
+          if (!rpcError && rpcData === true) {
+            setIsAdmin(true);
+            return;
           }
-        });
+        } catch (e) {
+          console.log("[AdminCheck] RPC failed:", e);
+        }
+
+        // Method 2: Direct query on user_roles (RLS: "Users can view own roles")
+        try {
+          const { data: roleRows, error: roleError } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id);
+
+          console.log("[AdminCheck] Direct query result:", roleRows, "error:", roleError);
+
+          if (!roleError && roleRows) {
+            const hasAdmin = roleRows.some((r) => r.role === "admin");
+            console.log("[AdminCheck] hasAdmin:", hasAdmin);
+            setIsAdmin(hasAdmin);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (e) {
+          console.log("[AdminCheck] Direct query failed:", e);
+          setIsAdmin(false);
+        }
+      };
+
+      checkAdmin();
     } else {
       setIsAdmin(false);
     }
