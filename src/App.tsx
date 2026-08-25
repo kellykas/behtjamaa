@@ -11,6 +11,10 @@ import LivePage from "./pages/LivePage";
 import PrayerPage from "./pages/PrayerPage";
 import MembersPage from "./pages/MembersPage";
 import AdminPage from "./pages/AdminPage";
+import ServicesPage from "./pages/ServicesPage";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
+import DonatePage from "./pages/DonatePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +33,10 @@ const App = () => (
             <Route path="/live" element={<LivePage />} />
             <Route path="/prayer" element={<PrayerPage />} />
             <Route path="/members" element={<MembersPage />} />
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/donate" element={<DonatePage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
