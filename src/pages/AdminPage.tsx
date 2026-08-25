@@ -270,9 +270,6 @@ const AdminPage = () => {
     toast({ title: `Role updated to ${role}` });
   };
 
-  if (authLoading) return <div className="min-h-screen gradient-subtle flex items-center justify-center">Loading...</div>;
-  if (!isAdmin) return null;
-
   return (
     <div className="min-h-screen gradient-subtle">
       <div className="max-w-6xl mx-auto px-4 py-8">
