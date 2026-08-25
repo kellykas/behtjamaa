@@ -53,12 +53,48 @@ const AdminPage = () => {
   const [evDialogOpen, setEvDialogOpen] = useState(false);
   const [editingEvId, setEditingEvId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
-      toast({ title: "Access denied", description: "You need admin privileges.", variant: "destructive" });
-      navigate("/");
-    }
-  }, [user, isAdmin, authLoading, navigate, toast]);
+  if (authLoading) {
+    return (
+      <div className="min-h-screen gradient-subtle flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Verifying admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen gradient-subtle flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-8 text-center">
+            <Shield className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h1 className="text-2xl font-bold mb-2">Sign In Required</h1>
+            <p className="text-muted-foreground mb-6">You need to sign in to access the admin panel.</p>
+            <Button onClick={() => navigate("/auth?returnTo=/admin")}>Sign In</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen gradient-subtle flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-8 text-center">
+            <Shield className="h-16 w-16 mx-auto mb-4 text-destructive" />
+            <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+            <p className="text-muted-foreground mb-2">You do not have admin privileges.</p>
+            <p className="text-xs text-muted-foreground mb-1">Signed in as: {user.email}</p>
+            <p className="text-xs text-muted-foreground mb-6">User ID: {user.id}</p>
+            <Button onClick={() => navigate("/")}>Back to Home</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const fetchAll = async () => {
     const [ep, pr, ev, prof] = await Promise.all([
