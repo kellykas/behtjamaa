@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -29,6 +29,23 @@ const AdminPage = () => {
   const [profiles, setProfiles] = useState<Tables<"profiles">[]>([]);
   const [roleMap, setRoleMap] = useState<Record<string, string>>({});
   const [epSearch, setEpSearch] = useState("");
+
+  // CMS content
+  const [siteSettings, setSiteSettings] = useState<Record<string, string>>({});
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [services, setServicesList] = useState<any[]>([]);
+  const [tmDialogOpen, setTmDialogOpen] = useState(false);
+  const [editingTmId, setEditingTmId] = useState<string | null>(null);
+  const [tmName, setTmName] = useState("");
+  const [tmRole, setTmRole] = useState("");
+  const [tmBio, setTmBio] = useState("");
+  const [tmAvatar, setTmAvatar] = useState("");
+  const [svDialogOpen, setSvDialogOpen] = useState(false);
+  const [editingSvId, setEditingSvId] = useState<string | null>(null);
+  const [svTitle, setSvTitle] = useState("");
+  const [svDesc, setSvDesc] = useState("");
+  const [svIcon, setSvIcon] = useState("");
+  const [svVerse, setSvVerse] = useState("");
 
   // Episode form
   const [epTitle, setEpTitle] = useState("");
@@ -53,16 +70,26 @@ const AdminPage = () => {
   const [editingEvId, setEditingEvId] = useState<string | null>(null);
 
   const fetchAll = async () => {
-    const [ep, pr, ev, prof] = await Promise.all([
+    const [ep, pr, ev, prof, ss, tm, sv] = await Promise.all([
       supabase.from("episodes").select("*").order("created_at", { ascending: false }),
       supabase.from("prayer_requests").select("*").order("created_at", { ascending: false }),
       supabase.from("live_events").select("*").order("scheduled_at", { ascending: true }),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+      supabase.from("site_settings").select("*"),
+      supabase.from("team_members").select("*").order("sort_order"),
+      supabase.from("services").select("*").order("sort_order"),
     ]);
     setEpisodes(ep.data || []);
     setPrayers(pr.data || []);
     setEvents(ev.data || []);
     setProfiles(prof.data || []);
+    if (ss.data) {
+      const map: Record<string, string> = {};
+      ss.data.forEach((s) => { map[s.key] = s.value || ""; });
+      setSiteSettings(map);
+    }
+    setTeamMembers(tm.data || []);
+    setServicesList(sv.data || []);
 
     const { data: roles } = await supabase.from("user_roles").select("*");
     if (roles) {
@@ -123,6 +150,73 @@ const AdminPage = () => {
 
   const resetEpForm = () => { setEpTitle(""); setEpDesc(""); setEpAudioUrl(""); setEpThumbnailUrl(""); setEpCategory("sermon"); setEpPublished(false); setEpFeatured(false); setEditingEpId(null); setAudioProgress(0); };
   const resetEvForm = () => { setEvTitle(""); setEvDesc(""); setEvStreamUrl(""); setEvScheduledAt(""); setEvIsLive(false); setEditingEvId(null); };
+
+  const resetTmForm = () => { setTmName(""); setTmRole(""); setTmBio(""); setTmAvatar(""); setEditingTmId(null); };
+  const resetSvForm = () => { setSvTitle(""); setSvDesc(""); setSvIcon(""); setSvVerse(""); setEditingSvId(null); };
+
+  const handleSaveSetting = async (key: string, value: string) => {
+    await supabase.from("site_settings").upsert({ key, value }, { onConflict: "key" });
+    setSiteSettings((prev) => ({ ...prev, [key]: value }));
+    toast({ title: "Setting saved" });
+  };
+
+  const handleSaveTeamMember = async () => {
+    const payload = { name: tmName, role: tmRole, bio: tmBio || null, avatar_url: tmAvatar || null };
+    if (editingTmId) {
+      await supabase.from("team_members").update(payload).eq("id", editingTmId);
+    } else {
+      const { data } = await supabase.from("team_members").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+      await supabase.from("team_members").insert({ ...payload, sort_order: (data?.[0]?.sort_order || 0) + 1 });
+    }
+    setTmDialogOpen(false);
+    resetTmForm();
+    fetchAll();
+    toast({ title: editingTmId ? "Team member updated" : "Team member added" });
+  };
+
+  const handleDeleteTeamMember = async (id: string) => {
+    await supabase.from("team_members").delete().eq("id", id);
+    fetchAll();
+    toast({ title: "Team member removed" });
+  };
+
+  const handleEditTeamMember = (tm: any) => {
+    setEditingTmId(tm.id);
+    setTmName(tm.name);
+    setTmRole(tm.role);
+    setTmBio(tm.bio || "");
+    setTmAvatar(tm.avatar_url || "");
+    setTmDialogOpen(true);
+  };
+
+  const handleSaveService = async () => {
+    const payload = { title: svTitle, description: svDesc || null, icon: svIcon || null, bible_verse: svVerse || null };
+    if (editingSvId) {
+      await supabase.from("services").update(payload).eq("id", editingSvId);
+    } else {
+      const { data } = await supabase.from("services").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+      await supabase.from("services").insert({ ...payload, sort_order: (data?.[0]?.sort_order || 0) + 1 });
+    }
+    setSvDialogOpen(false);
+    resetSvForm();
+    fetchAll();
+    toast({ title: editingSvId ? "Service updated" : "Service added" });
+  };
+
+  const handleDeleteService = async (id: string) => {
+    await supabase.from("services").delete().eq("id", id);
+    fetchAll();
+    toast({ title: "Service removed" });
+  };
+
+  const handleEditService = (sv: any) => {
+    setEditingSvId(sv.id);
+    setSvTitle(sv.title);
+    setSvDesc(sv.description || "");
+    setSvIcon(sv.icon || "");
+    setSvVerse(sv.bible_verse || "");
+    setSvDialogOpen(true);
+  };
 
   const uploadFile = async (file: File, bucket: "episode-audio" | "episode-thumbnails") => {
     const ext = file.name.split(".").pop();
@@ -298,6 +392,9 @@ const AdminPage = () => {
             <TabsTrigger value="prayers"><Heart className="h-4 w-4 mr-2" />Prayers</TabsTrigger>
             <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-2" />Events</TabsTrigger>
             <TabsTrigger value="members"><Users className="h-4 w-4 mr-2" />Members</TabsTrigger>
+            <TabsTrigger value="content"><Edit className="h-4 w-4 mr-2" />Content</TabsTrigger>
+            <TabsTrigger value="team"><Users className="h-4 w-4 mr-2" />Team</TabsTrigger>
+            <TabsTrigger value="services"><Sparkles className="h-4 w-4 mr-2" />Services</TabsTrigger>
           </TabsList>
 
           <TabsContent value="episodes">
@@ -496,6 +593,147 @@ const AdminPage = () => {
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="content">
+            <h2 className="text-xl font-semibold mb-4">Site Content</h2>
+            {(() => {
+              const sections = [
+                { label: "Home Page", keys: ["hero_title", "hero_subtitle", "hero_established", "hero_tagline", "stat_years", "stat_years_label", "stat_souls", "stat_souls_label", "stat_award", "stat_award_label", "vision", "mission", "purpose"], textarea: ["hero_subtitle", "vision", "mission", "purpose"] },
+                { label: "About Page", keys: ["confession_title", "confession_1", "confession_2", "confession_3", "about_story"], textarea: ["confession_1", "confession_2", "confession_3", "about_story"] },
+                { label: "Contact Info", keys: ["contact_email", "contact_phone", "contact_address", "contact_hours_weekday", "contact_hours_saturday", "contact_hours_sunday"], textarea: [] },
+                { label: "Donate Info", keys: ["donate_bank_name", "donate_account_name", "donate_routing", "donate_mail_address", "donate_email", "donate_phone"], textarea: ["donate_mail_address"] },
+                { label: "Footer", keys: ["footer_name", "footer_description", "footer_copyright"], textarea: ["footer_description"] },
+              ];
+              return (
+                <div className="space-y-8">
+                  {sections.map((section) => (
+                    <Card key={section.label}>
+                      <CardHeader><CardTitle className="text-lg">{section.label}</CardTitle></CardHeader>
+                      <CardContent className="space-y-4">
+                        {section.keys.map((key) => {
+                          const isLong = section.textarea.includes(key);
+                          const label = key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                          return (
+                            <div key={key} className="space-y-2">
+                              <Label className="text-sm font-medium">{label}</Label>
+                              <div className="flex gap-2">
+                                {isLong ? (
+                                  <Textarea
+                                    value={siteSettings[key] || ""}
+                                    onChange={(e) => setSiteSettings((prev) => ({ ...prev, [key]: e.target.value }))}
+                                    rows={3}
+                                    className="flex-1"
+                                  />
+                                ) : (
+                                  <Input
+                                    value={siteSettings[key] || ""}
+                                    onChange={(e) => setSiteSettings((prev) => ({ ...prev, [key]: e.target.value }))}
+                                    className="flex-1"
+                                  />
+                                )}
+                                <Button size="sm" onClick={() => handleSaveSetting(key, siteSettings[key] || "")} className="shrink-0">
+                                  <Save className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              );
+            })()}
+          </TabsContent>
+
+          <TabsContent value="team">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Team Members ({teamMembers.length})</h2>
+              <Dialog open={tmDialogOpen} onOpenChange={(o) => { setTmDialogOpen(o); if (!o) resetTmForm(); }}>
+                <DialogTrigger asChild>
+                  <Button><Plus className="h-4 w-4 mr-2" /> Add Member</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>{editingTmId ? "Edit" : "Add"} Team Member</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2"><Label>Name</Label><Input value={tmName} onChange={(e) => setTmName(e.target.value)} required /></div>
+                    <div className="space-y-2"><Label>Role</Label><Input value={tmRole} onChange={(e) => setTmRole(e.target.value)} placeholder="e.g. Co-Founder" required /></div>
+                    <div className="space-y-2"><Label>Bio</Label><Textarea value={tmBio} onChange={(e) => setTmBio(e.target.value)} rows={3} /></div>
+                    <div className="space-y-2"><Label>Avatar URL</Label><Input value={tmAvatar} onChange={(e) => setTmAvatar(e.target.value)} placeholder="https://..." /></div>
+                    <Button onClick={handleSaveTeamMember} className="w-full">{editingTmId ? "Update" : "Add"} Member</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            {teamMembers.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">No team members yet.</CardContent></Card>
+            ) : (
+              <div className="grid gap-3">
+                {teamMembers.map((tm) => (
+                  <Card key={tm.id}>
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold shrink-0">
+                          {tm.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{tm.name}</h3>
+                          <p className="text-sm text-primary font-medium">{tm.role}</p>
+                          {tm.bio && <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{tm.bio}</p>}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEditTeamMember(tm)}><Edit className="h-4 w-4" /></Button>
+                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteTeamMember(tm.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="services">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Ministry Services ({services.length})</h2>
+              <Dialog open={svDialogOpen} onOpenChange={(o) => { setSvDialogOpen(o); if (!o) resetSvForm(); }}>
+                <DialogTrigger asChild>
+                  <Button><Plus className="h-4 w-4 mr-2" /> Add Service</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader><DialogTitle>{editingSvId ? "Edit" : "Add"} Service</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2"><Label>Title</Label><Input value={svTitle} onChange={(e) => setSvTitle(e.target.value)} required /></div>
+                    <div className="space-y-2"><Label>Description</Label><Textarea value={svDesc} onChange={(e) => setSvDesc(e.target.value)} rows={3} /></div>
+                    <div className="space-y-2"><Label>Icon</Label><Input value={svIcon} onChange={(e) => setSvIcon(e.target.value)} placeholder="e.g. Globe, Heart, Music" /></div>
+                    <div className="space-y-2"><Label>Bible Verse</Label><Input value={svVerse} onChange={(e) => setSvVerse(e.target.value)} placeholder="e.g. Matthew 28:19" /></div>
+                    <Button onClick={handleSaveService} className="w-full">{editingSvId ? "Update" : "Add"} Service</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            {services.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">No services yet.</CardContent></Card>
+            ) : (
+              <div className="grid gap-3">
+                {services.map((sv) => (
+                  <Card key={sv.id}>
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div>
+                        <h3 className="font-semibold">{sv.title}</h3>
+                        {sv.description && <p className="text-sm text-muted-foreground line-clamp-1">{sv.description}</p>}
+                        {sv.bible_verse && <p className="text-xs text-primary italic mt-1">{sv.bible_verse}</p>}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEditService(sv)}><Edit className="h-4 w-4" /></Button>
+                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteService(sv.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </CardContent>
                   </Card>
