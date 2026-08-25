@@ -48,9 +48,9 @@ const Navbar = () => {
               Sign In
             </Link>
           )}
-          <a href="https://csfrdc.wixstudio.com/beht-jamaa" target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-brand-accent text-brand-accent-foreground h-9 px-4 hover:bg-brand-accent/90 transition-colors">
+          <Link to="/donate" className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-brand-accent text-brand-accent-foreground h-9 px-4 hover:bg-brand-accent/90 transition-colors">
             Donate
-          </a>
+          </Link>
         </div>
 
         <button className="md:hidden p-2" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -82,9 +82,9 @@ const Navbar = () => {
               <LogIn className="h-4 w-4" /> Sign In
             </Link>
           )}
-          <a href="https://csfrdc.wixstudio.com/beht-jamaa" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-medium text-brand-accent px-2 py-2" onClick={() => setMobileOpen(false)}>
+          <Link to="/donate" className="flex items-center gap-2 text-sm font-medium text-brand-accent px-2 py-2" onClick={() => setMobileOpen(false)}>
             <HeartHandshake className="h-4 w-4" /> Donate
-          </a>
+          </Link>
         </div>
       )}
     </nav>
@@ -370,15 +370,13 @@ const DonateCTA = () => (
       <p className="text-lg opacity-90 mb-8 max-w-2xl mx-auto leading-relaxed">
         Your generous donation helps us reach more young people with the Gospel, fund community projects, and host workshops and festivals that change lives.
       </p>
-      <a
-        href="https://csfrdc.wixstudio.com/beht-jamaa"
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        to="/donate"
         className="inline-flex items-center justify-center gap-2 h-14 rounded-md bg-brand-accent hover:bg-brand-accent/90 text-brand-accent-foreground font-bold text-lg px-10 transition-colors"
       >
         <HeartHandshake className="h-6 w-6" />
         Donate Now
-      </a>
+      </Link>
     </div>
   </section>
 );

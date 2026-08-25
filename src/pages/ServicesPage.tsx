@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Globe, Theater, Handshake, UsersRound, HeartHandshake, ExternalLink } from "lucide-react";
+import { ArrowLeft, Globe, Theater, Handshake, UsersRound, HeartHandshake } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 
 const services = [
@@ -106,11 +106,11 @@ const ServicesPage = () => {
             <Link to="/members">
               <Button size="lg">Join Us Today</Button>
             </Link>
-            <a href="https://csfrdc.wixstudio.com/beht-jamaa" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="lg" className="gap-2">
-                Donate <ExternalLink className="h-4 w-4" />
+            <Link to="/donate">
+              <Button variant="outline" size="lg">
+                Donate
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
       </div>
