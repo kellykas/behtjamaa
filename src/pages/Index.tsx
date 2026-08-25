@@ -99,10 +99,10 @@ const HeroSection = () => (
       <Badge className="mb-6 bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 text-sm px-4 py-1.5">
         Youth Evangelistic Ministry
       </Badge>
-      <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-2 leading-tight animate-fade-in">
+      <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-2 leading-tight animate-fade-in uppercase">
         Boys Evangelists
       </h1>
-      <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-tight animate-fade-in">
+      <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-tight animate-fade-in uppercase">
         of the Holy Trinity
       </h1>
       <p className="text-lg md:text-xl mb-3 font-medium opacity-95">
