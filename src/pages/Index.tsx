@@ -137,7 +137,7 @@ const beliefItems = [
   {
     icon: Target,
     title: "Mission",
-    text: "Win Souls for Jesus Christ and empower the youths for evangelism — Isaiah 52:7; Romans 10:15.",
+    text: "Win Souls for Jesus Christ and empower the youths for evangelism (Isaiah 52:7; Romans 10:15).",
     accent: "from-emerald-500 to-emerald-600",
   },
   {
@@ -178,9 +178,9 @@ const BeliefSection = () => (
 /* ─── Services ────────────────────────────────────────────────── */
 const services = [
   { icon: Globe, title: "Evangelism", desc: "Winning youths for Christ across communities and campuses.", color: "bg-red-100 text-red-600 group-hover:bg-red-200" },
-  { icon: Theater, title: "Artistic Activities", desc: "Empowering them for a life of discipleship, ministry and service through the arts — touching the spirit, soul and body with the power of the Holy Spirit.", color: "bg-blue-100 text-blue-600 group-hover:bg-blue-200" },
+  { icon: Theater, title: "Artistic Activities", desc: "Empowering them for a life of discipleship, ministry and service through the arts, touching the spirit, soul and body with the power of the Holy Spirit.", color: "bg-blue-100 text-blue-600 group-hover:bg-blue-200" },
   { icon: Handshake, title: "Community Service", desc: "Empowering youths for usefulness to their communities through active service.", color: "bg-green-100 text-green-600 group-hover:bg-green-200" },
-  { icon: UsersRound, title: "Workshops & Festivals", desc: "Starting from where the youths are — with their spiritual, physical, intellectual, social and financial needs — to attract them and launch them in a process of growth.", color: "bg-amber-100 text-amber-600 group-hover:bg-amber-200" },
+  { icon: UsersRound, title: "Workshops & Festivals", desc: "Starting from where the youths are, with their spiritual, physical, intellectual, social and financial needs, to attract them and launch them in a process of growth.", color: "bg-amber-100 text-amber-600 group-hover:bg-amber-200" },
   { icon: HeartHandshake, title: "Humanitarian", desc: "Engaging non-believers, especially young people, and sharing the love of Christ with them through tangible acts of care.", color: "bg-purple-100 text-purple-600 group-hover:bg-purple-200" },
 ];
 

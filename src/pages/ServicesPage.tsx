@@ -12,8 +12,8 @@ const services = [
     color: "from-red-500 to-red-600",
     iconBg: "bg-red-100 text-red-600",
     description:
-      'We go where young people are -- campuses, communities, social media -- and share the Gospel in ways that resonate with their lives. Through outreach events, street ministry, and digital evangelism, we bring the message of Jesus Christ to a generation searching for meaning and hope.',
-    verse: '"How beautiful on the mountains are the feet of those who bring good news, who proclaim peace, who bring good tidings, who proclaim salvation." -- Isaiah 52:7',
+      'We go where young people are, campuses, communities, social media, and share the Gospel in ways that resonate with their lives. Through outreach events, street ministry, and digital evangelism, we bring the message of Jesus Christ to a generation searching for meaning and hope.',
+    verse: '"How beautiful on the mountains are the feet of those who bring good news, who proclaim peace, who bring good tidings, who proclaim salvation.", Isaiah 52:7',
   },
   {
     icon: Theater,
@@ -23,7 +23,7 @@ const services = [
     iconBg: "bg-blue-100 text-blue-600",
     description:
       'Arts are at the heart of BEHT JAMAA. We harness music, dance, drama, visual arts and spoken word to empower youths for a life of discipleship, ministry and service. Our goal is to promote their talents for a total worship experience that touches the spirit, the soul and the body with the power of the Holy Spirit.',
-    verse: '"Sing to the Lord a new song; sing to the Lord, all the earth." -- Psalm 96:1',
+    verse: '"Sing to the Lord a new song; sing to the Lord, all the earth.", Psalm 96:1',
   },
   {
     icon: Handshake,
@@ -33,7 +33,7 @@ const services = [
     iconBg: "bg-emerald-100 text-emerald-600",
     description:
       'We believe that faith without works is dead. Through community service projects, clean-up drives, mentorship programs, and local partnerships, we empower young people to serve their communities with compassion, integrity, and the love of Christ.',
-    verse: '"For we are God\'s handiwork, created in Christ Jesus to do good works, which God prepared in advance for us to do." -- Ephesians 2:10',
+    verse: '"For we are God\'s handiwork, created in Christ Jesus to do good works, which God prepared in advance for us to do.", Ephesians 2:10',
   },
   {
     icon: UsersRound,
@@ -42,8 +42,8 @@ const services = [
     color: "from-amber-500 to-amber-600",
     iconBg: "bg-amber-100 text-amber-600",
     description:
-      'We start from where the youths are -- with their spiritual, physical, intellectual, social and financial needs. Through workshops on leadership, life skills, mental health and entrepreneurship, and festivals celebrating faith and creativity, we attract them and launch them in a process of lasting growth.',
-    verse: '"Train up a child in the way he should go; even when he is old he will not depart from it." -- Proverbs 22:6',
+      'We start from where the youths are, with their spiritual, physical, intellectual, social and financial needs. Through workshops on leadership, life skills, mental health and entrepreneurship, and festivals celebrating faith and creativity, we attract them and launch them in a process of lasting growth.',
+    verse: '"Train up a child in the way he should go; even when he is old he will not depart from it.", Proverbs 22:6',
   },
   {
     icon: HeartHandshake,
@@ -52,8 +52,8 @@ const services = [
     color: "from-purple-500 to-purple-600",
     iconBg: "bg-purple-100 text-purple-600",
     description:
-      'We engage non-believers, especially young people, through tangible acts of care -- food distribution, clothing drives, hospital visits and support for vulnerable families. Every act of kindness opens a door to share the love and hope found in Jesus Christ.',
-    verse: '"For I was hungry and you gave me something to eat, I was thirsty and you gave me something to drink." -- Matthew 25:35',
+      'We engage non-believers, especially young people, through tangible acts of care, food distribution, clothing drives, hospital visits and support for vulnerable families. Every act of kindness opens a door to share the love and hope found in Jesus Christ.',
+    verse: '"For I was hungry and you gave me something to eat, I was thirsty and you gave me something to drink.", Matthew 25:35',
   },
 ];
 
@@ -100,7 +100,7 @@ const ServicesPage = () => {
         <div className="mt-16 text-center space-y-4">
           <h2 className="text-2xl font-bold">Get Involved</h2>
           <p className="text-muted-foreground max-w-lg mx-auto">
-            Whether through prayer, volunteering, or supporting our work financially -- there is a place for you in BEHT JAMAA.
+            Whether through prayer, volunteering, or supporting our work financially, there is a place for you in BEHT JAMAA.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/members">

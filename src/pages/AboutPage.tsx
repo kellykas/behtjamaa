@@ -33,13 +33,13 @@ const achievements = [
   {
     icon: HeartHandshake,
     title: "Souls Won for Christ",
-    desc: "The majority of our present members are our own fruits -- transformed lives for Jesus",
+    desc: "The majority of our present members are our own fruits, transformed lives for Jesus",
     color: "from-emerald-500 to-emerald-600",
   },
   {
     icon: Globe,
     title: "International Performances",
-    desc: "Performed on local and international stages in Kampala, Uganda, and USA -- in schools, churches, streets, and beyond",
+    desc: "Performed on local and international stages in Kampala, Uganda, and USA, in schools, churches, streets, and beyond",
     color: "from-blue-500 to-blue-600",
   },
 ];
@@ -101,10 +101,10 @@ const AboutPage = () => {
               When God asked <em>&quot;What do you have?&quot;</em> Chris answered, <em>&quot;All I know is to rap.&quot;</em> God revealed that many youths loved rap music and sent him to be a &quot;fisher of men&quot; using his artistic gifts.
             </p>
             <p>
-              During an overnight service at Gabba Community Church, God spoke through <strong className="text-foreground">Isaiah 52:7</strong> and <strong className="text-foreground">1 Timothy 4:12</strong>, telling him not to let anyone look down on him and to be an example to fellow youths in all ways -- spiritually, socially, and in love.
+              During an overnight service at Gabba Community Church, God spoke through <strong className="text-foreground">Isaiah 52:7</strong> and <strong className="text-foreground">1 Timothy 4:12</strong>, telling him not to let anyone look down on him and to be an example to fellow youths in all ways, spiritually, socially, and in love.
             </p>
             <p>
-              In late 2010, Chris met with his co-founders -- <strong className="text-foreground">Dieudonne Sangano, Danny Mani, Fabrice Muhindo, and Lwenga Rajabu</strong> -- united in spirit and purpose to glorify Jesus Christ. Together, they launched the ASJC (All Souls for Jesus Christ) project on <strong className="text-foreground">January 7, 2011</strong>, organizing youth conferences, concerts, crusades, recording albums, and using media to spread the Gospel.
+              In late 2010, Chris met with his co-founders, <strong className="text-foreground">Dieudonne Sangano, Danny Mani, Fabrice Muhindo, and Lwenga Rajabu</strong>, united in spirit and purpose to glorify Jesus Christ. Together, they launched the ASJC (All Souls for Jesus Christ) project on <strong className="text-foreground">January 7, 2011</strong>, organizing youth conferences, concerts, crusades, recording albums, and using media to spread the Gospel.
             </p>
           </div>
         </section>
@@ -213,7 +213,7 @@ const AboutPage = () => {
             Be part of a generation that&apos;s modeling Jesus Christ&apos;s lifestyle and transforming lives worldwide.
           </p>
           <blockquote className="text-muted-foreground italic mb-6">
-            &quot;How beautiful are the feet of those who bring good news!&quot; -- Romans 10:15
+            &quot;How beautiful are the feet of those who bring good news!&quot;, Romans 10:15
           </blockquote>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/members"><Button size="lg">Become a Member</Button></Link>
