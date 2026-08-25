@@ -44,20 +44,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (user) {
-      // Check admin status by querying user_roles directly
-      // RLS policy "Users can view own roles" allows auth.uid() = user_id
+      // Fetch all roles for this user (RLS allows viewing own roles)
+      // Then check in JS to avoid enum comparison issues
       supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle()
         .then(({ data, error }) => {
           if (error) {
-            console.error("Admin check failed:", error);
+            console.error("Admin check query error:", error);
             setIsAdmin(false);
           } else {
-            setIsAdmin(!!data);
+            const roles = data?.map((r) => r.role) ?? [];
+            setIsAdmin(roles.includes("admin"));
           }
         });
     } else {
