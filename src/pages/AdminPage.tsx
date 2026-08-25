@@ -49,9 +49,34 @@ const AdminPage = () => {
   const [evDesc, setEvDesc] = useState("");
   const [evStreamUrl, setEvStreamUrl] = useState("");
   const [evScheduledAt, setEvScheduledAt] = useState("");
-  const [evIsLive, setEvIsLive] = useState(false);
-  const [evDialogOpen, setEvDialogOpen] = useState(false);
+  const [evIsLive, setEvIsLive] = useState(false);  const [evDialogOpen, setEvDialogOpen] = useState(false);
   const [editingEvId, setEditingEvId] = useState<string | null>(null);
+
+  const fetchAll = async () => {
+    const [ep, pr, ev, prof] = await Promise.all([
+      supabase.from("episodes").select("*").order("created_at", { ascending: false }),
+      supabase.from("prayer_requests").select("*").order("created_at", { ascending: false }),
+      supabase.from("live_events").select("*").order("scheduled_at", { ascending: true }),
+      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+    ]);
+    setEpisodes(ep.data || []);
+    setPrayers(pr.data || []);
+    setEvents(ev.data || []);
+    setProfiles(prof.data || []);
+
+    const { data: roles } = await supabase.from("user_roles").select("*");
+    if (roles) {
+      const map: Record<string, string> = {};
+      roles.forEach((r) => {
+        map[r.user_id] = r.role;
+      });
+      setRoleMap(map);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin) fetchAll();
+  }, [isAdmin]);
 
   if (authLoading) {
     return (
@@ -95,32 +120,6 @@ const AdminPage = () => {
       </div>
     );
   }
-
-  const fetchAll = async () => {
-    const [ep, pr, ev, prof] = await Promise.all([
-      supabase.from("episodes").select("*").order("created_at", { ascending: false }),
-      supabase.from("prayer_requests").select("*").order("created_at", { ascending: false }),
-      supabase.from("live_events").select("*").order("scheduled_at", { ascending: true }),
-      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-    ]);
-    setEpisodes(ep.data || []);
-    setPrayers(pr.data || []);
-    setEvents(ev.data || []);
-    setProfiles(prof.data || []);
-
-    const { data: roles } = await supabase.from("user_roles").select("*");
-    if (roles) {
-      const map: Record<string, string> = {};
-      roles.forEach((r) => {
-        map[r.user_id] = r.role;
-      });
-      setRoleMap(map);
-    }
-  };
-
-  useEffect(() => {
-    if (isAdmin) fetchAll();
-  }, [isAdmin]);
 
   const resetEpForm = () => { setEpTitle(""); setEpDesc(""); setEpAudioUrl(""); setEpThumbnailUrl(""); setEpCategory("sermon"); setEpPublished(false); setEpFeatured(false); setEditingEpId(null); setAudioProgress(0); };
   const resetEvForm = () => { setEvTitle(""); setEvDesc(""); setEvStreamUrl(""); setEvScheduledAt(""); setEvIsLive(false); setEditingEvId(null); };
