@@ -62,6 +62,8 @@ const AdminPage = () => {
   const [brBanner, setBrBanner] = useState("");
   const [brActive, setBrActive] = useState(true);
   const [brLeaderUserId, setBrLeaderUserId] = useState<string>("");
+  const [uploadingBranchLogo, setUploadingBranchLogo] = useState(false);
+  const [uploadingBranchBanner, setUploadingBranchBanner] = useState(false);
 
   // Episode form
   const [epTitle, setEpTitle] = useState("");
@@ -833,8 +835,34 @@ const AdminPage = () => {
                     </div>
                     <div className="space-y-2"><Label>Leader Email</Label><Input value={brEmail} onChange={(e) => setBrEmail(e.target.value)} type="email" /></div>
                     <div className="space-y-2"><Label>Phone</Label><Input value={brPhone} onChange={(e) => setBrPhone(e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Logo URL</Label><Input value={brLogo} onChange={(e) => setBrLogo(e.target.value)} placeholder="https://..." /></div>
-                    <div className="space-y-2"><Label>Banner URL</Label><Input value={brBanner} onChange={(e) => setBrBanner(e.target.value)} placeholder="https://..." /></div>
+                    <div className="space-y-2">
+                      <Label>Logo</Label>
+                      {brLogo && (<img src={brLogo} alt="Logo preview" className="w-16 h-16 rounded-full object-cover border mb-2" />)}
+                      <Input type="file" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadingBranchLogo(true);
+                        try { const url = await uploadFile(file, "episode-thumbnails"); setBrLogo(url); toast({ title: "Logo uploaded" }); }
+                        catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
+                        finally { setUploadingBranchLogo(false); }
+                      }} disabled={uploadingBranchLogo} />
+                      {uploadingBranchLogo && <p className="text-xs text-muted-foreground">Uploading...</p>}
+                      <Input value={brLogo} onChange={(e) => setBrLogo(e.target.value)} placeholder="...or paste URL" className="text-xs" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Banner</Label>
+                      {brBanner && (<img src={brBanner} alt="Banner preview" className="w-full h-24 object-cover rounded-md border mb-2" />)}
+                      <Input type="file" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadingBranchBanner(true);
+                        try { const url = await uploadFile(file, "episode-thumbnails"); setBrBanner(url); toast({ title: "Banner uploaded" }); }
+                        catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
+                        finally { setUploadingBranchBanner(false); }
+                      }} disabled={uploadingBranchBanner} />
+                      {uploadingBranchBanner && <p className="text-xs text-muted-foreground">Uploading...</p>}
+                      <Input value={brBanner} onChange={(e) => setBrBanner(e.target.value)} placeholder="...or paste URL" className="text-xs" />
+                    </div>
                     <div className="flex items-center gap-2"><Switch checked={brActive} onCheckedChange={setBrActive} /><Label>Active</Label></div>
                     <Button onClick={handleSaveBranch} className="w-full">{editingBranchId ? "Update" : "Create"} Branch</Button>
                   </div>
