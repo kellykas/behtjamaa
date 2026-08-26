@@ -204,11 +204,28 @@ const BranchPortalPage = () => {
   };
 
   const handleEventSave = async () => {
+    if (!evForm.title.trim()) {
+      toast({ title: "Title is required", variant: "destructive" });
+      return;
+    }
+    if (!evForm.scheduled_at) {
+      toast({ title: "Scheduled date is required", description: "Please set when this event takes place", variant: "destructive" });
+      return;
+    }
     const allImages = evForm.image_url ? [evForm.image_url, ...eventImages.filter(img => img !== evForm.image_url)] : eventImages;
-    const payload = { branch_id: branch!.id, ...evForm, images: allImages.length > 0 ? allImages : null };
+    const payload = {
+      branch_id: branch!.id,
+      title: evForm.title.trim(),
+      description: evForm.description || null,
+      stream_url: evForm.stream_url || null,
+      scheduled_at: evForm.scheduled_at,
+      is_live: evForm.is_live || false,
+      image_url: evForm.image_url || null,
+      images: allImages.length > 0 ? allImages : null,
+    };
     let error;
     if (editingId) {
-      ({ error } = await supabase.from("branch_events").update({ ...evForm, images: allImages.length > 0 ? allImages : null }).eq("id", editingId));
+      ({ error } = await supabase.from("branch_events").update(payload).eq("id", editingId));
     } else {
       ({ error } = await supabase.from("branch_events").insert(payload));
     }
@@ -631,7 +648,7 @@ const BranchPortalPage = () => {
                         )}
                       </div>
                       <div className="space-y-2"><Label>YouTube URL (Optional)</Label><Input value={evForm.stream_url || ""} onChange={(e) => setEvForm({ ...evForm, stream_url: e.target.value })} placeholder="YouTube URL for live stream" /></div>
-                      <div className="space-y-2"><Label>Scheduled At</Label><Input type="datetime-local" value={evForm.scheduled_at ? evForm.scheduled_at.slice(0, 16) : ""} onChange={(e) => setEvForm({ ...evForm, scheduled_at: new Date(e.target.value).toISOString() })} /></div>
+                      <div className="space-y-2"><Label>Scheduled At *</Label><Input type="datetime-local" required value={evForm.scheduled_at ? evForm.scheduled_at.slice(0, 16) : ""} onChange={(e) => setEvForm({ ...evForm, scheduled_at: new Date(e.target.value).toISOString() })} /></div>
                       <div className="flex items-center gap-2"><Switch checked={evForm.is_live || false} onCheckedChange={(v) => setEvForm({ ...evForm, is_live: v })} /><Label>Currently Live</Label></div>
                       <Button onClick={handleEventSave} className="w-full">{editingId ? "Update" : "Create"}</Button>
                       {(evForm.image_url || eventImages.length > 0) && <Button variant="ghost" size="sm" className="w-full text-destructive" onClick={() => { setEvForm({ ...evForm, image_url: "" }); setEventImages([]); }}>Remove All Images</Button>}
