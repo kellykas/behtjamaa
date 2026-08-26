@@ -69,27 +69,68 @@ export type Database = {
         Row: {
           id: string
           branch_id: string
-          user_id: string
+          user_id: string | null
           role: string
           joined_at: string
         }
         Insert: {
           id?: string
           branch_id: string
-          user_id: string
+          user_id?: string | null
           role?: string
           joined_at?: string
         }
         Update: {
           id?: string
           branch_id?: string
-          user_id?: string
+          user_id?: string | null
           role?: string
           joined_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "branch_members_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      membership_requests: {
+        Row: {
+          id: string
+          branch_id: string
+          full_name: string
+          email: string
+          phone: string | null
+          message: string | null
+          status: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          full_name: string
+          email: string
+          phone?: string | null
+          message?: string | null
+          status?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          full_name?: string
+          email?: string
+          phone?: string | null
+          message?: string | null
+          status?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "membership_requests_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"

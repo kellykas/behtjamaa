@@ -77,6 +77,7 @@ const BranchPortalPage = () => {
   const [branchPrayers, setBranchPrayers] = useState<any[]>([]);
   const [storeItems, setStoreItems] = useState<any[]>([]);
   const [storeOrders, setStoreOrders] = useState<any[]>([]);
+  const [membershipRequests, setMembershipRequests] = useState<any[]>([]);
 
   // Dialogs
   const [eventDialog, setEventDialog] = useState(false);
@@ -135,7 +136,7 @@ const BranchPortalPage = () => {
 
   const fetchBranchData = async () => {
     if (!branch) return;
-    const [mem, ev, sv, ep, don, pr, st, ords] = await Promise.all([
+    const [mem, ev, sv, ep, don, pr, st, ords, mreq] = await Promise.all([
       supabase.from("branch_members").select("*, profiles(display_name, avatar_url)").eq("branch_id", branch.id),
       supabase.from("branch_events").select("*").eq("branch_id", branch.id).order("scheduled_at", { ascending: true }),
       supabase.from("branch_services").select("*").eq("branch_id", branch.id).order("sort_order"),
@@ -144,6 +145,7 @@ const BranchPortalPage = () => {
       supabase.from("branch_prayers").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
       supabase.from("store_items").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
       supabase.from("store_orders").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
+      supabase.from("membership_requests").select("*").eq("branch_id", branch.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     if (ev.error) console.error("Events fetch error:", ev.error.message);
     setBranchMembers(mem.data || []);
@@ -154,6 +156,7 @@ const BranchPortalPage = () => {
     setBranchPrayers(pr.data || []);
     setStoreItems(st.data || []);
     setStoreOrders(ords.data || []);
+    setMembershipRequests(mreq.data || []);
   };
 
   if (loading) {
@@ -353,19 +356,16 @@ const BranchPortalPage = () => {
       toast({ title: "Please fill in your name and email", variant: "destructive" });
       return;
     }
-    // Insert as pending_member role (user_id can be null for anonymous visitors)
-    const { error } = await supabase.from("branch_members").insert({
+    // Use membership_requests table for anonymous visitors
+    const { error } = await supabase.from("membership_requests").insert({
       branch_id: branch!.id,
-      user_id: user?.id || null,
-      role: "pending_member",
+      full_name: memberForm.name.trim(),
+      email: memberForm.email.trim(),
+      phone: memberForm.phone || null,
+      message: memberForm.message || null,
     });
     if (error) {
-      // If they're already a member
-      if (error.code === "23505") {
-        toast({ title: "You're already a member or have a pending request", variant: "destructive" });
-      } else {
-        toast({ title: "Failed to submit request", description: error.message, variant: "destructive" });
-      }
+      toast({ title: "Failed to submit request", description: error.message, variant: "destructive" });
     } else {
       setMemberSubmitted(true);
       setMemberForm({ name: "", email: "", phone: "", message: "" });
@@ -515,8 +515,46 @@ const BranchPortalPage = () => {
           {/* ── Members ──────────────────────────────────── */}
           <TabsContent value="members">
             {isBranchLeader ? (
-              /* Leader view: see all members */
+              /* Leader view: see all members and pending requests */
               <>
+                {membershipRequests.length > 0 && (
+                  <>
+                    <h2 className="text-xl font-semibold mb-4">Pending Membership Requests ({membershipRequests.length})</h2>
+                    <div className="grid gap-3 mb-6">
+                      {membershipRequests.map((req: any) => (
+                        <Card key={req.id} className="border-amber-200 bg-amber-50/50">
+                          <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                            <div className="min-w-0">
+                              <p className="font-semibold">{req.full_name}</p>
+                              <p className="text-sm text-muted-foreground">{req.email}</p>
+                              {req.phone && <p className="text-sm text-muted-foreground">{req.phone}</p>}
+                              {req.message && <p className="text-sm text-muted-foreground italic mt-1">"{req.message}"</p>}
+                              <p className="text-xs text-muted-foreground mt-1">Requested {format(new Date(req.created_at), "PP")}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" className="text-green-600" onClick={async () => {
+                                // Add to branch_members
+                                await supabase.from("branch_members").insert({
+                                  branch_id: branch!.id,
+                                  role: "member",
+                                });
+                                // Mark request as approved
+                                await supabase.from("membership_requests").update({ status: "approved" }).eq("id", req.id);
+                                fetchBranchData();
+                                toast({ title: "Member approved" });
+                              }}>Approve</Button>
+                              <Button size="sm" variant="outline" className="text-destructive" onClick={async () => {
+                                await supabase.from("membership_requests").update({ status: "rejected" }).eq("id", req.id);
+                                fetchBranchData();
+                                toast({ title: "Request rejected" });
+                              }}>Reject</Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
                 <h2 className="text-xl font-semibold mb-4">Branch Members ({branchMembers.length})</h2>
                 {branchMembers.length === 0 ? (
                   <Card><CardContent className="py-8 text-center text-muted-foreground">No members in this branch yet.</CardContent></Card>
