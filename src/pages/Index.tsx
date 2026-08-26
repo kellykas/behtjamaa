@@ -574,8 +574,8 @@ const Index = () => (
   <div className="min-h-screen gradient-subtle">
     <Navbar />
     <HeroSection />
-    <BeliefSection />
     <BranchesPreview />
+    <BeliefSection />
     <DailyScripture />
     <ServicesPreview />
     <FeaturedEpisodes />
