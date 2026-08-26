@@ -213,21 +213,30 @@ const BranchPortalPage = () => {
       return;
     }
     const allImages = evForm.image_url ? [evForm.image_url, ...eventImages.filter(img => img !== evForm.image_url)] : eventImages;
-    const payload = {
+    // Only send base columns that exist in the original table
+    const basePayload = {
       branch_id: branch!.id,
       title: evForm.title.trim(),
       description: evForm.description || null,
       stream_url: evForm.stream_url || null,
       scheduled_at: evForm.scheduled_at,
       is_live: evForm.is_live || false,
-      image_url: evForm.image_url || null,
-      images: allImages.length > 0 ? allImages : null,
     };
     let error;
     if (editingId) {
-      ({ error } = await supabase.from("branch_events").update(payload).eq("id", editingId));
+      ({ error } = await supabase.from("branch_events").update(basePayload).eq("id", editingId));
     } else {
-      ({ error } = await supabase.from("branch_events").insert(payload));
+      ({ error } = await supabase.from("branch_events").insert(basePayload));
+    }
+    // Try to save image_url and images separately (may fail if columns don't exist yet)
+    if (!error) {
+      const imgPayload: Record<string, unknown> = {};
+      if (evForm.image_url) imgPayload.image_url = evForm.image_url;
+      if (allImages.length > 0) imgPayload.images = allImages;
+      if (Object.keys(imgPayload).length > 0) {
+        const { data: saved } = await supabase.from("branch_events").select("id").eq("branch_id", branch!.id).order("created_at", { ascending: false }).limit(1).single();
+        if (saved) await supabase.from("branch_events").update(imgPayload).eq("id", saved.id);
+      }
     }
     if (error) {
       toast({ title: "Error saving event", description: error.message, variant: "destructive" });
