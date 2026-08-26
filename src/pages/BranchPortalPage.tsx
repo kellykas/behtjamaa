@@ -576,7 +576,7 @@ const BranchPortalPage = () => {
               <h2 className="text-xl font-semibold">Events ({branchEvents.length})</h2>
               {isBranchLeader && (                  <Dialog open={eventDialog} onOpenChange={(o) => { setEventDialog(o); if (!o) { setEditingId(null); setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" }); setEventImages([]); } }}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Event</Button></DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingId ? "Edit" : "New"} Event</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2"><Label>Title</Label><Input value={evForm.title} onChange={(e) => setEvForm({ ...evForm, title: e.target.value })} /></div>
@@ -674,7 +674,7 @@ const BranchPortalPage = () => {
               {isBranchLeader && (
                 <Dialog open={serviceDialog} onOpenChange={(o) => { setServiceDialog(o); if (!o) { setEditingId(null); setSvForm({ title: "", description: "", icon: "", bible_verse: "" }); } }}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Service</Button></DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingId ? "Edit" : "New"} Service</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2"><Label>Title</Label><Input value={svForm.title} onChange={(e) => setSvForm({ ...svForm, title: e.target.value })} /></div>
@@ -879,7 +879,7 @@ const BranchPortalPage = () => {
               {isBranchLeader && (
                 <Dialog open={storeDialog} onOpenChange={(o) => { setStoreDialog(o); if (!o) { setEditingId(null); setStForm({ name: "", description: "", price: 0, image_url: "", category: "", stock: 10 }); } }}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Item</Button></DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingId ? "Edit" : "New"} Store Item</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2"><Label>Name</Label><Input value={stForm.name} onChange={(e) => setStForm({ ...stForm, name: e.target.value })} /></div>

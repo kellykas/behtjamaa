@@ -585,7 +585,7 @@ const AdminPage = () => {
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Event</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>{editingEvId ? "Edit" : "New"} Event</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2"><Label>Title</Label><Input value={evTitle} onChange={(e) => setEvTitle(e.target.value)} required /></div>
@@ -723,7 +723,7 @@ const AdminPage = () => {
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Member</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>{editingTmId ? "Edit" : "Add"} Team Member</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2"><Label>Name</Label><Input value={tmName} onChange={(e) => setTmName(e.target.value)} required /></div>
@@ -770,7 +770,7 @@ const AdminPage = () => {
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Service</Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>{editingSvId ? "Edit" : "Add"} Service</DialogTitle></DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2"><Label>Title</Label><Input value={svTitle} onChange={(e) => setSvTitle(e.target.value)} required /></div>
