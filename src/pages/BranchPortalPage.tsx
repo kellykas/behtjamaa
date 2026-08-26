@@ -145,6 +145,7 @@ const BranchPortalPage = () => {
       supabase.from("store_items").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
       supabase.from("store_orders").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
     ]);
+    if (ev.error) console.error("Events fetch error:", ev.error.message);
     setBranchMembers(mem.data || []);
     setBranchEvents(ev.data || []);
     setBranchServices(sv.data || []);
@@ -205,10 +206,15 @@ const BranchPortalPage = () => {
   const handleEventSave = async () => {
     const allImages = evForm.image_url ? [evForm.image_url, ...eventImages.filter(img => img !== evForm.image_url)] : eventImages;
     const payload = { branch_id: branch!.id, ...evForm, images: allImages.length > 0 ? allImages : null };
+    let error;
     if (editingId) {
-      await supabase.from("branch_events").update({ ...evForm, images: allImages.length > 0 ? allImages : null }).eq("id", editingId);
+      ({ error } = await supabase.from("branch_events").update({ ...evForm, images: allImages.length > 0 ? allImages : null }).eq("id", editingId));
     } else {
-      await supabase.from("branch_events").insert(payload);
+      ({ error } = await supabase.from("branch_events").insert(payload));
+    }
+    if (error) {
+      toast({ title: "Error saving event", description: error.message, variant: "destructive" });
+      return;
     }
     setEventDialog(false);
     setEditingId(null);
