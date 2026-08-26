@@ -135,8 +135,8 @@ const LivePage = () => {
             <div className="grid gap-3 opacity-75">
               {pastEvents.map((event) => (
                 <Card key={event.id}>
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div>
+                  <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                    <div className="min-w-0">
                       <h3 className="font-semibold">{event.title}</h3>
                       {event.description && <p className="text-muted-foreground text-sm">{event.description}</p>}
                     </div>

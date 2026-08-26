@@ -460,7 +460,7 @@ const BranchPortalPage = () => {
                   <CardHeader><CardTitle className="text-lg">Upcoming Events</CardTitle></CardHeader>
                   <CardContent className="space-y-3">
                     {branchEvents.slice(0, 3).map((ev) => (
-                      <div key={ev.id} className="flex items-center justify-between border-b last:border-0 pb-3 last:pb-0">
+                      <div key={ev.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b last:border-0 pb-3 last:pb-0">
                         <div>
                           <p className="font-medium">{ev.title}</p>
                           <p className="text-xs text-muted-foreground">{format(new Date(ev.scheduled_at), "PPP 'at' p")}</p>
@@ -486,8 +486,8 @@ const BranchPortalPage = () => {
                   <div className="grid gap-3">
                     {branchMembers.map((m: any) => (
                       <Card key={m.id}>
-                        <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
+                        <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                      <div className="flex items-center gap-3 min-w-0">
                         {m.profiles?.avatar_url ? (
                           <img src={m.profiles.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
                         ) : (
@@ -569,7 +569,7 @@ const BranchPortalPage = () => {
 
           {/* ── Events ───────────────────────────────────── */}
           <TabsContent value="events">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Events ({branchEvents.length})</h2>
               {isBranchLeader && (                  <Dialog open={eventDialog} onOpenChange={(o) => { setEventDialog(o); if (!o) { setEditingId(null); setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" }); } }}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Event</Button></DialogTrigger>
@@ -610,8 +610,8 @@ const BranchPortalPage = () => {
               <div className="grid gap-3">
                 {branchEvents.map((ev) => (
                   <Card key={ev.id}>
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex gap-3">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                      <div className="flex gap-3 min-w-0">
                         {ev.image_url && <img src={ev.image_url} alt="" className="w-16 h-16 rounded-md object-cover shrink-0" />}
                         <div>
                           <div className="flex items-center gap-2">
@@ -637,7 +637,7 @@ const BranchPortalPage = () => {
 
           {/* ── Services ─────────────────────────────────── */}
           <TabsContent value="services">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Branch Services ({branchServices.length})</h2>
               {isBranchLeader && (
                 <Dialog open={serviceDialog} onOpenChange={(o) => { setServiceDialog(o); if (!o) { setEditingId(null); setSvForm({ title: "", description: "", icon: "", bible_verse: "" }); } }}>
@@ -661,8 +661,8 @@ const BranchPortalPage = () => {
               <div className="grid gap-3">
                 {branchServices.map((sv) => (
                   <Card key={sv.id}>
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div>
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                      <div className="min-w-0">
                         <h3 className="font-semibold">{sv.title}</h3>
                         {sv.description && <p className="text-sm text-muted-foreground line-clamp-1">{sv.description}</p>}
                         {sv.bible_verse && <p className="text-xs text-primary italic mt-1">{sv.bible_verse}</p>}
@@ -682,7 +682,7 @@ const BranchPortalPage = () => {
 
           {/* ── Podcasts ─────────────────────────────────── */}
           <TabsContent value="podcasts">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Podcast Episodes ({branchEpisodes.length})</h2>
               {isBranchLeader && (
                 <Dialog open={episodeDialog} onOpenChange={(o) => { setEpisodeDialog(o); if (!o) { setEditingId(null); setEpForm({ title: "", description: "", audio_url: "", thumbnail_url: "", category: "sermon", published: false }); } }}>
@@ -739,7 +739,7 @@ const BranchPortalPage = () => {
             {isBranchLeader ? (
               /* Leader view: see all donations */
               <>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
                   <h2 className="text-xl font-semibold">Donations (${totalDonations.toLocaleString()} total)</h2>
                 </div>
                 {branchDonations.length === 0 ? (
@@ -748,13 +748,13 @@ const BranchPortalPage = () => {
                   <div className="grid gap-3">
                     {branchDonations.map((d) => (
                       <Card key={d.id}>
-                        <CardContent className="flex items-center justify-between p-4">
-                          <div>
+                        <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                          <div className="min-w-0">
                             <p className="font-semibold">{d.donor_name || "Anonymous"}</p>
                             <p className="text-sm text-muted-foreground">{d.donor_email || "No email"} - {d.frequency || "one-time"}</p>
                             <p className="text-xs text-muted-foreground">{format(new Date(d.created_at), "PP")}</p>
                           </div>
-                          <div className="text-right">
+                          <div className="sm:text-right">
                             <p className="text-lg font-bold text-green-600">${d.amount.toLocaleString()}</p>
                             <Badge variant={d.status === "completed" ? "default" : "secondary"}>{d.status || "pending"}</Badge>
                           </div>
@@ -842,7 +842,7 @@ const BranchPortalPage = () => {
 
           {/* ── Store ────────────────────────────────────── */}
           <TabsContent value="store">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Online Store ({storeItems.length} items)</h2>
               {isBranchLeader && (
                 <Dialog open={storeDialog} onOpenChange={(o) => { setStoreDialog(o); if (!o) { setEditingId(null); setStForm({ name: "", description: "", price: 0, image_url: "", category: "", stock: 10 }); } }}>
@@ -897,8 +897,8 @@ const BranchPortalPage = () => {
                 <div className="grid gap-3">
                   {storeOrders.map((order) => (
                     <Card key={order.id}>
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div>
+                      <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                        <div className="min-w-0">
                           <p className="font-semibold">{order.customer_name || "Guest"}</p>
                           <p className="text-sm text-muted-foreground">{order.customer_email || "No email"}</p>
                           <p className="text-xs text-muted-foreground">{format(new Date(order.created_at), "PP")}</p>
@@ -926,9 +926,8 @@ const BranchPortalPage = () => {
                 ) : (
                   <div className="grid gap-3">
                     {branchPrayers.map((pr) => (
-                      <Card key={pr.id}>
-                        <CardContent className="flex items-center justify-between p-4">
-                          <div>
+                      <Card key={pr.id}>                          <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                          <div className="min-w-0">
                             <p className="font-semibold">{pr.is_anonymous ? "Anonymous" : pr.name}</p>
                             <p className="text-sm text-muted-foreground line-clamp-2">{pr.request}</p>
                             <p className="text-xs text-muted-foreground mt-1">{format(new Date(pr.created_at), "PP")} - {pr.prayed_count || 0} prayers</p>

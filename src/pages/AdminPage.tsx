@@ -525,7 +525,7 @@ const AdminPage = () => {
               <div className="grid gap-3">
                 {filtered.map((ep) => (
                   <Card key={ep.id}>
-                    <CardContent className="flex items-center justify-between p-4">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{ep.title}</h3>
@@ -554,7 +554,7 @@ const AdminPage = () => {
               <div className="grid gap-3">
                 {prayers.map((pr) => (
                   <Card key={pr.id}>
-                    <CardContent className="flex items-center justify-between p-4">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div>
                         <p className="font-semibold">{pr.is_anonymous ? "Anonymous" : pr.name}</p>
                         <p className="text-sm text-muted-foreground line-clamp-1">{pr.request}</p>
@@ -579,7 +579,7 @@ const AdminPage = () => {
           </TabsContent>
 
           <TabsContent value="events">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Live Events</h2>
               <Dialog open={evDialogOpen} onOpenChange={(o) => { setEvDialogOpen(o); if (!o) resetEvForm(); }}>
                 <DialogTrigger asChild>
@@ -604,7 +604,7 @@ const AdminPage = () => {
               <div className="grid gap-3">
                 {events.map((ev) => (
                   <Card key={ev.id}>
-                    <CardContent className="flex items-center justify-between p-4">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div>
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{ev.title}</h3>
@@ -631,7 +631,7 @@ const AdminPage = () => {
               <div className="grid gap-3">
                 {profiles.map((p) => (
                   <Card key={p.id}>
-                    <CardContent className="flex items-center justify-between gap-4 p-4">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
                           {p.display_name ? p.display_name[0].toUpperCase() : "?"}
@@ -717,7 +717,7 @@ const AdminPage = () => {
           </TabsContent>
 
           <TabsContent value="team">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Team Members ({teamMembers.length})</h2>
               <Dialog open={tmDialogOpen} onOpenChange={(o) => { setTmDialogOpen(o); if (!o) resetTmForm(); }}>
                 <DialogTrigger asChild>
@@ -741,7 +741,7 @@ const AdminPage = () => {
               <div className="grid gap-3">
                 {teamMembers.map((tm) => (
                   <Card key={tm.id}>
-                    <CardContent className="flex items-center justify-between p-4">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold shrink-0">
                           {tm.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
@@ -764,7 +764,7 @@ const AdminPage = () => {
           </TabsContent>
 
           <TabsContent value="services">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Ministry Services ({services.length})</h2>
               <Dialog open={svDialogOpen} onOpenChange={(o) => { setSvDialogOpen(o); if (!o) resetSvForm(); }}>
                 <DialogTrigger asChild>
@@ -788,7 +788,7 @@ const AdminPage = () => {
               <div className="grid gap-3">
                 {services.map((sv) => (
                   <Card key={sv.id}>
-                    <CardContent className="flex items-center justify-between p-4">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div>
                         <h3 className="font-semibold">{sv.title}</h3>
                         {sv.description && <p className="text-sm text-muted-foreground line-clamp-1">{sv.description}</p>}
@@ -806,7 +806,7 @@ const AdminPage = () => {
           </TabsContent>
 
           <TabsContent value="branches">
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Ministry Branches ({branchesList.length})</h2>
               <Dialog open={branchDialogOpen} onOpenChange={(o) => { setBranchDialogOpen(o); if (!o) resetBrForm(); }}>
                 <DialogTrigger asChild>
@@ -875,7 +875,7 @@ const AdminPage = () => {
               <div className="grid gap-3">
                 {branchesList.map((br) => (
                   <Card key={br.id}>
-                    <CardContent className="flex items-center justify-between p-4">
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                           <Building2 className="h-6 w-6 text-green-600" />
