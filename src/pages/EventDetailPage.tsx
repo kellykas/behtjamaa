@@ -174,7 +174,9 @@ const EventDetailPage = () => {
         {/* Event Header - Title, Date, Location */}
         <div className="mb-6">
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            {event.is_live && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
+            {event.event_status === "live" && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
+            {event.event_status === "cancelled" && <Badge className="bg-orange-100 text-orange-800 border-transparent">CANCELLED</Badge>}
+            {event.event_status === "past" && <Badge className="bg-gray-100 text-gray-800 border-transparent">PAST EVENT</Badge>}
             <Badge variant="secondary" className="text-xs">
               <Clock className="h-3 w-3 mr-1" />
               {format(new Date(event.scheduled_at), "EEE, MMM d, yyyy 'at' h:mm a")}

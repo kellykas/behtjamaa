@@ -85,7 +85,7 @@ const BranchPortalPage = () => {
   const [storeDialog, setStoreDialog] = useState(false);
 
   // Leader forms
-  const [evForm, setEvForm] = useState({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" });
+  const [evForm, setEvForm] = useState({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "", event_status: "upcoming" });
   const [eventImages, setEventImages] = useState<string[]>([]);
   const [svForm, setSvForm] = useState({ title: "", description: "", icon: "", bible_verse: "" });
   const [epForm, setEpForm] = useState({ title: "", description: "", audio_url: "", thumbnail_url: "", category: "sermon", published: false });
@@ -221,6 +221,7 @@ const BranchPortalPage = () => {
       stream_url: evForm.stream_url || null,
       scheduled_at: evForm.scheduled_at,
       is_live: evForm.is_live || false,
+      event_status: evForm.event_status || "upcoming",
     };
     let error;
     if (editingId) {
@@ -244,7 +245,7 @@ const BranchPortalPage = () => {
     }
     setEventDialog(false);
     setEditingId(null);
-    setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" });
+    setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "", event_status: "upcoming" });
     setEventImages([]);
     fetchBranchData();
     toast({ title: editingId ? "Event updated" : "Event created" });
@@ -500,7 +501,9 @@ const BranchPortalPage = () => {
                           <p className="font-medium">{ev.title}</p>
                           <p className="text-xs text-muted-foreground">{format(new Date(ev.scheduled_at), "PPP 'at' p")}</p>
                         </div>
-                        {ev.is_live && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
+                        {ev.event_status === "live" && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
+                        {ev.event_status === "cancelled" && <Badge className="bg-orange-100 text-orange-800 border-transparent">CANCELLED</Badge>}
+                        {ev.event_status === "past" && <Badge className="bg-gray-100 text-gray-800 border-transparent">PAST</Badge>}
                       </div>
                     ))}
                   </CardContent>
@@ -606,7 +609,7 @@ const BranchPortalPage = () => {
           <TabsContent value="events">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Events ({branchEvents.length})</h2>
-              {isBranchLeader && (                  <Dialog open={eventDialog} onOpenChange={(o) => { setEventDialog(o); if (!o) { setEditingId(null); setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" }); setEventImages([]); } }}>
+              {isBranchLeader && (                  <Dialog open={eventDialog} onOpenChange={(o) => { setEventDialog(o); if (!o) { setEditingId(null); setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "", event_status: "upcoming" }); setEventImages([]); } }}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Event</Button></DialogTrigger>
                   <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingId ? "Edit" : "New"} Event</DialogTitle></DialogHeader>
@@ -659,6 +662,14 @@ const BranchPortalPage = () => {
                       <div className="space-y-2"><Label>YouTube URL (Optional)</Label><Input value={evForm.stream_url || ""} onChange={(e) => setEvForm({ ...evForm, stream_url: e.target.value })} placeholder="YouTube URL for live stream" /></div>
                       <div className="space-y-2"><Label>Scheduled At *</Label><Input type="datetime-local" required value={evForm.scheduled_at ? evForm.scheduled_at.slice(0, 16) : ""} onChange={(e) => setEvForm({ ...evForm, scheduled_at: new Date(e.target.value).toISOString() })} /></div>
                       <div className="flex items-center gap-2"><Switch checked={evForm.is_live || false} onCheckedChange={(v) => setEvForm({ ...evForm, is_live: v })} /><Label>Currently Live</Label></div>
+                      <div className="space-y-2">
+                        <Label>Event Status</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[{ value: "upcoming", label: "Upcoming", color: "bg-blue-100 text-blue-800" }, { value: "live", label: "Live Now", color: "bg-red-100 text-red-800" }, { value: "past", label: "Past", color: "bg-gray-100 text-gray-800" }, { value: "cancelled", label: "Cancelled", color: "bg-orange-100 text-orange-800" }].map((s) => (
+                            <button key={s.value} type="button" onClick={() => setEvForm({ ...evForm, event_status: s.value })} className={`px-3 py-2 rounded-md text-sm font-medium border transition-all ${evForm.event_status === s.value ? `${s.color} border-current` : "border-border text-muted-foreground hover:bg-muted"}`}>{s.label}</button>
+                          ))}
+                        </div>
+                      </div>
                       <Button onClick={handleEventSave} className="w-full">{editingId ? "Update" : "Create"}</Button>
                       {(evForm.image_url || eventImages.length > 0) && <Button variant="ghost" size="sm" className="w-full text-destructive" onClick={() => { setEvForm({ ...evForm, image_url: "" }); setEventImages([]); }}>Remove All Images</Button>}
                     </div>
@@ -679,7 +690,10 @@ const BranchPortalPage = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{ev.title}</h3>
-                            {ev.is_live && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
+                            {ev.event_status === "live" && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
+                            {ev.event_status === "cancelled" && <Badge className="bg-orange-100 text-orange-800 border-transparent">CANCELLED</Badge>}
+                            {ev.event_status === "past" && <Badge className="bg-gray-100 text-gray-800 border-transparent">PAST</Badge>}
+                            {(!ev.event_status || ev.event_status === "upcoming") && <Badge className="bg-blue-100 text-blue-800 border-transparent">UPCOMING</Badge>}
                           </div>
                           <p className="text-sm text-muted-foreground">{format(new Date(ev.scheduled_at), "PPP 'at' p")}</p>
                           {ev.description && <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{ev.description}</p>}
@@ -688,7 +702,7 @@ const BranchPortalPage = () => {
                       </div>
                       {isBranchLeader && (
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setEditingId(ev.id); setEvForm({ title: ev.title, description: ev.description || "", stream_url: ev.stream_url || "", scheduled_at: ev.scheduled_at, is_live: ev.is_live || false, image_url: ev.image_url || "" }); setEventImages((ev.images as string[]) || []); setEventDialog(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="outline" onClick={() => { setEditingId(ev.id); setEvForm({ title: ev.title, description: ev.description || "", stream_url: ev.stream_url || "", scheduled_at: ev.scheduled_at, is_live: ev.is_live || false, image_url: ev.image_url || "", event_status: ev.event_status || "upcoming" }); setEventImages((ev.images as string[]) || []); setEventDialog(true); }}><Edit className="h-4 w-4" /></Button>
                           <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete("branch_events", ev.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       )}
