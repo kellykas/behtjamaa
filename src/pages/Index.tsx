@@ -1,7 +1,8 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -217,6 +218,107 @@ const ServicesPreview = () => (
     </div>
   </section>
 );
+
+/* ─── Branches Preview ─────────────────────────────────────── */
+const BranchesPreview = () => {
+  const [branches, setBranches] = useState<Tables<"branches">[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("branches")
+      .select("*")
+      .eq("active", true)
+      .order("name")
+      .limit(6)
+      .then(({ data }) => {
+        setBranches(data || []);
+        setLoading(false);
+      });
+  }, []);
+
+  if (!loading && branches.length === 0) return null;
+
+  return (
+    <section className="py-20 px-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-14">
+          <Badge className="mb-3">Our Branches</Badge>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">BEHT JAMAA Worldwide</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Find a branch near you and join a community of young people transforming lives for Jesus Christ.
+          </p>
+        </div>
+        {loading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <Skeleton className="h-32 w-full" />
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {branches.map((branch) => (
+            <Link key={branch.id} to={`/branches/${branch.slug}`}>
+              <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full">
+                {branch.banner_url && (
+                  <div className="h-32 overflow-hidden">
+                    <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                )}
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-3">
+                    {branch.logo_url ? (
+                      <img src={branch.logo_url} alt="" className="w-10 h-10 rounded-full object-cover border" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
+                        <Building2 className="h-5 w-5 text-primary-foreground" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="font-bold truncate">{branch.name}</h3>
+                      {branch.location && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {branch.location}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {branch.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{branch.description}</p>}
+                  <span className="text-sm font-medium text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                    View Portal <ExternalLink className="h-3.5 w-3.5" />
+                  </span>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+        )}
+        {!loading && branches.length > 0 && (
+        <div className="text-center">
+          <Link to="/branches">
+            <Button variant="outline" size="lg" className="gap-2">
+              View All Branches <ExternalLink className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+        )}
+      </div>
+    </section>
+  );
+};
 
 /* ─── Daily Scripture ─────────────────────────────────────────── */
 const DailyScripture = () => {
@@ -449,6 +551,7 @@ const Index = () => (
     <Navbar />
     <HeroSection />
     <BeliefSection />
+    <BranchesPreview />
     <DailyScripture />
     <ServicesPreview />
     <FeaturedEpisodes />

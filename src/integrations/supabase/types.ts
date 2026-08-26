@@ -14,6 +14,436 @@ export type Database = {
   }
   public: {
     Tables: {
+      branches: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          location: string | null
+          description: string | null
+          leader_name: string | null
+          leader_user_id: string | null
+          leader_email: string | null
+          phone: string | null
+          logo_url: string | null
+          banner_url: string | null
+          active: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          location?: string | null
+          description?: string | null
+          leader_name?: string | null
+          leader_user_id?: string | null
+          leader_email?: string | null
+          phone?: string | null
+          logo_url?: string | null
+          banner_url?: string | null
+          active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          location?: string | null
+          description?: string | null
+          leader_name?: string | null
+          leader_user_id?: string | null
+          leader_email?: string | null
+          phone?: string | null
+          logo_url?: string | null
+          banner_url?: string | null
+          active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      branch_members: {
+        Row: {
+          id: string
+          branch_id: string
+          user_id: string
+          role: string
+          joined_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          user_id: string
+          role?: string
+          joined_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          user_id?: string
+          role?: string
+          joined_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_members_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      branch_events: {
+        Row: {
+          id: string
+          branch_id: string
+          title: string
+          description: string | null
+          scheduled_at: string
+          stream_url: string | null
+          location: string | null
+          is_live: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          title: string
+          description?: string | null
+          scheduled_at: string
+          stream_url?: string | null
+          location?: string | null
+          is_live?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          title?: string
+          description?: string | null
+          scheduled_at?: string
+          stream_url?: string | null
+          location?: string | null
+          is_live?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_events_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      branch_services: {
+        Row: {
+          id: string
+          branch_id: string
+          title: string
+          description: string | null
+          icon: string | null
+          bible_verse: string | null
+          active: boolean | null
+          sort_order: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          title: string
+          description?: string | null
+          icon?: string | null
+          bible_verse?: string | null
+          active?: boolean | null
+          sort_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          title?: string
+          description?: string | null
+          icon?: string | null
+          bible_verse?: string | null
+          active?: boolean | null
+          sort_order?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_services_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      branch_episodes: {
+        Row: {
+          id: string
+          branch_id: string
+          title: string
+          description: string | null
+          audio_url: string | null
+          thumbnail_url: string | null
+          category: string | null
+          duration: string | null
+          published: boolean | null
+          featured: boolean | null
+          published_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          title: string
+          description?: string | null
+          audio_url?: string | null
+          thumbnail_url?: string | null
+          category?: string | null
+          duration?: string | null
+          published?: boolean | null
+          featured?: boolean | null
+          published_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          title?: string
+          description?: string | null
+          audio_url?: string | null
+          thumbnail_url?: string | null
+          category?: string | null
+          duration?: string | null
+          published?: boolean | null
+          featured?: boolean | null
+          published_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_episodes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      branch_donations: {
+        Row: {
+          id: string
+          branch_id: string
+          user_id: string | null
+          donor_name: string | null
+          donor_email: string | null
+          amount: number
+          currency: string | null
+          frequency: string | null
+          message: string | null
+          status: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          user_id?: string | null
+          donor_name?: string | null
+          donor_email?: string | null
+          amount: number
+          currency?: string | null
+          frequency?: string | null
+          message?: string | null
+          status?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          user_id?: string | null
+          donor_name?: string | null
+          donor_email?: string | null
+          amount?: number
+          currency?: string | null
+          frequency?: string | null
+          message?: string | null
+          status?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_donations_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      branch_prayers: {
+        Row: {
+          id: string
+          branch_id: string
+          user_id: string | null
+          name: string
+          request: string
+          is_anonymous: boolean | null
+          status: string | null
+          prayed_count: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          user_id?: string | null
+          name: string
+          request: string
+          is_anonymous?: boolean | null
+          status?: string | null
+          prayed_count?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          user_id?: string | null
+          name?: string
+          request?: string
+          is_anonymous?: boolean | null
+          status?: string | null
+          prayed_count?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_prayers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      store_items: {
+        Row: {
+          id: string
+          branch_id: string
+          name: string
+          description: string | null
+          price: number
+          image_url: string | null
+          category: string | null
+          active: boolean | null
+          stock: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          name: string
+          description?: string | null
+          price: number
+          image_url?: string | null
+          category?: string | null
+          active?: boolean | null
+          stock?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          name?: string
+          description?: string | null
+          price?: number
+          image_url?: string | null
+          category?: string | null
+          active?: boolean | null
+          stock?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_items_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      store_orders: {
+        Row: {
+          id: string
+          branch_id: string
+          user_id: string | null
+          customer_name: string | null
+          customer_email: string | null
+          items: Json
+          total: number
+          status: string | null
+          shipping_address: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          user_id?: string | null
+          customer_name?: string | null
+          customer_email?: string | null
+          items?: Json
+          total: number
+          status?: string | null
+          shipping_address?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          user_id?: string | null
+          customer_name?: string | null
+          customer_email?: string | null
+          items?: Json
+          total?: number
+          status?: string | null
+          shipping_address?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       episodes: {
         Row: {
           audio_url: string | null
@@ -176,6 +606,105 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          section: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          section?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          section?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          active: boolean | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          id: string
+          name: string
+          role: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          role: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          role?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          active: boolean | null
+          bible_verse: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          sort_order: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          bible_verse?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          bible_verse?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -184,6 +713,13 @@ export type Database = {
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_branch_leader: {
+        Args: {
+          _branch_id: string
           _user_id: string
         }
         Returns: boolean
@@ -223,8 +759,7 @@ export type Tables<
     : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
         DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+    ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R

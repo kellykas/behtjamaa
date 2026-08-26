@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -46,6 +46,22 @@ const AdminPage = () => {
   const [svDesc, setSvDesc] = useState("");
   const [svIcon, setSvIcon] = useState("");
   const [svVerse, setSvVerse] = useState("");
+
+  // Branch management
+  const [branchesList, setBranchesList] = useState<Tables<"branches">[]>([]);
+  const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const [editingBranchId, setEditingBranchId] = useState<string | null>(null);
+  const [brName, setBrName] = useState("");
+  const [brSlug, setBrSlug] = useState("");
+  const [brLocation, setBrLocation] = useState("");
+  const [brDesc, setBrDesc] = useState("");
+  const [brLeader, setBrLeader] = useState("");
+  const [brEmail, setBrEmail] = useState("");
+  const [brPhone, setBrPhone] = useState("");
+  const [brLogo, setBrLogo] = useState("");
+  const [brBanner, setBrBanner] = useState("");
+  const [brActive, setBrActive] = useState(true);
+  const [brLeaderUserId, setBrLeaderUserId] = useState<string>("");
 
   // Episode form
   const [epTitle, setEpTitle] = useState("");
@@ -90,6 +106,9 @@ const AdminPage = () => {
     }
     setTeamMembers(tm.data || []);
     setServicesList(sv.data || []);
+
+    const { data: br } = await supabase.from("branches").select("*").order("created_at", { ascending: false });
+    setBranchesList(br || []);
 
     const { data: roles } = await supabase.from("user_roles").select("*");
     if (roles) {
@@ -153,6 +172,7 @@ const AdminPage = () => {
 
   const resetTmForm = () => { setTmName(""); setTmRole(""); setTmBio(""); setTmAvatar(""); setEditingTmId(null); };
   const resetSvForm = () => { setSvTitle(""); setSvDesc(""); setSvIcon(""); setSvVerse(""); setEditingSvId(null); };
+  const resetBrForm = () => { setBrName(""); setBrSlug(""); setBrLocation(""); setBrDesc(""); setBrLeader(""); setBrEmail(""); setBrPhone(""); setBrLogo(""); setBrBanner(""); setBrActive(true); setBrLeaderUserId(""); setEditingBranchId(null); };
 
   const handleSaveSetting = async (key: string, value: string) => {
     await supabase.from("site_settings").upsert({ key, value }, { onConflict: "key" });
@@ -320,6 +340,46 @@ const AdminPage = () => {
     toast({ title: "Event deleted" });
   };
 
+  const handleSaveBranch = async () => {
+    if (!brName.trim()) {
+      toast({ title: "Name is required", variant: "destructive" });
+      return;
+    }
+    const slug = brSlug || brName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const payload = { name: brName.trim(), slug, location: brLocation || null, description: brDesc || null, leader_name: brLeader || null, leader_user_id: brLeaderUserId || null, leader_email: brEmail || null, phone: brPhone || null, logo_url: brLogo || null, banner_url: brBanner || null, active: brActive };
+    if (editingBranchId) {
+      await supabase.from("branches").update(payload).eq("id", editingBranchId);
+    } else {
+      await supabase.from("branches").insert(payload);
+    }
+    setBranchDialogOpen(false);
+    resetBrForm();
+    fetchAll();
+    toast({ title: editingBranchId ? "Branch updated" : "Branch created" });
+  };
+
+  const handleDeleteBranch = async (id: string) => {
+    await supabase.from("branches").delete().eq("id", id);
+    fetchAll();
+    toast({ title: "Branch deleted" });
+  };
+
+  const handleEditBranch = (br: Tables<"branches">) => {
+    setEditingBranchId(br.id);
+    setBrName(br.name);
+    setBrSlug(br.slug);
+    setBrLocation(br.location || "");
+    setBrDesc(br.description || "");
+    setBrLeader(br.leader_name || "");
+    setBrLeaderUserId(br.leader_user_id || "");
+    setBrEmail(br.leader_email || "");
+    setBrPhone(br.phone || "");
+    setBrLogo(br.logo_url || "");
+    setBrBanner(br.banner_url || "");
+    setBrActive(br.active !== false);
+    setBranchDialogOpen(true);
+  };
+
   const handleEditEvent = (ev: Tables<"live_events">) => {
     setEditingEvId(ev.id);
     setEvTitle(ev.title);
@@ -387,7 +447,7 @@ const AdminPage = () => {
         </div>
 
         <Tabs defaultValue="episodes">
-          <TabsList className="mb-4">
+          <TabsList className="mb-4 flex-wrap h-auto gap-1">
             <TabsTrigger value="episodes"><Music className="h-4 w-4 mr-2" />Episodes</TabsTrigger>
             <TabsTrigger value="prayers"><Heart className="h-4 w-4 mr-2" />Prayers</TabsTrigger>
             <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-2" />Events</TabsTrigger>
@@ -395,6 +455,7 @@ const AdminPage = () => {
             <TabsTrigger value="content"><Edit className="h-4 w-4 mr-2" />Content</TabsTrigger>
             <TabsTrigger value="team"><Users className="h-4 w-4 mr-2" />Team</TabsTrigger>
             <TabsTrigger value="services"><Sparkles className="h-4 w-4 mr-2" />Services</TabsTrigger>
+            <TabsTrigger value="branches"><Building2 className="h-4 w-4 mr-2" />Branches</TabsTrigger>
           </TabsList>
 
           <TabsContent value="episodes">
@@ -734,6 +795,74 @@ const AdminPage = () => {
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => handleEditService(sv)}><Edit className="h-4 w-4" /></Button>
                         <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteService(sv.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="branches">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Ministry Branches ({branchesList.length})</h2>
+              <Dialog open={branchDialogOpen} onOpenChange={(o) => { setBranchDialogOpen(o); if (!o) resetBrForm(); }}>
+                <DialogTrigger asChild>
+                  <Button><Plus className="h-4 w-4 mr-2" /> Add Branch</Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                  <DialogHeader><DialogTitle>{editingBranchId ? "Edit" : "New"} Branch</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2"><Label>Name</Label><Input value={brName} onChange={(e) => setBrName(e.target.value)} required /></div>
+                    <div className="space-y-2"><Label>Slug</Label><Input value={brSlug} onChange={(e) => setBrSlug(e.target.value)} placeholder="auto-generated from name" /></div>
+                    <div className="space-y-2"><Label>Location</Label><Input value={brLocation} onChange={(e) => setBrLocation(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Description</Label><Textarea value={brDesc} onChange={(e) => setBrDesc(e.target.value)} rows={3} /></div>
+                    <div className="space-y-2"><Label>Leader Name</Label><Input value={brLeader} onChange={(e) => setBrLeader(e.target.value)} /></div>
+                    <div className="space-y-2">
+                      <Label>Leader User (Portal Access)</Label>
+                      <Select value={brLeaderUserId || "none"} onValueChange={(v) => setBrLeaderUserId(v === "none" ? "" : v)}>
+                        <SelectTrigger><SelectValue placeholder="Select a user" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {profiles.map((p) => (
+                            <SelectItem key={p.user_id} value={p.user_id}>{p.display_name || p.user_id.slice(0, 8)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Assigns this user branch portal editing access.</p>
+                    </div>
+                    <div className="space-y-2"><Label>Leader Email</Label><Input value={brEmail} onChange={(e) => setBrEmail(e.target.value)} type="email" /></div>
+                    <div className="space-y-2"><Label>Phone</Label><Input value={brPhone} onChange={(e) => setBrPhone(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Logo URL</Label><Input value={brLogo} onChange={(e) => setBrLogo(e.target.value)} placeholder="https://..." /></div>
+                    <div className="space-y-2"><Label>Banner URL</Label><Input value={brBanner} onChange={(e) => setBrBanner(e.target.value)} placeholder="https://..." /></div>
+                    <div className="flex items-center gap-2"><Switch checked={brActive} onCheckedChange={setBrActive} /><Label>Active</Label></div>
+                    <Button onClick={handleSaveBranch} className="w-full">{editingBranchId ? "Update" : "Create"} Branch</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            {branchesList.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">No branches yet. Add your first branch!</CardContent></Card>
+            ) : (
+              <div className="grid gap-3">
+                {branchesList.map((br) => (
+                  <Card key={br.id}>
+                    <CardContent className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                          <Building2 className="h-6 w-6 text-green-600" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{br.name}</h3>
+                            {!br.active && <Badge variant="secondary">Inactive</Badge>}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{br.location || "No location"} - {br.leader_name || "No leader"}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEditBranch(br)}><Edit className="h-4 w-4" /></Button>
+                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteBranch(br.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </CardContent>
                   </Card>
