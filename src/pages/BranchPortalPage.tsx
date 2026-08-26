@@ -104,6 +104,8 @@ const BranchPortalPage = () => {
 
   const [memberForm, setMemberForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [memberSubmitted, setMemberSubmitted] = useState(false);
+  const [approvingRequest, setApprovingRequest] = useState<string | null>(null);
+  const [tempPassword, setTempPassword] = useState("");
 
   useEffect(() => {
     if (slug) fetchBranch();
@@ -531,23 +533,60 @@ const BranchPortalPage = () => {
                               {req.message && <p className="text-sm text-muted-foreground italic mt-1">"{req.message}"</p>}
                               <p className="text-xs text-muted-foreground mt-1">Requested {format(new Date(req.created_at), "PP")}</p>
                             </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" className="text-green-600" onClick={async () => {
-                                // Add to branch_members
-                                await supabase.from("branch_members").insert({
-                                  branch_id: branch!.id,
-                                  role: "member",
-                                });
-                                // Mark request as approved
-                                await supabase.from("membership_requests").update({ status: "approved" }).eq("id", req.id);
-                                fetchBranchData();
-                                toast({ title: "Member approved" });
-                              }}>Approve</Button>
-                              <Button size="sm" variant="outline" className="text-destructive" onClick={async () => {
-                                await supabase.from("membership_requests").update({ status: "rejected" }).eq("id", req.id);
-                                fetchBranchData();
-                                toast({ title: "Request rejected" });
-                              }}>Reject</Button>
+                            <div className="flex flex-col gap-2">
+                              {approvingRequest === req.id ? (
+                                <div className="flex flex-col gap-2 p-3 bg-white rounded-md border">
+                                  <Label className="text-sm">Set Login Password for {req.full_name}</Label>
+                                  <Input
+                                    type="password"
+                                    placeholder="Min 6 characters"
+                                    value={tempPassword}
+                                    onChange={(e) => setTempPassword(e.target.value)}
+                                    minLength={6}
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={async () => {
+                                      if (tempPassword.length < 6) {
+                                        toast({ title: "Password too short", description: "Minimum 6 characters", variant: "destructive" });
+                                        return;
+                                      }
+                                      // Create login credential
+                                      await supabase.from("member_login_credentials").insert({
+                                        branch_id: branch!.id,
+                                        membership_request_id: req.id,
+                                        email: req.email,
+                                        full_name: req.full_name,
+                                        temp_password: tempPassword,
+                                      });
+                                      // Add to branch_members with login flag
+                                      await supabase.from("branch_members").insert({
+                                        branch_id: branch!.id,
+                                        role: "member",
+                                        has_login: true,
+                                      });
+                                      // Mark request as approved with password
+                                      await supabase.from("membership_requests").update({ status: "approved", temp_password: tempPassword }).eq("id", req.id);
+                                      setApprovingRequest(null);
+                                      setTempPassword("");
+                                      fetchBranchData();
+                                      toast({ title: "Member approved with login", description: `${req.full_name} can now log in with email: ${req.email}` });
+                                    }}>Create Login</Button>
+                                    <Button size="sm" variant="outline" onClick={() => { setApprovingRequest(null); setTempPassword(""); }}>Cancel</Button>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">Share this password with the member securely.</p>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2">
+                                  <Button size="sm" variant="outline" className="text-green-600" onClick={() => { setApprovingRequest(req.id); setTempPassword(""); }}>
+                                    Approve & Create Login
+                                  </Button>
+                                  <Button size="sm" variant="outline" className="text-destructive" onClick={async () => {
+                                    await supabase.from("membership_requests").update({ status: "rejected" }).eq("id", req.id);
+                                    fetchBranchData();
+                                    toast({ title: "Request rejected" });
+                                  }}>Reject</Button>
+                                </div>
+                              )}
                             </div>
                           </CardContent>
                         </Card>

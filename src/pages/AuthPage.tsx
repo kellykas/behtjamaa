@@ -37,7 +37,7 @@ const AuthPage = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -49,7 +49,29 @@ const AuthPage = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Check your email", description: "We sent you a confirmation link." });
+      // Check if this email has an approved membership request and auto-add to branch
+      if (data.user) {
+        const { data: requests } = await supabase
+          .from("membership_requests")
+          .select("*, branches!inner(id)")
+          .eq("email", email)
+          .eq("status", "approved");
+        if (requests && requests.length > 0) {
+          for (const req of requests) {
+            // Add to branch_members
+            await supabase.from("branch_members").insert({
+              branch_id: req.branch_id,
+              user_id: data.user.id,
+              role: "member",
+              has_login: true,
+            });
+          }
+          toast({ title: "Welcome!", description: "Your account has been linked to your branch membership." });
+        } else {
+          toast({ title: "Check your email", description: "We sent you a confirmation link." });
+        }
+        navigate(returnTo, { replace: true });
+      }
     }
   };
 

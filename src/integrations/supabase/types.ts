@@ -106,6 +106,7 @@ export type Database = {
           phone: string | null
           message: string | null
           status: string | null
+          temp_password: string | null
           created_at: string
         }
         Insert: {
@@ -116,6 +117,7 @@ export type Database = {
           phone?: string | null
           message?: string | null
           status?: string | null
+          temp_password?: string | null
           created_at?: string
         }
         Update: {
@@ -126,11 +128,56 @@ export type Database = {
           phone?: string | null
           message?: string | null
           status?: string | null
+          temp_password?: string | null
           created_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "membership_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      member_login_credentials: {
+        Row: {
+          id: string
+          branch_id: string
+          membership_request_id: string | null
+          email: string
+          full_name: string
+          temp_password: string
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          branch_id: string
+          membership_request_id?: string | null
+          email: string
+          full_name: string
+          temp_password: string
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          branch_id?: string
+          membership_request_id?: string | null
+          email?: string
+          full_name?: string
+          temp_password?: string
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_login_credentials_branch_id_fkey"
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
