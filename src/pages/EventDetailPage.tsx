@@ -21,6 +21,7 @@ import {
   ChevronRight,
   X,
   Phone,
+  Calendar,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -238,10 +239,25 @@ const EventDetailPage = () => {
                 </CardContent>
               </Card>
             )}
+
+            {/* More from this branch */}
+            <Card>
+              <CardContent className="pt-4 pb-4 text-center">
+                <p className="text-sm text-muted-foreground mb-3">Explore more from {branch.name}</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/branches/${slug}?tab=events`)}>
+                    <Calendar className="h-3.5 w-3.5 mr-1.5" /> All Events
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/branches/${slug}`)}>
+                    <Users className="h-3.5 w-3.5 mr-1.5" /> Branch Portal
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Sidebar - Compact */}
-          <div className="space-y-4">
+          {/* Sidebar - Sticky */}
+          <div className="space-y-4 md:sticky md:top-20 md:self-start">
             {/* Branch Info + Join */}
             <Card>
               <CardContent className="pt-4 pb-4 space-y-3">
