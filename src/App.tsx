@@ -18,6 +18,7 @@ import DonatePage from "./pages/DonatePage";
 import NotFound from "./pages/NotFound";
 import BranchPortalPage from "./pages/BranchPortalPage";
 import BranchesPage from "./pages/BranchesPage";
+import EventDetailPage from "./pages/EventDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/donate" element={<DonatePage />} />
             <Route path="/branches" element={<BranchesPage />} />
             <Route path="/branches/:slug" element={<BranchPortalPage />} />
+            <Route path="/branches/:slug/events/:eventId" element={<EventDetailPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -86,6 +86,7 @@ const BranchPortalPage = () => {
 
   // Leader forms
   const [evForm, setEvForm] = useState({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" });
+  const [eventImages, setEventImages] = useState<string[]>([]);
   const [svForm, setSvForm] = useState({ title: "", description: "", icon: "", bible_verse: "" });
   const [epForm, setEpForm] = useState({ title: "", description: "", audio_url: "", thumbnail_url: "", category: "sermon", published: false });
   const [stForm, setStForm] = useState({ name: "", description: "", price: 0, image_url: "", category: "", stock: 10 });
@@ -202,15 +203,17 @@ const BranchPortalPage = () => {
   };
 
   const handleEventSave = async () => {
-    const payload = { branch_id: branch!.id, ...evForm };
+    const allImages = evForm.image_url ? [evForm.image_url, ...eventImages.filter(img => img !== evForm.image_url)] : eventImages;
+    const payload = { branch_id: branch!.id, ...evForm, images: allImages.length > 0 ? allImages : null };
     if (editingId) {
-      await supabase.from("branch_events").update(evForm).eq("id", editingId);
+      await supabase.from("branch_events").update({ ...evForm, images: allImages.length > 0 ? allImages : null }).eq("id", editingId);
     } else {
       await supabase.from("branch_events").insert(payload);
     }
     setEventDialog(false);
     setEditingId(null);
     setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" });
+    setEventImages([]);
     fetchBranchData();
     toast({ title: editingId ? "Event updated" : "Event created" });
   };
@@ -571,7 +574,7 @@ const BranchPortalPage = () => {
           <TabsContent value="events">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Events ({branchEvents.length})</h2>
-              {isBranchLeader && (                  <Dialog open={eventDialog} onOpenChange={(o) => { setEventDialog(o); if (!o) { setEditingId(null); setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" }); } }}>
+              {isBranchLeader && (                  <Dialog open={eventDialog} onOpenChange={(o) => { setEventDialog(o); if (!o) { setEditingId(null); setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" }); setEventImages([]); } }}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Event</Button></DialogTrigger>
                   <DialogContent>
                     <DialogHeader><DialogTitle>{editingId ? "Edit" : "New"} Event</DialogTitle></DialogHeader>
@@ -594,11 +597,38 @@ const BranchPortalPage = () => {
                         }} className="w-full text-sm" />
                         {evForm.image_url && <img src={evForm.image_url} alt="Event" className="w-full h-32 object-cover rounded-md mt-2" />}
                       </div>
+                      <div className="space-y-2">
+                        <Label>Additional Images (Optional)</Label>
+                        <input type="file" accept="image/*" multiple onChange={async (e) => {
+                          const files = e.target.files;
+                          if (!files) return;
+                          for (const file of Array.from(files)) {
+                            if (file.size > 5 * 1024 * 1024) { toast({ title: 'Image too large', description: 'Max 5MB each', variant: 'destructive' }); continue; }
+                            const ext = file.name.split('.').pop();
+                            const path = `events/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+                            const { error } = await supabase.storage.from('profile-avatars').upload(path, file, { upsert: true });
+                            if (error) { toast({ title: 'Upload failed', description: error.message, variant: 'destructive' }); continue; }
+                            const { data } = supabase.storage.from('profile-avatars').getPublicUrl(path);
+                            setEventImages(prev => [...prev, data.publicUrl]);
+                          }
+                          toast({ title: 'Images uploaded' });
+                        }} className="w-full text-sm" />
+                        {eventImages.length > 0 && (
+                          <div className="flex gap-2 mt-2 flex-wrap">
+                            {eventImages.map((img, i) => (
+                              <div key={i} className="relative">
+                                <img src={img} alt="" className="w-20 h-20 object-cover rounded-md" />
+                                <button onClick={() => setEventImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">X</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <div className="space-y-2"><Label>YouTube URL (Optional)</Label><Input value={evForm.stream_url || ""} onChange={(e) => setEvForm({ ...evForm, stream_url: e.target.value })} placeholder="YouTube URL for live stream" /></div>
                       <div className="space-y-2"><Label>Scheduled At</Label><Input type="datetime-local" value={evForm.scheduled_at ? evForm.scheduled_at.slice(0, 16) : ""} onChange={(e) => setEvForm({ ...evForm, scheduled_at: new Date(e.target.value).toISOString() })} /></div>
                       <div className="flex items-center gap-2"><Switch checked={evForm.is_live || false} onCheckedChange={(v) => setEvForm({ ...evForm, is_live: v })} /><Label>Currently Live</Label></div>
                       <Button onClick={handleEventSave} className="w-full">{editingId ? "Update" : "Create"}</Button>
-                      {evForm.image_url && <Button variant="ghost" size="sm" className="w-full text-destructive" onClick={() => setEvForm({ ...evForm, image_url: "" })}>Remove Image</Button>}
+                      {(evForm.image_url || eventImages.length > 0) && <Button variant="ghost" size="sm" className="w-full text-destructive" onClick={() => { setEvForm({ ...evForm, image_url: "" }); setEventImages([]); }}>Remove All Images</Button>}
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -613,6 +643,7 @@ const BranchPortalPage = () => {
                     <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="flex gap-3 min-w-0">
                         {ev.image_url && <img src={ev.image_url} alt="" className="w-16 h-16 rounded-md object-cover shrink-0" />}
+                        {!ev.image_url && ev.images && (ev.images as string[]).length > 0 && <img src={(ev.images as string[])[0]} alt="" className="w-16 h-16 rounded-md object-cover shrink-0" />}
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold">{ev.title}</h3>
@@ -620,11 +651,12 @@ const BranchPortalPage = () => {
                           </div>
                           <p className="text-sm text-muted-foreground">{format(new Date(ev.scheduled_at), "PPP 'at' p")}</p>
                           {ev.description && <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{ev.description}</p>}
+                          <Link to={`/branches/${slug}/events/${ev.id}`} className="text-sm text-primary hover:underline mt-1 inline-block">View Details</Link>
                         </div>
                       </div>
                       {isBranchLeader && (
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setEditingId(ev.id); setEvForm({ title: ev.title, description: ev.description || "", stream_url: ev.stream_url || "", scheduled_at: ev.scheduled_at, is_live: ev.is_live || false, image_url: ev.image_url || "" }); setEventDialog(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="outline" onClick={() => { setEditingId(ev.id); setEvForm({ title: ev.title, description: ev.description || "", stream_url: ev.stream_url || "", scheduled_at: ev.scheduled_at, is_live: ev.is_live || false, image_url: ev.image_url || "" }); setEventImages((ev.images as string[]) || []); setEventDialog(true); }}><Edit className="h-4 w-4" /></Button>
                           <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete("branch_events", ev.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       )}
