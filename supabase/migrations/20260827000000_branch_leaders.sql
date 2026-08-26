@@ -3,6 +3,7 @@ ALTER TABLE public.branches
   ADD COLUMN IF NOT EXISTS leader_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
 
 -- SECURITY DEFINER function so the client can check branch leadership via RPC
+-- NOTE: has_role(_user_id UUID, _role app_role) -- user_id FIRST, role SECOND
 CREATE OR REPLACE FUNCTION public.is_branch_leader(_branch_id uuid, _user_id uuid)
 RETURNS boolean
 LANGUAGE sql
