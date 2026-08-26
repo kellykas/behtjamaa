@@ -85,7 +85,7 @@ const BranchPortalPage = () => {
   const [storeDialog, setStoreDialog] = useState(false);
 
   // Leader forms
-  const [evForm, setEvForm] = useState({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false });
+  const [evForm, setEvForm] = useState({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" });
   const [svForm, setSvForm] = useState({ title: "", description: "", icon: "", bible_verse: "" });
   const [epForm, setEpForm] = useState({ title: "", description: "", audio_url: "", thumbnail_url: "", category: "sermon", published: false });
   const [stForm, setStForm] = useState({ name: "", description: "", price: 0, image_url: "", category: "", stock: 10 });
@@ -210,7 +210,7 @@ const BranchPortalPage = () => {
     }
     setEventDialog(false);
     setEditingId(null);
-    setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false });
+    setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" });
     fetchBranchData();
     toast({ title: editingId ? "Event updated" : "Event created" });
   };
@@ -571,18 +571,34 @@ const BranchPortalPage = () => {
           <TabsContent value="events">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Events ({branchEvents.length})</h2>
-              {isBranchLeader && (
-                <Dialog open={eventDialog} onOpenChange={(o) => { setEventDialog(o); if (!o) { setEditingId(null); setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false }); } }}>
+              {isBranchLeader && (                  <Dialog open={eventDialog} onOpenChange={(o) => { setEventDialog(o); if (!o) { setEditingId(null); setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "" }); } }}>
                   <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" />Add Event</Button></DialogTrigger>
                   <DialogContent>
                     <DialogHeader><DialogTitle>{editingId ? "Edit" : "New"} Event</DialogTitle></DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2"><Label>Title</Label><Input value={evForm.title} onChange={(e) => setEvForm({ ...evForm, title: e.target.value })} /></div>
                       <div className="space-y-2"><Label>Description</Label><Textarea value={evForm.description || ""} onChange={(e) => setEvForm({ ...evForm, description: e.target.value })} rows={3} /></div>
-                      <div className="space-y-2"><Label>Stream URL</Label><Input value={evForm.stream_url || ""} onChange={(e) => setEvForm({ ...evForm, stream_url: e.target.value })} placeholder="YouTube embed URL" /></div>
+                      <div className="space-y-2">
+                        <Label>Event Image (Optional)</Label>
+                        <input type="file" accept="image/*" onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 5 * 1024 * 1024) { toast({ title: 'Image too large', description: 'Max 5MB', variant: 'destructive' }); return; }
+                          const ext = file.name.split('.').pop();
+                          const path = `events/${Date.now()}.${ext}`;
+                          const { error } = await supabase.storage.from('profile-avatars').upload(path, file, { upsert: true });
+                          if (error) { toast({ title: 'Upload failed', description: error.message, variant: 'destructive' }); return; }
+                          const { data } = supabase.storage.from('profile-avatars').getPublicUrl(path);
+                          setEvForm({ ...evForm, image_url: data.publicUrl });
+                          toast({ title: 'Image uploaded' });
+                        }} className="w-full text-sm" />
+                        {evForm.image_url && <img src={evForm.image_url} alt="Event" className="w-full h-32 object-cover rounded-md mt-2" />}
+                      </div>
+                      <div className="space-y-2"><Label>YouTube URL (Optional)</Label><Input value={evForm.stream_url || ""} onChange={(e) => setEvForm({ ...evForm, stream_url: e.target.value })} placeholder="YouTube URL for live stream" /></div>
                       <div className="space-y-2"><Label>Scheduled At</Label><Input type="datetime-local" value={evForm.scheduled_at ? evForm.scheduled_at.slice(0, 16) : ""} onChange={(e) => setEvForm({ ...evForm, scheduled_at: new Date(e.target.value).toISOString() })} /></div>
                       <div className="flex items-center gap-2"><Switch checked={evForm.is_live || false} onCheckedChange={(v) => setEvForm({ ...evForm, is_live: v })} /><Label>Currently Live</Label></div>
                       <Button onClick={handleEventSave} className="w-full">{editingId ? "Update" : "Create"}</Button>
+                      {evForm.image_url && <Button variant="ghost" size="sm" className="w-full text-destructive" onClick={() => setEvForm({ ...evForm, image_url: "" })}>Remove Image</Button>}
                     </div>
                   </DialogContent>
                 </Dialog>
@@ -595,17 +611,20 @@ const BranchPortalPage = () => {
                 {branchEvents.map((ev) => (
                   <Card key={ev.id}>
                     <CardContent className="flex items-center justify-between p-4">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{ev.title}</h3>
-                          {ev.is_live && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
+                      <div className="flex gap-3">
+                        {ev.image_url && <img src={ev.image_url} alt="" className="w-16 h-16 rounded-md object-cover shrink-0" />}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{ev.title}</h3>
+                            {ev.is_live && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
+                          </div>
+                          <p className="text-sm text-muted-foreground">{format(new Date(ev.scheduled_at), "PPP 'at' p")}</p>
+                          {ev.description && <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{ev.description}</p>}
                         </div>
-                        <p className="text-sm text-muted-foreground">{format(new Date(ev.scheduled_at), "PPP 'at' p")}</p>
-                        {ev.description && <p className="text-sm text-muted-foreground line-clamp-1 mt-1">{ev.description}</p>}
                       </div>
                       {isBranchLeader && (
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { setEditingId(ev.id); setEvForm({ title: ev.title, description: ev.description || "", stream_url: ev.stream_url || "", scheduled_at: ev.scheduled_at, is_live: ev.is_live || false }); setEventDialog(true); }}><Edit className="h-4 w-4" /></Button>
+                          <Button size="sm" variant="outline" onClick={() => { setEditingId(ev.id); setEvForm({ title: ev.title, description: ev.description || "", stream_url: ev.stream_url || "", scheduled_at: ev.scheduled_at, is_live: ev.is_live || false, image_url: ev.image_url || "" }); setEventDialog(true); }}><Edit className="h-4 w-4" /></Button>
                           <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete("branch_events", ev.id)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       )}
