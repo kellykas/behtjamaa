@@ -353,7 +353,7 @@ const BranchPortalPage = () => {
       toast({ title: "Please fill in your name and email", variant: "destructive" });
       return;
     }
-    // Insert as pending_member role
+    // Insert as pending_member role (user_id can be null for anonymous visitors)
     const { error } = await supabase.from("branch_members").insert({
       branch_id: branch!.id,
       user_id: user?.id || null,
