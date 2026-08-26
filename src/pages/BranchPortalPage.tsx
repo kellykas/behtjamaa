@@ -487,10 +487,14 @@ const BranchPortalPage = () => {
                     {branchMembers.map((m: any) => (
                       <Card key={m.id}>
                         <CardContent className="flex items-center justify-between p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
-                              {m.profiles?.display_name ? m.profiles.display_name[0].toUpperCase() : "?"}
-                            </div>
+                      <div className="flex items-center gap-3">
+                        {m.profiles?.avatar_url ? (
+                          <img src={m.profiles.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
+                            {m.profiles?.display_name ? m.profiles.display_name[0].toUpperCase() : "?"}
+                          </div>
+                        )}
                             <div>
                               <p className="font-medium">{m.profiles?.display_name || "Unnamed"}</p>
                               <p className="text-xs text-muted-foreground">{m.role} - Joined {format(new Date(m.joined_at), "PP")}</p>
