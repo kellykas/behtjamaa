@@ -46,6 +46,10 @@ import {
   Pause,
   Star,
   Package,
+  Send,
+  HandHeart,
+  UserPlus,
+  CheckCircle2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -79,17 +83,25 @@ const BranchPortalPage = () => {
   const [serviceDialog, setServiceDialog] = useState(false);
   const [episodeDialog, setEpisodeDialog] = useState(false);
   const [storeDialog, setStoreDialog] = useState(false);
-  const [prayerDialog, setPrayerDialog] = useState(false);
 
-  // Forms
+  // Leader forms
   const [evForm, setEvForm] = useState({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false });
   const [svForm, setSvForm] = useState({ title: "", description: "", icon: "", bible_verse: "" });
   const [epForm, setEpForm] = useState({ title: "", description: "", audio_url: "", thumbnail_url: "", category: "sermon", published: false });
   const [stForm, setStForm] = useState({ name: "", description: "", price: 0, image_url: "", category: "", stock: 10 });
-  const [prForm, setPrForm] = useState({ name: "", request: "", is_anonymous: false });
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+
+  // Visitor forms
+  const [prayerForm, setPrayerForm] = useState({ name: "", request: "", is_anonymous: false });
+  const [prayerSubmitted, setPrayerSubmitted] = useState(false);
+
+  const [donationForm, setDonationForm] = useState({ donor_name: "", donor_email: "", amount: 50, frequency: "one_time", message: "" });
+  const [donationSubmitted, setDonationSubmitted] = useState(false);
+
+  const [memberForm, setMemberForm] = useState({ name: "", email: "", phone: "", message: "" });
+  const [memberSubmitted, setMemberSubmitted] = useState(false);
 
   useEffect(() => {
     if (slug) fetchBranch();
@@ -252,6 +264,79 @@ const BranchPortalPage = () => {
     toast({ title: `Marked as ${status}` });
   };
 
+  // ── Visitor: Submit Prayer Request ────────────────────────────
+  const handlePrayerSubmit = async () => {
+    if (!prayerForm.request.trim()) {
+      toast({ title: "Please enter your prayer request", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("branch_prayers").insert({
+      branch_id: branch!.id,
+      user_id: user?.id || null,
+      name: prayerForm.is_anonymous ? "Anonymous" : (prayerForm.name || "Anonymous"),
+      request: prayerForm.request,
+      is_anonymous: prayerForm.is_anonymous,
+    });
+    if (error) {
+      toast({ title: "Failed to submit", description: error.message, variant: "destructive" });
+    } else {
+      setPrayerSubmitted(true);
+      setPrayerForm({ name: "", request: "", is_anonymous: false });
+      toast({ title: "Prayer request submitted", description: "Your request has been sent to the branch leader." });
+    }
+  };
+
+  // ── Visitor: Make a Donation ──────────────────────────────────
+  const handleDonationSubmit = async () => {
+    if (donationForm.amount <= 0) {
+      toast({ title: "Please enter a valid amount", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase.from("branch_donations").insert({
+      branch_id: branch!.id,
+      user_id: user?.id || null,
+      donor_name: donationForm.donor_name || "Anonymous",
+      donor_email: donationForm.donor_email || null,
+      amount: donationForm.amount,
+      frequency: donationForm.frequency,
+      message: donationForm.message || null,
+      status: "completed",
+    });
+    if (error) {
+      toast({ title: "Failed to process donation", description: error.message, variant: "destructive" });
+    } else {
+      setDonationSubmitted(true);
+      setDonationForm({ donor_name: "", donor_email: "", amount: 50, frequency: "one_time", message: "" });
+      toast({ title: "Thank you for your donation!", description: "Your generous gift supports this branch's ministry." });
+    }
+  };
+
+  // ── Visitor: Request to Join ──────────────────────────────────
+  const handleMemberRequest = async () => {
+    if (!memberForm.name.trim() || !memberForm.email.trim()) {
+      toast({ title: "Please fill in your name and email", variant: "destructive" });
+      return;
+    }
+    // Insert as pending_member role
+    const { error } = await supabase.from("branch_members").insert({
+      branch_id: branch!.id,
+      user_id: user?.id || null,
+      role: "pending_member",
+    });
+    if (error) {
+      // If they're already a member
+      if (error.code === "23505") {
+        toast({ title: "You're already a member or have a pending request", variant: "destructive" });
+      } else {
+        toast({ title: "Failed to submit request", description: error.message, variant: "destructive" });
+      }
+    } else {
+      setMemberSubmitted(true);
+      setMemberForm({ name: "", email: "", phone: "", message: "" });
+      toast({ title: "Membership request submitted", description: "The branch leader will review your request." });
+    }
+  };
+
   return (
     <div className="min-h-screen gradient-subtle">
       {/* Branch Header */}
@@ -323,13 +408,13 @@ const BranchPortalPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 flex-wrap h-auto gap-1">
             <TabsTrigger value="overview"><Building2 className="h-4 w-4 mr-1" />Overview</TabsTrigger>
-            <TabsTrigger value="members"><Users className="h-4 w-4 mr-1" />Members</TabsTrigger>
+            <TabsTrigger value="members"><Users className="h-4 w-4 mr-1" />{isBranchLeader ? "Members" : "Join Us"}</TabsTrigger>
             <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-1" />Events</TabsTrigger>
             <TabsTrigger value="services"><Globe className="h-4 w-4 mr-1" />Services</TabsTrigger>
             <TabsTrigger value="podcasts"><Music className="h-4 w-4 mr-1" />Podcasts</TabsTrigger>
-            <TabsTrigger value="donations"><DollarSign className="h-4 w-4 mr-1" />Donations</TabsTrigger>
+            <TabsTrigger value="donations"><DollarSign className="h-4 w-4 mr-1" />{isBranchLeader ? "Donations" : "Give"}</TabsTrigger>
             <TabsTrigger value="store"><ShoppingBag className="h-4 w-4 mr-1" />Store</TabsTrigger>
-            <TabsTrigger value="prayers"><Heart className="h-4 w-4 mr-1" />Prayers</TabsTrigger>
+            <TabsTrigger value="prayers"><Heart className="h-4 w-4 mr-1" />{isBranchLeader ? "Prayers" : "Pray"}</TabsTrigger>
           </TabsList>
 
           {/* ── Overview ─────────────────────────────────── */}
@@ -355,13 +440,13 @@ const BranchPortalPage = () => {
                   <CardHeader><CardTitle className="text-lg">Quick Actions</CardTitle></CardHeader>
                   <CardContent className="space-y-2">
                     <Button className="w-full justify-start" variant="outline" onClick={() => setActiveTab("members")}>
-                      <Users className="h-4 w-4 mr-2" /> View Members ({branchMembers.length})
+                      <UserPlus className="h-4 w-4 mr-2" /> Become a Member
                     </Button>
-                    <Button className="w-full justify-start" variant="outline" onClick={() => setActiveTab("events")}>
-                      <Calendar className="h-4 w-4 mr-2" /> View Events ({branchEvents.length})
+                    <Button className="w-full justify-start" variant="outline" onClick={() => setActiveTab("donations")}>
+                      <HandHeart className="h-4 w-4 mr-2" /> Support This Branch
                     </Button>
-                    <Button className="w-full justify-start" variant="outline" onClick={() => setActiveTab("podcasts")}>
-                      <Music className="h-4 w-4 mr-2" /> Listen to Podcasts ({branchEpisodes.length})
+                    <Button className="w-full justify-start" variant="outline" onClick={() => setActiveTab("prayers")}>
+                      <Heart className="h-4 w-4 mr-2" /> Submit Prayer Request
                     </Button>
                     <Button className="w-full justify-start" variant="outline" onClick={() => setActiveTab("store")}>
                       <ShoppingBag className="h-4 w-4 mr-2" /> Browse Store ({storeItems.length} items)
@@ -391,31 +476,89 @@ const BranchPortalPage = () => {
 
           {/* ── Members ──────────────────────────────────── */}
           <TabsContent value="members">
-            <h2 className="text-xl font-semibold mb-4">Branch Members ({branchMembers.length})</h2>
-            {branchMembers.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">No members in this branch yet.</CardContent></Card>
+            {isBranchLeader ? (
+              /* Leader view: see all members */
+              <>
+                <h2 className="text-xl font-semibold mb-4">Branch Members ({branchMembers.length})</h2>
+                {branchMembers.length === 0 ? (
+                  <Card><CardContent className="py-8 text-center text-muted-foreground">No members in this branch yet.</CardContent></Card>
+                ) : (
+                  <div className="grid gap-3">
+                    {branchMembers.map((m: any) => (
+                      <Card key={m.id}>
+                        <CardContent className="flex items-center justify-between p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
+                              {m.profiles?.display_name ? m.profiles.display_name[0].toUpperCase() : "?"}
+                            </div>
+                            <div>
+                              <p className="font-medium">{m.profiles?.display_name || "Unnamed"}</p>
+                              <p className="text-xs text-muted-foreground">{m.role} - Joined {format(new Date(m.joined_at), "PP")}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {m.role === "pending_member" && (
+                              <Button size="sm" variant="outline" className="text-green-600" onClick={async () => {
+                                await supabase.from("branch_members").update({ role: "member" }).eq("id", m.id);
+                                fetchBranchData();
+                                toast({ title: "Member approved" });
+                              }}>Approve</Button>
+                            )}
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete("branch_members", m.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="grid gap-3">
-                {branchMembers.map((m: any) => (
-                  <Card key={m.id}>
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
-                          {m.profiles?.display_name ? m.profiles.display_name[0].toUpperCase() : "?"}
-                        </div>
-                        <div>
-                          <p className="font-medium">{m.profiles?.display_name || "Unnamed"}</p>
-                          <p className="text-xs text-muted-foreground">{m.role} - Joined {format(new Date(m.joined_at), "PP")}</p>
-                        </div>
+              /* Visitor view: request to join */
+              <div className="max-w-lg mx-auto">
+                <Card>
+                  <CardHeader className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                      <UserPlus className="h-8 w-8 text-primary" />
+                    </div>
+                    <CardTitle>Join {branch.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">Become part of this branch's community and grow in faith together.</p>
+                  </CardHeader>
+                  <CardContent>
+                    {memberSubmitted ? (
+                      <div className="text-center py-6">
+                        <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold mb-2">Request Submitted!</h3>
+                        <p className="text-muted-foreground mb-4">Your membership request has been sent to the branch leader for approval. You'll be notified once reviewed.</p>
+                        <Button variant="outline" onClick={() => setMemberSubmitted(false)}>Submit Another Request</Button>
                       </div>
-                      {isBranchLeader && (
-                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete("branch_members", m.id)}>
-                          <Trash2 className="h-4 w-4" />
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="member-name">Full Name *</Label>
+                          <Input id="member-name" placeholder="Your full name" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="member-email">Email Address *</Label>
+                          <Input id="member-email" type="email" placeholder="your@email.com" value={memberForm.email} onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="member-phone">Phone Number (Optional)</Label>
+                          <Input id="member-phone" type="tel" placeholder="+1 (555) 000-0000" value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="member-message">Why do you want to join? (Optional)</Label>
+                          <Textarea id="member-message" placeholder="Tell us about yourself and why you'd like to join..." value={memberForm.message} onChange={(e) => setMemberForm({ ...memberForm, message: e.target.value })} rows={3} />
+                        </div>
+                        <Button onClick={handleMemberRequest} className="w-full" size="lg">
+                          <Send className="h-4 w-4 mr-2" /> Submit Request
                         </Button>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        <p className="text-xs text-muted-foreground text-center">Your request will be reviewed by the branch leader.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
           </TabsContent>
@@ -570,28 +713,106 @@ const BranchPortalPage = () => {
 
           {/* ── Donations ────────────────────────────────── */}
           <TabsContent value="donations">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Donations (${totalDonations.toLocaleString()} total)</h2>
-            </div>
-            {branchDonations.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">No donations recorded yet.</CardContent></Card>
+            {isBranchLeader ? (
+              /* Leader view: see all donations */
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Donations (${totalDonations.toLocaleString()} total)</h2>
+                </div>
+                {branchDonations.length === 0 ? (
+                  <Card><CardContent className="py-8 text-center text-muted-foreground">No donations recorded yet.</CardContent></Card>
+                ) : (
+                  <div className="grid gap-3">
+                    {branchDonations.map((d) => (
+                      <Card key={d.id}>
+                        <CardContent className="flex items-center justify-between p-4">
+                          <div>
+                            <p className="font-semibold">{d.donor_name || "Anonymous"}</p>
+                            <p className="text-sm text-muted-foreground">{d.donor_email || "No email"} - {d.frequency || "one-time"}</p>
+                            <p className="text-xs text-muted-foreground">{format(new Date(d.created_at), "PP")}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-green-600">${d.amount.toLocaleString()}</p>
+                            <Badge variant={d.status === "completed" ? "default" : "secondary"}>{d.status || "pending"}</Badge>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="grid gap-3">
-                {branchDonations.map((d) => (
-                  <Card key={d.id}>
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div>
-                        <p className="font-semibold">{d.donor_name || "Anonymous"}</p>
-                        <p className="text-sm text-muted-foreground">{d.donor_email || "No email"} - {d.frequency || "one-time"}</p>
-                        <p className="text-xs text-muted-foreground">{format(new Date(d.created_at), "PP")}</p>
+              /* Visitor view: make a donation */
+              <div className="max-w-lg mx-auto">
+                <Card>
+                  <CardHeader className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
+                      <HandHeart className="h-8 w-8 text-green-600" />
+                    </div>
+                    <CardTitle>Support {branch.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">Your generous donation helps this branch spread the Gospel and serve the community.</p>
+                  </CardHeader>
+                  <CardContent>
+                    {donationSubmitted ? (
+                      <div className="text-center py-6">
+                        <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold mb-2">Thank You!</h3>
+                        <p className="text-muted-foreground mb-4">Your donation has been recorded. May God bless you for your generosity!</p>
+                        <p className="text-xs text-muted-foreground italic mb-4">"Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver." - 2 Corinthians 9:7</p>
+                        <Button variant="outline" onClick={() => setDonationSubmitted(false)}>Make Another Donation</Button>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-green-600">${d.amount.toLocaleString()}</p>
-                        <Badge variant={d.status === "completed" ? "default" : "secondary"}>{d.status || "pending"}</Badge>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Donation Amount (USD)</Label>
+                          <div className="grid grid-cols-4 gap-2">
+                            {[25, 50, 100, 250].map((amt) => (
+                              <Button
+                                key={amt}
+                                variant={donationForm.amount === amt ? "default" : "outline"}
+                                onClick={() => setDonationForm({ ...donationForm, amount: amt })}
+                              >
+                                ${amt}
+                              </Button>
+                            ))}
+                          </div>
+                          <div className="mt-2">
+                            <Input
+                              type="number"
+                              placeholder="Custom amount"
+                              value={donationForm.amount || ""}
+                              onChange={(e) => setDonationForm({ ...donationForm, amount: parseFloat(e.target.value) || 0 })}
+                              min="1"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Frequency</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button variant={donationForm.frequency === "one_time" ? "default" : "outline"} onClick={() => setDonationForm({ ...donationForm, frequency: "one_time" })}>One-Time</Button>
+                            <Button variant={donationForm.frequency === "monthly" ? "default" : "outline"} onClick={() => setDonationForm({ ...donationForm, frequency: "monthly" })}>Monthly</Button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="donor-name">Your Name (Optional)</Label>
+                          <Input id="donor-name" placeholder="Anonymous" value={donationForm.donor_name} onChange={(e) => setDonationForm({ ...donationForm, donor_name: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="donor-email">Email for Receipt (Optional)</Label>
+                          <Input id="donor-email" type="email" placeholder="your@email.com" value={donationForm.donor_email} onChange={(e) => setDonationForm({ ...donationForm, donor_email: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="donor-message">Message (Optional)</Label>
+                          <Textarea id="donor-message" placeholder="Leave a note..." value={donationForm.message} onChange={(e) => setDonationForm({ ...donationForm, message: e.target.value })} rows={2} />
+                        </div>
+                        <Button onClick={handleDonationSubmit} className="w-full" size="lg">
+                          <DollarSign className="h-4 w-4 mr-2" /> Give ${donationForm.amount} {donationForm.frequency === "monthly" ? "Monthly" : "Now"}
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">Your donation is a blessing to this ministry.</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
           </TabsContent>
@@ -647,7 +868,7 @@ const BranchPortalPage = () => {
               </div>
             )}
 
-            {storeOrders.length > 0 && (
+            {isBranchLeader && storeOrders.length > 0 && (
               <div className="mt-8">
                 <h3 className="text-lg font-semibold mb-4">Recent Orders ({storeOrders.length})</h3>
                 <div className="grid gap-3">
@@ -673,37 +894,83 @@ const BranchPortalPage = () => {
 
           {/* ── Prayers ──────────────────────────────────── */}
           <TabsContent value="prayers">
-            <h2 className="text-xl font-semibold mb-4">Prayer Requests ({branchPrayers.length})</h2>
-            {branchPrayers.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">No prayer requests yet.</CardContent></Card>
+            {isBranchLeader ? (
+              /* Leader view: see all prayer requests */
+              <>
+                <h2 className="text-xl font-semibold mb-4">Prayer Requests ({branchPrayers.length})</h2>
+                {branchPrayers.length === 0 ? (
+                  <Card><CardContent className="py-8 text-center text-muted-foreground">No prayer requests yet.</CardContent></Card>
+                ) : (
+                  <div className="grid gap-3">
+                    {branchPrayers.map((pr) => (
+                      <Card key={pr.id}>
+                        <CardContent className="flex items-center justify-between p-4">
+                          <div>
+                            <p className="font-semibold">{pr.is_anonymous ? "Anonymous" : pr.name}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-2">{pr.request}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{format(new Date(pr.created_at), "PP")} - {pr.prayed_count || 0} prayers</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Select value={pr.status || "pending"} onValueChange={(v) => handlePrayerStatus(pr.id, v)}>
+                              <SelectTrigger className="w-28 h-9"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="praying">Praying</SelectItem>
+                                <SelectItem value="answered">Answered</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete("branch_prayers", pr.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="grid gap-3">
-                {branchPrayers.map((pr) => (
-                  <Card key={pr.id}>
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div>
-                        <p className="font-semibold">{pr.is_anonymous ? "Anonymous" : pr.name}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{pr.request}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{format(new Date(pr.created_at), "PP")} - {pr.prayed_count || 0} prayers</p>
+              /* Visitor view: submit a prayer request */
+              <div className="max-w-lg mx-auto">
+                <Card>
+                  <CardHeader className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-3">
+                      <Heart className="h-8 w-8 text-purple-600" />
+                    </div>
+                    <CardTitle>Submit a Prayer Request</CardTitle>
+                    <p className="text-sm text-muted-foreground">Share your prayer needs with {branch.name}. Our leaders and community will pray for you.</p>
+                  </CardHeader>
+                  <CardContent>
+                    {prayerSubmitted ? (
+                      <div className="text-center py-6">
+                        <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold mb-2">Prayer Request Received!</h3>
+                        <p className="text-muted-foreground mb-4">Your request has been sent to the branch leader. They will keep you in their prayers.</p>
+                        <p className="text-xs text-muted-foreground italic mb-4">"Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God." - Philippians 4:6</p>
+                        <Button variant="outline" onClick={() => setPrayerSubmitted(false)}>Submit Another Request</Button>
                       </div>
-                      {isBranchLeader && (
-                        <div className="flex items-center gap-2">
-                          <Select value={pr.status || "pending"} onValueChange={(v) => handlePrayerStatus(pr.id, v)}>
-                            <SelectTrigger className="w-28 h-9"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="praying">Praying</SelectItem>
-                              <SelectItem value="answered">Answered</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete("branch_prayers", pr.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="prayer-name">Your Name</Label>
+                          <Input id="prayer-name" placeholder="Your name" value={prayerForm.name} onChange={(e) => setPrayerForm({ ...prayerForm, name: e.target.value })} />
                         </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                        <div className="flex items-center gap-2">
+                          <Switch id="prayer-anon" checked={prayerForm.is_anonymous} onCheckedChange={(v) => setPrayerForm({ ...prayerForm, is_anonymous: v })} />
+                          <Label htmlFor="prayer-anon" className="text-sm">Submit anonymously</Label>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="prayer-request">Your Prayer Request *</Label>
+                          <Textarea id="prayer-request" placeholder="Share what you'd like us to pray about..." value={prayerForm.request} onChange={(e) => setPrayerForm({ ...prayerForm, request: e.target.value })} rows={5} />
+                        </div>
+                        <Button onClick={handlePrayerSubmit} className="w-full" size="lg">
+                          <Send className="h-4 w-4 mr-2" /> Submit Prayer Request
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">Your request is confidential and only visible to branch leaders.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
           </TabsContent>
