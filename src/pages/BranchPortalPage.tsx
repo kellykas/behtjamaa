@@ -103,7 +103,10 @@ const BranchPortalPage = () => {
     if (branch && user) {
       supabase
         .rpc("is_branch_leader", { _branch_id: branch.id, _user_id: user.id })
-        .then(({ data }) => setIsLeader(!!data));
+        .then(({ data, error }) => {
+          if (error) console.error("Branch leader check failed:", error.message);
+          setIsLeader(!!data);
+        });
     }
   }, [branch, user]);
 
