@@ -16,6 +16,8 @@ import {
   Phone,
   Mail,
   ExternalLink,
+  ArrowRight,
+  Star,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
@@ -76,7 +78,7 @@ const BranchesPage = () => {
   );
 
   return (
-    <div className="min-h-screen gradient-subtle">
+    <div className="min-h-screen" style={{ background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)" }}>
       <div className="max-w-6xl mx-auto px-4 py-8">
         <Button
           variant="ghost"
@@ -87,43 +89,43 @@ const BranchesPage = () => {
         </Button>
 
         <div className="text-center mb-10">
-          <Badge className="mb-3 bg-blue-100 text-blue-800 border-transparent">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 mb-4">
             Our Branches
-          </Badge>
-          <h1 className="text-4xl font-bold mb-3">
+          </span>
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
             BEHT JAMAA Worldwide
           </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-slate-500 max-w-2xl mx-auto text-lg">
             Find a branch near you and join a community of young people
             transforming lives for Jesus Christ.
           </p>
         </div>
 
         <div className="relative max-w-md mx-auto mb-10">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search branches by name or location..."
-            className="pl-9"
+            className="pl-11 py-6 rounded-full bg-white border-slate-200 shadow-sm focus:shadow-md transition-shadow"
           />
         </div>
 
         {loading ? (
           <div className="text-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading branches...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4" />
+            <p className="text-slate-500">Loading branches...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <Card>
+          <Card className="rounded-3xl border-0 shadow-lg">
             <CardContent className="py-16 text-center">
-              <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-2xl font-bold mb-2">
+              <Building2 className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">
                 {branches.length === 0
                   ? "No Branches Yet"
                   : "No Branches Found"}
               </h2>
-              <p className="text-muted-foreground max-w-md mx-auto">
+              <p className="text-slate-500 max-w-md mx-auto">
                 {branches.length === 0
                   ? "Branches will appear here once created by an admin."
                   : "Try adjusting your search terms."}
@@ -131,124 +133,99 @@ const BranchesPage = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((branch) => (
-              <Card
+              <Link
                 key={branch.id}
-                className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                to={`/branches/${branch.slug}`}
+                className="group rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-100"
               >
-                {branch.banner_url && (
-                  <div className="h-40 overflow-hidden">
+                {/* Banner */}
+                <div className="h-[280px] relative overflow-hidden">
+                  {branch.banner_url ? (
                     <img
                       src={branch.banner_url}
                       alt={branch.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
-                  </div>
-                )}
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-3 mb-4">
-                    {branch.logo_url ? (
-                      <img
-                        src={branch.logo_url}
-                        alt=""
-                        className="w-12 h-12 rounded-full object-cover border"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
-                        <Building2 className="h-6 w-6 text-primary-foreground" />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <h3 className="font-bold text-lg leading-tight truncate">
-                        {branch.name}
-                      </h3>
-                      {branch.location && (
-                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <MapPin className="h-3 w-3 shrink-0" />
-                          {branch.location}
-                        </p>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center">
+                      <Building2 className="h-16 w-16 text-white/25" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                  {/* Branch name overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <div className="flex items-center gap-3">
+                      {branch.logo_url ? (
+                        <img
+                          src={branch.logo_url}
+                          alt=""
+                          className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xl"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                          <Building2 className="h-7 w-7 text-white" />
+                        </div>
                       )}
+                      <div>
+                        <h3 className="font-bold text-white text-xl drop-shadow-lg">
+                          {branch.name}
+                        </h3>
+                        {branch.location && (
+                          <p className="text-white/80 text-sm flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5" /> {branch.location}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
+                </div>
 
+                {/* Content */}
+                <div className="p-6">
                   {branch.description && (
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                    <p className="text-sm text-slate-500 leading-relaxed mb-4 line-clamp-2">
                       {branch.description}
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
-                    <span className="flex items-center gap-1">
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 text-xs text-slate-500 mb-4">
+                    <span className="flex items-center gap-1.5">
                       <Users className="h-3.5 w-3.5" />
                       {branch.member_count} members
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5" />
                       {branch.event_count} events
                     </span>
                   </div>
 
-                  {branch.leader_name && (
-                    <p className="text-xs text-muted-foreground mb-3">
-                      <span className="font-medium">Led by:</span>{" "}
-                      {branch.leader_name}
-                    </p>
-                  )}
-
-                  <div className="flex flex-col gap-2">
-                    <Link to={`/branches/${branch.slug}`}>
-                      <Button className="w-full" size="sm">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        View Portal
-                      </Button>
-                    </Link>
-                    <div className="flex gap-2">
-                      {branch.phone && (
-                        <a
-                          href={`tel:${branch.phone}`}
-                          className="flex-1"
-                        >
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                          >
-                            <Phone className="h-3.5 w-3.5 mr-1" />
-                            Call
-                          </Button>
-                        </a>
-                      )}
-                      {branch.leader_email && (
-                        <a
-                          href={`mailto:${branch.leader_email}`}
-                          className="flex-1"
-                        >
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                          >
-                            <Mail className="h-3.5 w-3.5 mr-1" />
-                            Email
-                          </Button>
-                        </a>
-                      )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-blue-600 inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                      View Portal <ArrowRight className="h-4 w-4" />
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="text-xs font-medium text-slate-500">
+                        Active
+                      </span>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </Link>
             ))}
           </div>
         )}
 
         {!loading && branches.length > 0 && (
           <div className="text-center mt-10">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-slate-500 text-sm">
               Can't find your city?{" "}
               <Link
                 to="/contact"
-                className="text-primary hover:underline font-medium"
+                className="text-blue-600 hover:underline font-medium"
               >
                 Contact us
               </Link>{" "}

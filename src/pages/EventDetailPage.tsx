@@ -22,6 +22,7 @@ import {
   X,
   Phone,
   Calendar,
+  ArrowRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -69,20 +70,22 @@ const EventDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen gradient-subtle flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)" }}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900" />
       </div>
     );
   }
 
   if (!event || !branch) {
     return (
-      <div className="min-h-screen gradient-subtle flex items-center justify-center">
-        <Card className="max-w-md w-full mx-4">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)" }}>
+        <Card className="max-w-md w-full mx-4 rounded-3xl border-0 shadow-lg">
           <CardContent className="pt-8 text-center">
-            <h1 className="text-2xl font-bold mb-2">Event Not Found</h1>
-            <p className="text-muted-foreground mb-6">This event doesn't exist or has been removed.</p>
-            <Button onClick={() => navigate(`/branches/${slug}`)}>Back to Branch</Button>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2">Event Not Found</h1>
+            <p className="text-slate-500 mb-6">This event doesn't exist or has been removed.</p>
+            <Button onClick={() => navigate(`/branches/${slug}`)} className="bg-slate-900 hover:bg-slate-800 text-white rounded-full">
+              Back to Branch
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -102,47 +105,76 @@ const EventDetailPage = () => {
   )?.[1];
 
   return (
-    <div className="min-h-screen gradient-subtle">
+    <div className="min-h-screen" style={{ background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)" }}>
       {/* Image Gallery / Hero */}
       {allImages.length > 0 ? (
         <div className="relative">
-          <div className="h-48 md:h-72 overflow-hidden">
+          <div className="h-64 md:h-96 overflow-hidden">
             <img
               src={allImages[currentImageIndex]}
               alt={event.title}
-              className="w-full h-full object-cover cursor-pointer"
+              className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-700"
               onClick={() => setLightboxOpen(true)}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           </div>
           {allImages.length > 1 && (
             <>
               <button
                 onClick={() => setCurrentImageIndex((i) => (i === 0 ? allImages.length - 1 : i - 1))}
-                className="absolute left-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center"
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-all border border-white/30"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
               <button
                 onClick={() => setCurrentImageIndex((i) => (i === allImages.length - 1 ? 0 : i + 1))}
-                className="absolute right-3 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full w-9 h-9 flex items-center justify-center"
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white hover:bg-white/30 transition-all border border-white/30"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                 {allImages.map((_, i) => (
                   <button
                     key={i}
                     onClick={() => setCurrentImageIndex(i)}
-                    className={`w-2 h-2 rounded-full transition-colors ${i === currentImageIndex ? "bg-white" : "bg-white/40"}`}
+                    className="rounded-full transition-all"
+                    style={{
+                      width: i === currentImageIndex ? 24 : 8,
+                      height: 8,
+                      background: i === currentImageIndex ? "white" : "rgba(255,255,255,0.4)",
+                    }}
                   />
                 ))}
               </div>
             </>
           )}
+          {/* Event title overlay */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                {event.event_status === "live" && (
+                  <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500 text-white text-xs font-bold shadow-lg">
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    LIVE
+                  </span>
+                )}
+                {event.event_status === "cancelled" && (
+                  <span className="px-3 py-1.5 rounded-full bg-orange-500 text-white text-xs font-bold">CANCELLED</span>
+                )}
+                {event.event_status === "past" && (
+                  <span className="px-3 py-1.5 rounded-full bg-slate-500 text-white text-xs font-bold">PAST EVENT</span>
+                )}
+                <span className="px-3 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-medium border border-white/30">
+                  <Clock className="h-3 w-3 inline mr-1" />
+                  {format(new Date(event.scheduled_at), "EEE, MMM d, yyyy 'at' h:mm a")}
+                </span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">{event.title}</h1>
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="h-20 bg-gradient-to-r from-primary/10 to-primary/5" />
+        <div className="h-32 bg-gradient-to-r from-blue-500 to-indigo-600" />
       )}
 
       {/* Lightbox */}
@@ -161,59 +193,53 @@ const EventDetailPage = () => {
               </button>
             </>
           )}
-          <img src={allImages[currentImageIndex]} alt="" className="max-h-[85vh] max-w-[90vw] object-contain" onClick={(e) => e.stopPropagation()} />
+          <img src={allImages[currentImageIndex]} alt="" className="max-h-[85vh] max-w-[90vw] object-contain rounded-2xl" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
 
       <div className="max-w-5xl mx-auto px-4 py-6">
         {/* Back button */}
-        <Button variant="ghost" onClick={() => navigate(`/branches/${slug}`)} className="mb-4" size="sm">
+        <Button variant="ghost" onClick={() => navigate(`/branches/${slug}`)} className="mb-6" size="sm">
           <ArrowLeft className="h-4 w-4 mr-1" /> Back to {branch.name}
         </Button>
-
-        {/* Event Header - Title, Date, Location */}
-        <div className="mb-6">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
-            {event.event_status === "live" && <Badge className="bg-red-100 text-red-800 border-transparent">LIVE</Badge>}
-            {event.event_status === "cancelled" && <Badge className="bg-orange-100 text-orange-800 border-transparent">CANCELLED</Badge>}
-            {event.event_status === "past" && <Badge className="bg-gray-100 text-gray-800 border-transparent">PAST EVENT</Badge>}
-            <Badge variant="secondary" className="text-xs">
-              <Clock className="h-3 w-3 mr-1" />
-              {format(new Date(event.scheduled_at), "EEE, MMM d, yyyy 'at' h:mm a")}
-            </Badge>
-          </div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-2">{event.title}</h1>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" /> {branch.name}
-            </span>
-            {event.location && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" /> {event.location}
-              </span>
-            )}
-          </div>
-        </div>
 
         <div className="grid md:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="md:col-span-2 space-y-5">
+            {/* Branch + Location */}
+            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <Users className="h-4 w-4" /> {branch.name}
+              </span>
+              {event.location && (
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="h-4 w-4" /> {event.location}
+                </span>
+              )}
+            </div>
+
             {/* Description */}
             {event.description && (
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-lg">About This Event</CardTitle></CardHeader>
+              <Card className="rounded-3xl border-0 shadow-md">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg text-slate-900">About This Event</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">{event.description}</p>
+                  <p className="text-slate-500 leading-relaxed whitespace-pre-wrap">{event.description}</p>
                 </CardContent>
               </Card>
             )}
 
             {/* YouTube Embed */}
             {youtubeId && (
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-lg flex items-center gap-2"><Play className="h-4 w-4" /> Watch Live</CardTitle></CardHeader>
+              <Card className="rounded-3xl border-0 shadow-md">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg text-slate-900 flex items-center gap-2">
+                    <Play className="h-4 w-4" /> Watch Live
+                  </CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <div className="aspect-video rounded-lg overflow-hidden">
+                  <div className="aspect-video rounded-2xl overflow-hidden">
                     <iframe
                       src={`https://www.youtube.com/embed/${youtubeId}`}
                       className="w-full h-full"
@@ -228,12 +254,18 @@ const EventDetailPage = () => {
 
             {/* Thumbnail Gallery */}
             {allImages.length > 1 && (
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-lg">Event Photos ({allImages.length})</CardTitle></CardHeader>
+              <Card className="rounded-3xl border-0 shadow-md">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg text-slate-900">Event Photos ({allImages.length})</CardTitle>
+                </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
                     {allImages.map((img, i) => (
-                      <button key={i} onClick={() => { setCurrentImageIndex(i); setLightboxOpen(true); }} className="rounded-lg overflow-hidden aspect-square border hover:ring-2 hover:ring-primary transition-all">
+                      <button
+                        key={i}
+                        onClick={() => { setCurrentImageIndex(i); setLightboxOpen(true); }}
+                        className="rounded-xl overflow-hidden aspect-square border-2 border-slate-100 hover:border-blue-500 hover:shadow-lg transition-all"
+                      >
                         <img src={img} alt="" className="w-full h-full object-cover" />
                       </button>
                     ))}
@@ -243,14 +275,23 @@ const EventDetailPage = () => {
             )}
 
             {/* More from this branch */}
-            <Card>
-              <CardContent className="pt-4 pb-4 text-center">
-                <p className="text-sm text-muted-foreground mb-3">Explore more from {branch.name}</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/branches/${slug}?tab=events`)}>
+            <Card className="rounded-3xl border-0 shadow-md">
+              <CardContent className="pt-6 pb-6 text-center">
+                <p className="text-sm text-slate-500 mb-4">Explore more from {branch.name}</p>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 rounded-full border-slate-200"
+                    onClick={() => navigate(`/branches/${slug}?tab=events`)}
+                  >
                     <Calendar className="h-3.5 w-3.5 mr-1.5" /> All Events
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/branches/${slug}`)}>
+                  <Button
+                    size="sm"
+                    className="flex-1 rounded-full bg-slate-900 hover:bg-slate-800 text-white"
+                    onClick={() => navigate(`/branches/${slug}`)}
+                  >
                     <Users className="h-3.5 w-3.5 mr-1.5" /> Branch Portal
                   </Button>
                 </div>
@@ -261,52 +302,71 @@ const EventDetailPage = () => {
           {/* Sidebar - Sticky */}
           <div className="space-y-4 md:sticky md:top-20 md:self-start">
             {/* Branch Info + Join */}
-            <Card>
-              <CardContent className="pt-4 pb-4 space-y-3">
+            <Card className="rounded-3xl border-0 shadow-md">
+              <CardContent className="pt-6 pb-6 space-y-4">
                 <div className="flex items-center gap-3">
                   {branch.logo_url ? (
-                    <img src={branch.logo_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                    <img src={branch.logo_url} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-md" />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Users className="h-5 w-5 text-primary" />
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-white" />
                     </div>
                   )}
                   <div>
-                    <p className="font-semibold text-sm">{branch.name}</p>
-                    {branch.location && <p className="text-xs text-muted-foreground">{branch.location}</p>}
+                    <p className="font-bold text-slate-900">{branch.name}</p>
+                    {branch.location && <p className="text-xs text-slate-500">{branch.location}</p>}
                   </div>
                 </div>
                 {branch.leader_name && (
-                  <p className="text-xs text-muted-foreground">Led by <span className="font-medium text-foreground">{branch.leader_name}</span></p>
+                  <p className="text-xs text-slate-500">Led by <span className="font-medium text-slate-900">{branch.leader_name}</span></p>
                 )}
-                <Button className="w-full" size="sm" onClick={() => navigate(`/branches/${slug}`)}>
+                <Button
+                  className="w-full rounded-full bg-slate-900 hover:bg-slate-800 text-white"
+                  size="sm"
+                  onClick={() => navigate(`/branches/${slug}`)}
+                >
                   <Users className="h-3.5 w-3.5 mr-1.5" /> Join Ministry
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Donate + Daily Verse in one card */}
-            <Card>
-              <CardContent className="pt-4 pb-4 space-y-3">
+            {/* Donate + Daily Verse */}
+            <Card className="rounded-3xl border-0 shadow-md">
+              <CardContent className="pt-6 pb-6 space-y-4">
                 <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  <h3 className="font-semibold text-sm">Support This Branch</h3>
+                  <DollarSign className="h-4 w-4 text-emerald-600" />
+                  <h3 className="font-bold text-slate-900 text-sm">Support This Branch</h3>
                 </div>
-                <p className="text-xs text-muted-foreground">Your donation helps spread the Gospel.</p>
-                <Button className="w-full bg-green-600 hover:bg-green-700 text-white" size="sm" onClick={() => navigate(`/branches/${slug}?tab=donations`)}>
+                <p className="text-xs text-slate-500">Your donation helps spread the Gospel.</p>
+                <Button
+                  className="w-full rounded-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                  size="sm"
+                  onClick={() => navigate(`/branches/${slug}?tab=donations`)}
+                >
                   <DollarSign className="h-3.5 w-3.5 mr-1.5" /> Give Now
                 </Button>
-                <div className="border-t pt-3">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="border-t border-slate-100 pt-4">
+                  <div className="flex items-center gap-2 mb-3">
                     <BookOpen className="h-4 w-4 text-amber-600" />
-                    <h3 className="font-semibold text-sm">Daily Bible Verse</h3>
+                    <h3 className="font-bold text-slate-900 text-sm">Daily Bible Verse</h3>
                   </div>
                   {subscribed ? (
-                    <p className="text-xs text-amber-700 bg-amber-50 rounded p-2">Subscribed! Check your email daily.</p>
+                    <p className="text-xs text-amber-700 bg-amber-50 rounded-xl p-3">Subscribed! Check your email daily.</p>
                   ) : (
-                    <div className="flex gap-1.5">
-                      <Input type="email" placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="text-xs h-8" />
-                      <Button variant="outline" size="sm" className="h-8 px-3 text-amber-700 border-amber-300" onClick={handleSubscribe}>
+                    <div className="flex gap-2">
+                      <Input
+                        type="email"
+                        placeholder="your@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="text-xs h-9 rounded-full"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 px-4 rounded-full text-amber-700 border-amber-200 hover:bg-amber-50"
+                        onClick={handleSubscribe}
+                      >
                         <BookOpen className="h-3 w-3" />
                       </Button>
                     </div>
@@ -315,35 +375,35 @@ const EventDetailPage = () => {
               </CardContent>
             </Card>
 
-            {/* Contact + Social in one card */}
-            <Card>
-              <CardContent className="pt-4 pb-4 space-y-3">
+            {/* Contact + Social */}
+            <Card className="rounded-3xl border-0 shadow-md">
+              <CardContent className="pt-6 pb-6 space-y-4">
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-blue-600" />
-                  <h3 className="font-semibold text-sm">Connect</h3>
+                  <h3 className="font-bold text-slate-900 text-sm">Connect</h3>
                 </div>
                 <div className="flex gap-2">
                   {branch.leader_email && (
                     <a href={`mailto:${branch.leader_email}`} className="flex-1">
-                      <Button variant="outline" className="w-full" size="sm">
+                      <Button variant="outline" className="w-full rounded-full" size="sm">
                         <Mail className="h-3 w-3 mr-1" /> Email
                       </Button>
                     </a>
                   )}
                   {branch.phone && (
                     <a href={`tel:${branch.phone}`} className="flex-1">
-                      <Button variant="outline" className="w-full" size="sm">
+                      <Button variant="outline" className="w-full rounded-full" size="sm">
                         <Phone className="h-3 w-3 mr-1" /> Call
                       </Button>
                     </a>
                   )}
                 </div>
-                <div className="border-t pt-3">
-                  <p className="text-xs text-muted-foreground mb-2">Follow us on social media</p>
-                  <div className="flex flex-wrap gap-1.5">
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="text-xs text-slate-500 mb-3">Follow us on social media</p>
+                  <div className="flex flex-wrap gap-2">
                     {["Facebook", "YouTube", "Instagram", "TikTok"].map((name) => (
                       <a key={name} href={`https://${name.toLowerCase()}.com`} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm" className="h-7 text-xs px-2">
+                        <Button variant="outline" size="sm" className="h-8 text-xs px-3 rounded-full">
                           <ExternalLink className="h-3 w-3 mr-1" /> {name}
                         </Button>
                       </a>
@@ -353,7 +413,7 @@ const EventDetailPage = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full text-muted-foreground"
+                  className="w-full text-slate-500 hover:text-slate-900 rounded-full"
                   onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
                     toast({ title: "Link copied!" });
