@@ -711,6 +711,37 @@ const AdminPage = () => {
                       </CardContent>
                     </Card>
                   ))}
+
+                  {/* Appearance Settings */}
+                  <Card>
+                    <CardHeader><CardTitle className="text-lg">Appearance</CardTitle></CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-medium">Glass Intensity</Label>
+                          <span className="text-sm text-muted-foreground font-mono">{siteSettings.glass_intensity || "60"}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="5"
+                          value={siteSettings.glass_intensity || "60"}
+                          onChange={(e) => setSiteSettings((prev) => ({ ...prev, glass_intensity: e.target.value }))}
+                          className="w-full h-2 rounded-full appearance-none cursor-pointer bg-gray-200 accent-primary"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Clear (0%)</span>
+                          <span>Default (60%)</span>
+                          <span>Frosted (100%)</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Controls the opacity and blur of glass-effect cards (Auth page, Navbar). Higher = more frosted.</p>
+                        <Button size="sm" onClick={() => handleSaveSetting("glass_intensity", siteSettings.glass_intensity || "60")}>
+                          <Save className="h-4 w-4 mr-2" /> Save Appearance
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
               );
             })()}

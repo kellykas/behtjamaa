@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useSiteSettings } from "@/hooks/useContent";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Home,
@@ -34,6 +35,13 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const [myBranch, setMyBranch] = useState<{ slug: string } | null>(null);
+  const { settings } = useSiteSettings("appearance");
+  const glassIntensity = parseInt(settings.glass_intensity || "60", 10);
+  const glassStyle = {
+    background: `rgba(255,255,255,${glassIntensity / 100})`,
+    backdropFilter: `blur(${Math.round(glassIntensity * 0.24)}px)`,
+    WebkitBackdropFilter: `blur(${Math.round(glassIntensity * 0.24)}px)`,
+  } as const;
 
   useEffect(() => {
     if (!user) return;
@@ -57,7 +65,7 @@ const Navbar = () => {
     <>
       {/* Desktop: floating pill at top */}
       <nav className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 z-50">
-        <div className="flex items-center gap-1 px-2 py-2 rounded-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center gap-1 px-2 py-2 rounded-full border border-white/40 shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)]" style={glassStyle}>
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.to);
             return (
@@ -149,7 +157,7 @@ const Navbar = () => {
 
       {/* Mobile: floating pill at bottom */}
       <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-[420px]">
-        <div className="flex items-center justify-around px-1 py-2 rounded-full bg-white/70 backdrop-blur-xl border border-white/40 shadow-[0_4px_24px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]">
+        <div className="flex items-center justify-around px-1 py-2 rounded-full border border-white/40 shadow-[0_4px_24px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]" style={glassStyle}>
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.to);
             return (
