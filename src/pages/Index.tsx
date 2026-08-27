@@ -9,7 +9,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
-import { Navbar } from "@/components/Navbar";
 
 
 
@@ -406,7 +405,7 @@ const DonateCTA = () => (
 
 /* ─── Footer ──────────────────────────────────────────────────── */
 const Footer = () => (
-  <footer className="bg-primary text-primary-foreground pb-24 md:pb-12">
+  <footer className="bg-primary text-primary-foreground">
     <div className="max-w-6xl mx-auto px-4 py-12">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
         <div className="md:col-span-2">
@@ -469,7 +468,6 @@ const Footer = () => (
 /* ─── Home Page ───────────────────────────────────────────────── */
 const Index = () => (
   <div className="min-h-screen gradient-subtle">
-    <Navbar />
     <HeroSection />
     <BranchesPreview />
     <BeliefSection />

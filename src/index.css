@@ -87,6 +87,13 @@
   }
 }
 
+/* Mobile bottom padding for fixed navbar */
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 5rem;
+  }
+}
+
 @layer utilities {
   .gradient-hero {
     background: linear-gradient(135deg, hsl(210 60% 45%), hsl(220 55% 50%), hsl(200 50% 60%));
