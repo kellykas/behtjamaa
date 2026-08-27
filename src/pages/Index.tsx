@@ -1,16 +1,14 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
-
-
 
 /* ─── Hero ────────────────────────────────────────────────────── */
 const HeroSection = () => (
@@ -189,51 +187,51 @@ const BranchesPreview = () => {
             ))}
           </div>
         ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {branches.map((branch) => (
-            <Link key={branch.id} to={`/branches/${branch.slug}`}>
-              <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full">
-                {branch.banner_url && (
-                  <div className="h-32 overflow-hidden">
-                    <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  </div>
-                )}
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    {branch.logo_url ? (
-                      <img src={branch.logo_url} alt="" className="w-10 h-10 rounded-full object-cover border" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
-                        <Building2 className="h-5 w-5 text-primary-foreground" />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <h3 className="font-bold truncate">{branch.name}</h3>
-                      {branch.location && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="h-3 w-3" /> {branch.location}
-                        </p>
-                      )}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {branches.map((branch) => (
+              <Link key={branch.id} to={`/branches/${branch.slug}`}>
+                <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full">
+                  {branch.banner_url && (
+                    <div className="h-32 overflow-hidden">
+                      <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     </div>
-                  </div>
-                  {branch.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{branch.description}</p>}
-                  <span className="text-sm font-medium text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
-                    View Portal <ExternalLink className="h-3.5 w-3.5" />
-                  </span>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                  )}
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-3">
+                      {branch.logo_url ? (
+                        <img src={branch.logo_url} alt="" className="w-10 h-10 rounded-full object-cover border" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
+                          <Building2 className="h-5 w-5 text-primary-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h3 className="font-bold truncate">{branch.name}</h3>
+                        {branch.location && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <MapPin className="h-3 w-3" /> {branch.location}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {branch.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{branch.description}</p>}
+                    <span className="text-sm font-medium text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                      View Portal <ExternalLink className="h-3.5 w-3.5" />
+                    </span>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         )}
         {!loading && branches.length > 0 && (
-        <div className="text-center">
-          <Link to="/branches">
-            <Button variant="outline" size="lg" className="gap-2">
-              View All Branches <ExternalLink className="h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
+          <div className="text-center">
+            <Link to="/branches">
+              <Button variant="outline" size="lg" className="gap-2">
+                View All Branches <ExternalLink className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
         )}
       </div>
     </section>
@@ -264,106 +262,262 @@ const DailyScripture = () => {
   );
 };
 
-/* ─── Audio Player + Episodes ─────────────────────────────────── */
-/* ── Podcast Carousel Card ────────────────────────────────────── */
-const CarouselCard = ({
+/* ─── Spotify-Style Podcast Carousel ──────────────────────────── */
+
+// Color orbs that bleed through the glass cards
+const CarouselOrbs = ({ activeEpisode }: { activeEpisode: Tables<"episodes"> | null }) => {
+  // Generate orb colors from the active episode's category or a default
+  const colors = activeEpisode?.category === "Worship"
+    ? ["rgba(59,130,246,0.5)", "rgba(168,85,247,0.4)", "rgba(236,72,153,0.35)"]
+    : activeEpisode?.category === "Sermon"
+    ? ["rgba(239,68,68,0.5)", "rgba(245,158,11,0.4)", "rgba(239,68,68,0.3)"]
+    : activeEpisode?.category === "Testimony"
+    ? ["rgba(16,185,129,0.5)", "rgba(59,130,246,0.4)", "rgba(16,185,129,0.3)"]
+    : ["rgba(59,130,246,0.5)", "rgba(168,85,247,0.4)", "rgba(236,72,153,0.35)"];
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Orb 1 — top center */}
+      <div
+        className="carousel-orb"
+        style={{
+          position: "absolute",
+          width: 400,
+          height: 400,
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${colors[0]} 0%, transparent 70%)`,
+          filter: "blur(60px)",
+          top: "5%",
+          left: "50%",
+          transform: "translateX(-50%)",
+          animation: "orb-drift-1 16s ease-in-out infinite",
+        }}
+      />
+      {/* Orb 2 — left */}
+      <div
+        className="carousel-orb"
+        style={{
+          position: "absolute",
+          width: 350,
+          height: 350,
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${colors[1]} 0%, transparent 70%)`,
+          filter: "blur(60px)",
+          top: "30%",
+          left: "5%",
+          animation: "orb-drift-2 14s ease-in-out infinite",
+          animationDelay: "-3s",
+        }}
+      />
+      {/* Orb 3 — right */}
+      <div
+        className="carousel-orb"
+        style={{
+          position: "absolute",
+          width: 350,
+          height: 350,
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${colors[2]} 0%, transparent 70%)`,
+          filter: "blur(60px)",
+          top: "30%",
+          right: "5%",
+          animation: "orb-drift-3 18s ease-in-out infinite",
+          animationDelay: "-7s",
+        }}
+      />
+    </div>
+  );
+};
+
+// Individual cover-flow card
+const CoverFlowCard = ({
   episode,
-  isActive,
+  offset,
   onPlay,
   playing,
+  onClick,
 }: {
   episode: Tables<"episodes">;
-  isActive: boolean;
+  offset: number;
   onPlay: () => void;
   playing: boolean;
-}) => (
-  <div
-    className="carousel-card relative shrink-0 rounded-2xl overflow-hidden transition-all duration-500 cursor-pointer select-none"
-    style={{
-      width: isActive ? 280 : 220,
-      height: isActive ? 360 : 300,
-      opacity: isActive ? 1 : 0.6,
-      transform: isActive ? "scale(1) rotateY(0)" : "scale(0.85) rotateY(0)",
-      transition: "all 500ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-    }}
-    onClick={onPlay}
-  >
-    {/* Thumbnail */}
-    {episode.thumbnail_url ? (
-      <img
-        src={episode.thumbnail_url}
-        alt={episode.title}
-        className="absolute inset-0 w-full h-full object-cover"
-        draggable={false}
-      />
-    ) : (
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
-        <Music className="h-16 w-16 text-white/30" />
-      </div>
-    )}
+  onClick: () => void;
+}) => {
+  const absOffset = Math.abs(offset);
+  const isCenter = offset === 0;
+  const isLeft = offset < 0;
 
-    {/* Dark gradient overlay */}
-    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+  // Cover-flow math
+  const rotateY = isCenter ? 0 : isLeft ? 40 : -40;
+  const scale = isCenter ? 1 : absOffset === 1 ? 0.78 : 0.55;
+  const translateX = isCenter ? 0 : isLeft ? -55 : 55;
+  const opacity = isCenter ? 1 : absOffset === 1 ? 0.8 : 0.35;
+  const zIndex = 10 - absOffset;
 
-    {/* Glass border */}
+  return (
     <div
-      className="absolute inset-0 rounded-2xl pointer-events-none"
+      className="carousel-cover-card absolute top-1/2 left-1/2 cursor-pointer select-none"
       style={{
-        border: "1px solid rgba(255,255,255,0.15)",
-        boxShadow: isActive
-          ? "0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)"
-          : "0 4px 16px rgba(0,0,0,0.3)",
+        width: isCenter ? 260 : 210,
+        height: isCenter ? 340 : 280,
+        opacity,
+        zIndex,
+        transform: `translate(-50%, -50%) translateX(${translateX}px) perspective(900px) rotateY(${rotateY}deg) scale(${scale})`,
+        transition: "all 550ms cubic-bezier(0.34, 1.56, 0.64, 1)",
       }}
-    />
-
-    {/* Content overlay at bottom */}
-    <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-      <div className="flex items-center gap-2 mb-1">
-        <Badge className="bg-white/20 text-white border-white/20 text-[10px] backdrop-blur-sm">{episode.category}</Badge>
-        {episode.featured && <Badge className="bg-amber-400/20 text-amber-300 border-amber-400/20 text-[10px] backdrop-blur-sm">Featured</Badge>}
-      </div>
-      <h3 className="text-white font-bold text-sm leading-tight mb-0.5 truncate">{episode.title}</h3>
-      {episode.description && (
-        <p className="text-white/60 text-xs line-clamp-1">{episode.description}</p>
-      )}
-
-      {/* Play button — only visible on active card */}
-      {episode.audio_url && isActive && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onPlay(); }}
-          className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full text-xs font-semibold h-8 px-4 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/20 transition-all duration-200"
-        >
-          {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3 fill-white" />}
-          {playing ? "Pause" : "Play"}
-        </button>
-      )}
-    </div>
-
-    {/* Playing indicator dots */}
-    {playing && (
-      <div className="absolute top-3 right-3 z-10 flex items-end gap-0.5 h-4">
-        {[0, 1, 2].map((i) => (
-          <div
-            key={i}
-            className="w-0.5 bg-white rounded-full"
+      onClick={onClick}
+    >
+      {/* Card body */}
+      <div className="relative w-full h-full rounded-2xl overflow-hidden">
+        {/* Thumbnail */}
+        {episode.thumbnail_url ? (
+          <img
+            src={episode.thumbnail_url}
+            alt={episode.title}
+            className="absolute inset-0 w-full h-full object-cover"
             style={{
-              animation: `eq-bar 0.8s ease-in-out ${i * 0.15}s infinite alternate`,
-              height: "100%",
+              transform: isCenter ? "scale(1.08)" : "scale(1)",
+              transition: "transform 600ms ease-out",
             }}
+            draggable={false}
           />
-        ))}
-      </div>
-    )}
-  </div>
-);
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
+            <Music className="h-16 w-16 text-white/20" />
+          </div>
+        )}
 
-/* ── Featured Episodes Carousel ──────────────────────────────── */
+        {/* Dark gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+        {/* Glass border + inner glow */}
+        <div
+          className="absolute inset-0 rounded-2xl pointer-events-none"
+          style={{
+            border: isCenter ? "1.5px solid rgba(255,255,255,0.22)" : "1px solid rgba(255,255,255,0.1)",
+            boxShadow: isCenter
+              ? "0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(255,255,255,0.05)"
+              : "0 8px 30px rgba(0,0,0,0.4)",
+            transition: "all 550ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+          }}
+        />
+
+        {/* Content */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+          <Badge className="bg-white/15 text-white border-white/15 text-[10px] backdrop-blur-md mb-2">{episode.category}</Badge>
+          <h3 className="text-white font-bold text-sm leading-tight drop-shadow-lg truncate">{episode.title}</h3>
+          {episode.description && (
+            <p className="text-white/50 text-xs line-clamp-1 mt-0.5">{episode.description}</p>
+          )}
+
+          {/* Play button — center card only */}
+          {episode.audio_url && isCenter && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onPlay(); }}
+              className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full text-xs font-semibold h-8 px-5 carousel-play-btn"
+              style={{
+                background: playing ? "rgba(239,68,68,0.35)" : "rgba(255,255,255,0.18)",
+                backdropFilter: "blur(16px)",
+                border: playing ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.25)",
+                color: "white",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+              }}
+            >
+              {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3 fill-white" />}
+              {playing ? "Pause" : "Play"}
+            </button>
+          )}
+        </div>
+
+        {/* Equalizer when playing */}
+        {playing && isCenter && (
+          <div className="absolute top-3 right-3 z-10 flex items-end gap-[3px] h-4">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="carousel-eq-bar w-[3px] bg-red-400 rounded-full"
+                style={{
+                  animationDelay: `${i * 0.12}s`,
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Player bar at the bottom
+const PlayerBar = ({
+  episode,
+  playing,
+  onToggle,
+  onPrev,
+  onNext,
+}: {
+  episode: Tables<"episodes"> | null;
+  playing: boolean;
+  onToggle: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) => {
+  if (!episode) return null;
+
+  return (
+    <div className="carousel-player-bar mx-auto mt-6 flex items-center gap-3 py-3 px-4 rounded-2xl max-w-lg"
+      style={{
+        background: "rgba(255,255,255,0.12)",
+        backdropFilter: "blur(20px) saturate(180%)",
+        border: "1px solid rgba(255,255,255,0.15)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
+      }}
+    >
+      {/* Thumbnail */}
+      {episode.thumbnail_url ? (
+        <img src={episode.thumbnail_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
+      ) : (
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
+          <Music className="h-4 w-4 text-white/50" />
+        </div>
+      )}
+
+      {/* Track info */}
+      <div className="flex-1 min-w-0">
+        <p className="text-white font-semibold text-sm truncate">{episode.title}</p>
+        <p className="text-white/50 text-xs truncate">{episode.category}</p>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center gap-1">
+        <button onClick={onPrev} className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all">
+          <SkipBack className="h-4 w-4" />
+        </button>
+        <button
+          onClick={onToggle}
+          className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
+          style={{
+            background: playing ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.2)",
+            border: "1px solid rgba(255,255,255,0.2)",
+          }}
+        >
+          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-white" />}
+        </button>
+        <button onClick={onNext} className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all">
+          <SkipForward className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const FeaturedEpisodes = () => {
   const [episodes, setEpisodes] = useState<Tables<"episodes">[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [audios, setAudios] = useState<Record<string, HTMLAudioElement>>({});
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     supabase
@@ -375,17 +529,18 @@ const FeaturedEpisodes = () => {
       .then(({ data }) => {
         const eps = data || [];
         setEpisodes(eps);
-        // Pre-create audio objects
         const map: Record<string, HTMLAudioElement> = {};
         eps.forEach((ep) => {
           if (ep.audio_url) map[ep.id] = new Audio(ep.audio_url);
         });
         setAudios(map);
       });
-    return () => { Object.values(audios).forEach((a) => a.pause()); };
+    return () => {
+      Object.values(audios).forEach((a) => a.pause());
+    };
   }, []);
 
-  const togglePlay = (idx: number) => {
+  const togglePlay = useCallback((idx: number) => {
     const ep = episodes[idx];
     if (!ep?.audio_url) return;
     const audio = audios[ep.id];
@@ -394,118 +549,140 @@ const FeaturedEpisodes = () => {
       audio.pause();
       setPlayingIdx(null);
     } else {
-      // Stop previous
-      if (playingIdx !== null) { audios[episodes[playingIdx]?.id]?.pause(); }
+      if (playingIdx !== null) audios[episodes[playingIdx]?.id]?.pause();
       audio.currentTime = 0;
       audio.play();
       setPlayingIdx(idx);
       audio.onended = () => setPlayingIdx(null);
     }
-  };
+  }, [episodes, audios, playingIdx]);
 
-  const scrollTo = (idx: number) => {
+  const goTo = useCallback((idx: number) => {
     const clamped = Math.max(0, Math.min(idx, episodes.length - 1));
     setActiveIdx(clamped);
-    const el = scrollRef.current;
-    if (!el) return;
-    const cardWidth = window.innerWidth < 768 ? 230 : 300;
-    const center = el.clientWidth / 2;
-    el.scrollTo({ left: clamped * cardWidth + cardWidth / 2 - center, behavior: "smooth" });
-  };
+    setIsAutoPlaying(false);
+  }, [episodes.length]);
 
-  const handleScroll = () => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const cardWidth = window.innerWidth < 768 ? 230 : 300;
-    const center = el.scrollLeft + el.clientWidth / 2;
-    const idx = Math.round((center - cardWidth / 2) / cardWidth);
-    setActiveIdx(Math.max(0, Math.min(idx, episodes.length - 1)));
-  };
+  const goNext = useCallback(() => {
+    goTo(activeIdx >= episodes.length - 1 ? 0 : activeIdx + 1);
+  }, [activeIdx, episodes.length, goTo]);
+
+  const goPrev = useCallback(() => {
+    goTo(activeIdx <= 0 ? episodes.length - 1 : activeIdx - 1);
+  }, [activeIdx, episodes.length, goTo]);
+
+  // Auto-advance carousel every 4s when autoPlaying
+  useEffect(() => {
+    if (isAutoPlaying && episodes.length > 1) {
+      autoScrollRef.current = setInterval(() => {
+        setActiveIdx((prev) => (prev >= episodes.length - 1 ? 0 : prev + 1));
+      }, 4000);
+    }
+    return () => { if (autoScrollRef.current) clearInterval(autoScrollRef.current); };
+  }, [isAutoPlaying, episodes.length]);
+
+  const activeEpisode = episodes[activeIdx] || null;
 
   return (
-    <section id="featured" className="py-20 overflow-hidden scroll-mt-20">
-      <div className="text-center mb-12 px-4">
-        <Badge className="mb-3">Podcast</Badge>
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">Featured Episodes</h2>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Swipe to explore — powerful sermons, testimonies, and Bible teachings.
+    <section id="featured" className="scroll-mt-20 relative overflow-hidden"
+      style={{
+        background: "linear-gradient(180deg, hsl(222 47% 8%) 0%, hsl(230 40% 10%) 50%, hsl(222 47% 8%) 100%)",
+        paddingTop: 80,
+        paddingBottom: 80,
+      }}
+    >
+      {/* Background orbs */}
+      <CarouselOrbs activeEpisode={activeEpisode} />
+
+      {/* Title */}
+      <div className="text-center mb-8 px-4 relative z-10">
+        <Badge className="mb-3 bg-white/10 text-white border-white/15 backdrop-blur-md">Podcast</Badge>
+        <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">Featured Episodes</h2>
+        <p className="text-white/50 max-w-lg mx-auto text-sm">
+          Swipe or hover to explore — sermons, testimonies, and Bible teachings.
         </p>
       </div>
 
       {episodes.length === 0 ? (
-        <div className="text-center py-12 px-4">
-          <p className="text-muted-foreground text-lg">No episodes available yet.</p>
-          <p className="text-muted-foreground">Check back soon!</p>
+        <div className="text-center py-20 px-4 relative z-10">
+          <Music className="h-16 w-16 text-white/20 mx-auto mb-4" />
+          <p className="text-white/40 text-lg">No episodes available yet.</p>
+          <p className="text-white/30 text-sm">Check back soon!</p>
         </div>
       ) : (
         <>
-          {/* Carousel */}
+          {/* Cover-flow container */}
           <div
-            ref={scrollRef}
-            onScroll={handleScroll}
-            className="flex items-center gap-4 px-4 pb-6 overflow-x-auto scroll-smooth snap-x snap-mandatory"
-            style={{
-              scrollSnapType: "x mandatory",
-              WebkitOverflowScrolling: "touch",
-              scrollbarWidth: "none",
-              msOverflowStyle: "none",
-            }}
+            className="relative mx-auto"
+            style={{ height: 380, maxWidth: 700 }}
+            onMouseEnter={() => setIsAutoPlaying(false)}
+            onMouseLeave={() => setIsAutoPlaying(true)}
           >
-            {/* Left spacer for centering first card */}
-            <div className="shrink-0 w-[calc(50vw-160px)] md:w-[calc(50vw-160px)]" />
-
             {episodes.map((ep, i) => (
-              <div
+              <CoverFlowCard
                 key={ep.id}
-                className="snap-center shrink-0"
-                style={{ scrollSnapAlign: "center" }}
-              >
-                <CarouselCard
-                  episode={ep}
-                  isActive={i === activeIdx}
-                  onPlay={() => togglePlay(i)}
-                  playing={playingIdx === i}
-                />
-              </div>
+                episode={ep}
+                offset={i - activeIdx}
+                onPlay={() => togglePlay(i)}
+                playing={playingIdx === i}
+                onClick={() => goTo(i)}
+              />
             ))}
 
-            {/* Right spacer */}
-            <div className="shrink-0 w-[calc(50vw-160px)] md:w-[calc(50vw-160px)]" />
+            {/* Arrow buttons — desktop */}
+            <button
+              onClick={goPrev}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center hidden md:flex transition-all duration-300 hover:scale-110 active:scale-95"
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                color: "rgba(255,255,255,0.7)",
+              }}
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={goNext}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center hidden md:flex transition-all duration-300 hover:scale-110 active:scale-95"
+              style={{
+                background: "rgba(255,255,255,0.1)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                color: "rgba(255,255,255,0.7)",
+              }}
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Player bar */}
+          <div className="relative z-10 px-4">
+            <PlayerBar
+              episode={activeEpisode}
+              playing={playingIdx === activeIdx}
+              onToggle={() => togglePlay(activeIdx)}
+              onPrev={goPrev}
+              onNext={goNext}
+            />
           </div>
 
           {/* Navigation dots */}
-          <div className="flex justify-center gap-2 mt-6">
+          <div className="flex justify-center gap-2 mt-6 relative z-10">
             {episodes.map((_, i) => (
               <button
                 key={i}
-                onClick={() => scrollTo(i)}
-                className="rounded-full transition-all duration-300"
+                onClick={() => goTo(i)}
+                className="rounded-full transition-all duration-400"
                 style={{
-                  width: i === activeIdx ? 24 : 8,
+                  width: i === activeIdx ? 28 : 8,
                   height: 8,
-                  background: i === activeIdx ? "#2563eb" : "rgba(0,0,0,0.15)",
+                  background: i === activeIdx ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
+                  transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
                 }}
               />
             ))}
           </div>
-
-          {/* Arrow buttons */}
-          {activeIdx > 0 && (
-            <button
-              onClick={() => scrollTo(activeIdx - 1)}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm shadow-lg flex items-center justify-center hover:bg-white transition-all duration-200 hidden md:flex"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            </button>
-          )}
-          {activeIdx < episodes.length - 1 && (
-            <button
-              onClick={() => scrollTo(activeIdx + 1)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm shadow-lg flex items-center justify-center hover:bg-white transition-all duration-200 hidden md:flex"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </button>
-          )}
         </>
       )}
     </section>
