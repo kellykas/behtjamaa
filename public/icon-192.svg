@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1e3a5f"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5d77a"/>
+      <stop offset="50%" stop-color="#d4a554"/>
+      <stop offset="100%" stop-color="#b8862e"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="40" fill="url(#bg)"/>
+  <circle cx="96" cy="96" r="72" fill="none" stroke="url(#gold)" stroke-width="2" opacity="0.3"/>
+  <!-- Cross -->
+  <rect x="88" y="40" width="16" height="60" rx="3" fill="url(#gold)"/>
+  <rect x="72" y="52" width="48" height="14" rx="3" fill="url(#gold)"/>
+  <!-- Text -->
+  <text x="96" y="130" text-anchor="middle" font-family="Georgia, serif" font-size="18" font-weight="bold" fill="white" letter-spacing="2">BEHT</text>
+  <text x="96" y="152" text-anchor="middle" font-family="Georgia, serif" font-size="14" fill="#d4a554" letter-spacing="4">JAMAA</text>
+</svg>
