@@ -343,6 +343,10 @@ const Navbar = () => {
     );
   };
 
+  // Hide navbar on auth-related pages
+  const hideNav = location.pathname === "/auth" || location.pathname === "/reset-password";
+  if (hideNav) return null;
+
   return (
     <>
       {/* ── Desktop: floating pill at top ─────────────────────── */}
