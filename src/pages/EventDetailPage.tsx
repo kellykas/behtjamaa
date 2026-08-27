@@ -23,6 +23,9 @@ import {
   Phone,
   Calendar,
   ArrowRight,
+  Copy,
+  Check,
+  MessageCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +47,30 @@ const EventDetailPage = () => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const eventUrl = typeof window !== "undefined" ? window.location.href : "";
+  const shareText = `Check out this event: ${event?.title || "BEHT JAMAA Event"}`;
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: event?.title, text: shareText, url: eventUrl });
+      } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(eventUrl);
+      setLinkCopied(true);
+      toast({ title: "Link copied!", description: "Share this event with your friends." });
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(eventUrl);
+    setLinkCopied(true);
+    toast({ title: "Link copied!", description: "Share this event with your friends." });
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   useEffect(() => {
     if (slug && eventId) fetchData();
@@ -327,6 +354,61 @@ const EventDetailPage = () => {
                 >
                   <Users className="h-3.5 w-3.5 mr-1.5" /> Join Ministry
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Share Event */}
+            <Card className="rounded-3xl border-0 shadow-md">
+              <CardContent className="pt-6 pb-6 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Share2 className="h-4 w-4 text-blue-600" />
+                  <h3 className="font-bold text-slate-900 text-sm">Share This Event</h3>
+                </div>
+                {"share" in navigator && (
+                  <Button
+                    className="w-full rounded-full bg-blue-600 hover:bg-blue-700 text-white"
+                    size="sm"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="h-3.5 w-3.5 mr-1.5" /> Share
+                  </Button>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#1877F2] text-white text-xs font-medium hover:bg-[#166FE5] transition-colors"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    Facebook
+                  </a>
+                  <a
+                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(eventUrl)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-black text-white text-xs font-medium hover:bg-slate-800 transition-colors"
+                  >
+                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    X
+                  </a>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(shareText + " " + eventUrl)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-[#25D366] text-white text-xs font-medium hover:bg-[#20BA5A] transition-colors"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    WhatsApp
+                  </a>
+                  <button
+                    onClick={handleCopyLink}
+                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-full bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors"
+                  >
+                    {linkCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                    {linkCopied ? "Copied!" : "Copy Link"}
+                  </button>
+                </div>
               </CardContent>
             </Card>
 
