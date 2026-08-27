@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSiteSettings } from "@/hooks/useContent";
@@ -30,6 +30,10 @@ const NAV_ITEMS: NavItem[] = [
   { to: "/donate", label: "Give", icon: HandHeart },
 ];
 
+/* Smooth spring-like easing */
+const EASE_SPRING = "cubic-bezier(0.34, 1.56, 0.64, 1)";
+const EASE_SMOOTH = "cubic-bezier(0.4, 0, 0.2, 1)";
+
 const Navbar = () => {
   const { user, signOut } = useAuth();
   const location = useLocation();
@@ -37,21 +41,27 @@ const Navbar = () => {
   const { settings } = useSiteSettings("appearance");
   const glassIntensity = parseInt(settings.glass_intensity || "60", 10);
 
-  // Scroll/hover state
   const [shrunk, setShrunk] = useState(false);
   const [hovered, setHovered] = useState(false);
 
-  // Track scroll direction
+  // Track scroll direction with debounce
   useEffect(() => {
     let lastScroll = 0;
+    let ticking = false;
     const onScroll = () => {
-      const current = window.scrollY;
-      if (current > 80) {
-        setShrunk(current > lastScroll);
-      } else {
-        setShrunk(false);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const current = window.scrollY;
+          if (current > 80) {
+            setShrunk(current > lastScroll);
+          } else {
+            setShrunk(false);
+          }
+          lastScroll = current;
+          ticking = false;
+        });
+        ticking = true;
       }
-      lastScroll = current;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -64,7 +74,6 @@ const Navbar = () => {
 
   const isExpanded = !shrunk || hovered;
 
-  // Fetch branch leader info
   useEffect(() => {
     if (!user) return;
     supabase
@@ -89,150 +98,288 @@ const Navbar = () => {
     WebkitBackdropFilter: `blur(${Math.round(glassIntensity * 0.24)}px)`,
   } as const;
 
-  const renderItem = (item: NavItem, compact: boolean) => {
+  const compact = !isExpanded;
+
+  /* ── Individual nav item ──────────────────────────────────────── */
+  const NavItemLink = ({ item }: { item: NavItem }) => {
     const active = isActive(item.to);
     return (
       <Link
-        key={item.to}
         to={item.to}
-        className={cn(
-          "flex flex-col items-center rounded-full transition-all duration-300 ease-in-out",
-          compact ? "gap-0 px-3 py-1.5 min-w-[40px]" : "gap-0.5 px-4 py-2 min-w-[64px]",
-          active
-            ? "text-blue-600"
-            : "text-gray-500 hover:text-gray-800 hover:bg-gray-100/60"
-        )}
+        className="relative flex flex-col items-center rounded-full overflow-hidden"
+        style={{
+          padding: compact ? "6px 10px" : "8px 16px",
+          minWidth: compact ? 40 : 64,
+          gap: compact ? 0 : 2,
+          transition: `padding 400ms ${EASE_SPRING}, min-width 400ms ${EASE_SPRING}, gap 300ms ${EASE_SMOOTH}`,
+        }}
       >
-        <item.icon
+        {/* Hover / active background pill */}
+        <div
           className={cn(
-            "transition-all duration-300",
-            compact ? "h-4 w-4" : "h-5 w-5",
-            active && "fill-blue-600/15 stroke-[2.2]"
+            "absolute inset-0 rounded-full transition-all duration-300",
+            active ? "bg-blue-50" : "bg-transparent hover:bg-gray-100/60"
           )}
+          style={{ transition: `background 300ms ${EASE_SMOOTH}` }}
         />
-        {!compact && (
-          <span className="text-[10px] font-semibold leading-none transition-all duration-300">
+
+        <div className="relative z-10 flex flex-col items-center" style={{ gap: compact ? 0 : 2 }}>
+          <item.icon
+            className={cn(
+              "transition-all",
+              active && "fill-blue-600/15 stroke-[2.2]"
+            )}
+            style={{
+              width: compact ? 16 : 20,
+              height: compact ? 16 : 20,
+              color: active ? "#2563eb" : "#6b7280",
+              transition: `width 400ms ${EASE_SPRING}, height 400ms ${EASE_SPRING}, color 200ms ease`,
+            }}
+          />
+
+          {/* Label — fades out before collapsing */}
+          <span
+            className="text-[10px] font-semibold leading-none whitespace-nowrap overflow-hidden"
+            style={{
+              maxHeight: compact ? 0 : 14,
+              opacity: compact ? 0 : 1,
+              maxWidth: compact ? 0 : 80,
+              marginBottom: compact ? 0 : 1,
+              transition: `max-height 250ms ${EASE_SMOOTH}, opacity 200ms ease, max-width 400ms ${EASE_SPRING}, margin 300ms ${EASE_SMOOTH}`,
+              color: active ? "#2563eb" : "#6b7280",
+            }}
+          >
             {item.label}
           </span>
-        )}
-        {active && !compact && (
-          <div className="w-5 h-0.5 bg-blue-600 rounded-full mt-0.5 transition-all duration-300" />
-        )}
-        {active && compact && (
-          <div className="w-3 h-0.5 bg-blue-600 rounded-full mt-0.5 transition-all duration-300" />
-        )}
+        </div>
+
+        {/* Active indicator dot/bar */}
+        <div
+          className="relative z-10 bg-blue-600 rounded-full"
+          style={{
+            width: compact ? 8 : 16,
+            height: 2,
+            marginTop: compact ? 2 : 2,
+            opacity: active ? 1 : 0,
+            transform: active ? "scaleX(1)" : "scaleX(0)",
+            transition: `width 400ms ${EASE_SPRING}, opacity 250ms ease, transform 350ms ${EASE_SPRING}`,
+          }}
+        />
       </Link>
     );
   };
 
-  const renderAuthButton = (compact: boolean) => {
+  /* ── Auth button ──────────────────────────────────────────────── */
+  const AuthButton = () => {
     if (user) {
       return (
         <button
           onClick={signOut}
-          className={cn(
-            "flex flex-col items-center rounded-full transition-all duration-300 text-gray-500 hover:text-gray-800 hover:bg-gray-100/60",
-            compact ? "gap-0 px-3 py-1.5" : "gap-0.5 px-4 py-2 min-w-[64px]"
-          )}
+          className="relative flex flex-col items-center rounded-full overflow-hidden text-gray-500 hover:text-gray-800"
+          style={{
+            padding: compact ? "6px 10px" : "8px 16px",
+            minWidth: compact ? 40 : 64,
+            gap: compact ? 0 : 2,
+            transition: `padding 400ms ${EASE_SPRING}, min-width 400ms ${EASE_SPRING}`,
+          }}
         >
-          <LogOut className={cn("transition-all duration-300", compact ? "h-4 w-4" : "h-5 w-5")} />
-          {!compact && (
-            <span className="text-[10px] font-semibold leading-none">Sign Out</span>
-          )}
+          <div className="absolute inset-0 rounded-full bg-transparent hover:bg-gray-100/60 transition-colors duration-300" />
+          <LogOut
+            className="relative z-10"
+            style={{
+              width: compact ? 16 : 20,
+              height: compact ? 16 : 20,
+              transition: `width 400ms ${EASE_SPRING}, height 400ms ${EASE_SPRING}`,
+            }}
+          />
+          <span
+            className="relative z-10 text-[10px] font-semibold leading-none whitespace-nowrap overflow-hidden"
+            style={{
+              maxHeight: compact ? 0 : 14,
+              opacity: compact ? 0 : 1,
+              maxWidth: compact ? 0 : 80,
+              transition: `max-height 250ms ${EASE_SMOOTH}, opacity 200ms ease, max-width 400ms ${EASE_SPRING}`,
+            }}
+          >
+            Sign Out
+          </span>
         </button>
       );
     }
+    const active = isActive("/auth");
     return (
       <Link
         to="/auth"
-        className={cn(
-          "flex flex-col items-center rounded-full transition-all duration-300",
-          compact ? "gap-0 px-3 py-1.5" : "gap-0.5 px-4 py-2 min-w-[64px]",
-          isActive("/auth")
-            ? "text-blue-600"
-            : "text-gray-500 hover:text-gray-800 hover:bg-gray-100/60"
-        )}
+        className="relative flex flex-col items-center rounded-full overflow-hidden"
+        style={{
+          padding: compact ? "6px 10px" : "8px 16px",
+          minWidth: compact ? 40 : 64,
+          gap: compact ? 0 : 2,
+          transition: `padding 400ms ${EASE_SPRING}, min-width 400ms ${EASE_SPRING}`,
+          color: active ? "#2563eb" : "#6b7280",
+        }}
       >
-        <User className={cn("transition-all duration-300", compact ? "h-4 w-4" : "h-5 w-5")} />
-        {!compact && (
-          <span className="text-[10px] font-semibold leading-none">Sign In</span>
-        )}
-        {isActive("/auth") && !compact && (
-          <div className="w-5 h-0.5 bg-blue-600 rounded-full mt-0.5" />
-        )}
-        {isActive("/auth") && compact && (
-          <div className="w-3 h-0.5 bg-blue-600 rounded-full mt-0.5" />
-        )}
+        <div
+          className={cn(
+            "absolute inset-0 rounded-full transition-colors duration-300",
+            active ? "bg-blue-50" : "bg-transparent hover:bg-gray-100/60"
+          )}
+        />
+        <User
+          className="relative z-10"
+          style={{
+            width: compact ? 16 : 20,
+            height: compact ? 16 : 20,
+            transition: `width 400ms ${EASE_SPRING}, height 400ms ${EASE_SPRING}`,
+            color: active ? "#2563eb" : "#6b7280",
+          }}
+        />
+        <span
+          className="relative z-10 text-[10px] font-semibold leading-none whitespace-nowrap overflow-hidden"
+          style={{
+            maxHeight: compact ? 0 : 14,
+            opacity: compact ? 0 : 1,
+            maxWidth: compact ? 0 : 80,
+            transition: `max-height 250ms ${EASE_SMOOTH}, opacity 200ms ease, max-width 400ms ${EASE_SPRING}`,
+          }}
+        >
+          Sign In
+        </span>
+        {/* Active indicator */}
+        <div
+          className="relative z-10 bg-blue-600 rounded-full"
+          style={{
+            width: active ? (compact ? 8 : 16) : 0,
+            height: 2,
+            marginTop: 2,
+            opacity: active ? 1 : 0,
+            transform: active ? "scaleX(1)" : "scaleX(0)",
+            transition: `width 400ms ${EASE_SPRING}, opacity 250ms ease, transform 350ms ${EASE_SPRING}`,
+          }}
+        />
       </Link>
     );
   };
 
-  const renderBranchLink = (compact: boolean) => {
+  /* ── Branch link (leader only) ────────────────────────────────── */
+  const BranchLink = () => {
     if (!user || !myBranch) return null;
     const active = isActive("/branches/");
     return (
       <>
-        <div className={cn("bg-gray-200 transition-all duration-300", compact ? "w-px h-6 mx-0.5" : "w-px h-8 mx-1")} />
+        {/* Divider */}
+        <div
+          className="bg-gray-200/60"
+          style={{
+            width: 1,
+            height: compact ? 20 : 28,
+            margin: compact ? "0 2px" : "0 4px",
+            transition: `height 400ms ${EASE_SPRING}, margin 300ms ${EASE_SMOOTH}`,
+          }}
+        />
         <Link
           to={`/branches/${myBranch.slug}`}
-          className={cn(
-            "flex flex-col items-center rounded-full transition-all duration-300",
-            compact ? "gap-0 px-3 py-1.5" : "gap-0.5 px-4 py-2 min-w-[64px]",
-            active
-              ? "text-blue-600"
-              : "text-gray-500 hover:text-gray-800 hover:bg-gray-100/60"
-          )}
+          className="relative flex flex-col items-center rounded-full overflow-hidden"
+          style={{
+            padding: compact ? "6px 10px" : "8px 16px",
+            minWidth: compact ? 40 : 64,
+            gap: compact ? 0 : 2,
+            transition: `padding 400ms ${EASE_SPRING}, min-width 400ms ${EASE_SPRING}`,
+            color: active ? "#2563eb" : "#6b7280",
+          }}
         >
-          <Building2 className={cn("transition-all duration-300", compact ? "h-4 w-4" : "h-5 w-5")} />
-          {!compact && (
-            <span className="text-[10px] font-semibold leading-none">My Branch</span>
-          )}
-          {active && !compact && (
-            <div className="w-5 h-0.5 bg-blue-600 rounded-full mt-0.5" />
-          )}
-          {active && compact && (
-            <div className="w-3 h-0.5 bg-blue-600 rounded-full mt-0.5" />
-          )}
+          <div
+            className={cn(
+              "absolute inset-0 rounded-full transition-colors duration-300",
+              active ? "bg-blue-50" : "bg-transparent hover:bg-gray-100/60"
+            )}
+          />
+          <Building2
+            className="relative z-10"
+            style={{
+              width: compact ? 16 : 20,
+              height: compact ? 16 : 20,
+              transition: `width 400ms ${EASE_SPRING}, height 400ms ${EASE_SPRING}`,
+              color: active ? "#2563eb" : "#6b7280",
+            }}
+          />
+          <span
+            className="relative z-10 text-[10px] font-semibold leading-none whitespace-nowrap overflow-hidden"
+            style={{
+              maxHeight: compact ? 0 : 14,
+              opacity: compact ? 0 : 1,
+              maxWidth: compact ? 0 : 80,
+              transition: `max-height 250ms ${EASE_SMOOTH}, opacity 200ms ease, max-width 400ms ${EASE_SPRING}`,
+            }}
+          >
+            My Branch
+          </span>
+          <div
+            className="relative z-10 bg-blue-600 rounded-full"
+            style={{
+              width: active ? (compact ? 8 : 16) : 0,
+              height: 2,
+              marginTop: 2,
+              opacity: active ? 1 : 0,
+              transform: active ? "scaleX(1)" : "scaleX(0)",
+              transition: `width 400ms ${EASE_SPRING}, opacity 250ms ease, transform 350ms ${EASE_SPRING}`,
+            }}
+          />
         </Link>
       </>
     );
   };
 
-  const compact = !isExpanded;
-
   return (
     <>
-      {/* Desktop: floating pill at top */}
+      {/* ── Desktop: floating pill at top ─────────────────────── */}
       <nav
-        className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300"
+        className="hidden md:flex fixed top-4 left-1/2 -translate-x-1/2 z-50"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
         <div
-          className={cn(
-            "flex items-center rounded-full border border-white/40 shadow-[0_4px_24px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-300",
-            compact ? "gap-0.5 px-1.5 py-1.5" : "gap-1 px-2 py-2"
-          )}
-          style={glassStyle}
+          className="flex items-center rounded-full border"
+          style={{
+            ...glassStyle,
+            borderColor: compact ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.5)",
+            padding: compact ? "6px 6px" : "8px 8px",
+            gap: compact ? 2 : 4,
+            boxShadow: compact
+              ? "0 2px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03)"
+              : "0 4px 24px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.04)",
+            transition: `padding 400ms ${EASE_SPRING}, gap 300ms ${EASE_SMOOTH}, box-shadow 400ms ${EASE_SMOOTH}, border-color 300ms ease`,
+          }}
         >
-          {NAV_ITEMS.map((item) => renderItem(item, compact))}
+          {NAV_ITEMS.map((item) => (
+            <NavItemLink key={item.to} item={item} />
+          ))}
 
           {/* Divider */}
-          <div className={cn("bg-gray-200 transition-all duration-300", compact ? "w-px h-6 mx-0.5" : "w-px h-8 mx-1")} />
+          <div
+            className="bg-gray-200/60"
+            style={{
+              width: 1,
+              height: compact ? 20 : 28,
+              margin: compact ? "0 2px" : "0 4px",
+              transition: `height 400ms ${EASE_SPRING}, margin 300ms ${EASE_SMOOTH}`,
+            }}
+          />
 
-          {/* Auth button */}
-          {renderAuthButton(compact)}
-
-          {/* My Branch (if leader) */}
-          {renderBranchLink(compact)}
+          <AuthButton />
+          <BranchLink />
         </div>
       </nav>
 
-      {/* Mobile: floating pill at bottom */}
+      {/* ── Mobile: floating pill at bottom ──────────────────── */}
       <nav className="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-[420px]">
         <div
-          className="flex items-center justify-around px-1 py-2 rounded-full border border-white/40 shadow-[0_4px_24px_rgba(0,0,0,0.1),0_1px_2px_rgba(0,0,0,0.06)]"
-          style={glassStyle}
+          className="flex items-center justify-around rounded-full border border-white/40"
+          style={{
+            ...glassStyle,
+            padding: "8px 4px",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)",
+          }}
         >
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.to);
@@ -240,56 +387,61 @@ const Navbar = () => {
               <Link
                 key={item.to}
                 to={item.to}
-                className={cn(
-                  "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200",
-                  active
-                    ? "text-blue-600"
-                    : "text-gray-500 active:text-gray-800"
-                )}
+                className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full relative overflow-hidden"
+                style={{
+                  color: active ? "#2563eb" : "#6b7280",
+                  transition: "color 200ms ease",
+                }}
               >
-                <item.icon
+                <div
                   className={cn(
-                    "h-5 w-5 transition-all",
-                    active && "fill-blue-600/15 stroke-[2.2]"
+                    "absolute inset-0 rounded-full transition-colors duration-200",
+                    active ? "bg-blue-50" : "active:bg-gray-100"
                   )}
                 />
-                <span className="text-[9px] font-semibold leading-none">
+                <item.icon
+                  className="relative z-10 h-5 w-5 transition-all duration-200"
+                  style={active ? { fill: "rgba(37,99,235,0.15)", strokeWidth: 2.2 } : undefined}
+                />
+                <span className="relative z-10 text-[9px] font-semibold leading-none">
                   {item.label}
                 </span>
                 {active && (
-                  <div className="w-4 h-0.5 bg-blue-600 rounded-full mt-0.5" />
+                  <div className="relative z-10 w-4 h-0.5 bg-blue-600 rounded-full mt-0.5" />
                 )}
               </Link>
             );
           })}
 
-          {/* Auth / Profile */}
           {user ? (
             <button
               onClick={signOut}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200 text-gray-500 active:text-gray-800"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full text-gray-500 active:text-gray-800 active:bg-gray-100 relative overflow-hidden"
             >
               <LogOut className="h-5 w-5" />
-              <span className="text-[9px] font-semibold leading-none">
-                Exit
-              </span>
+              <span className="text-[9px] font-semibold leading-none">Exit</span>
             </button>
           ) : (
             <Link
               to="/auth"
-              className={cn(
-                "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full transition-all duration-200",
-                isActive("/auth")
-                  ? "text-blue-600"
-                  : "text-gray-500 active:text-gray-800"
-              )}
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full relative overflow-hidden"
+              style={{
+                color: isActive("/auth") ? "#2563eb" : "#6b7280",
+                transition: "color 200ms ease",
+              }}
             >
-              <User className="h-5 w-5" />
-              <span className="text-[9px] font-semibold leading-none">
+              <div
+                className={cn(
+                  "absolute inset-0 rounded-full transition-colors duration-200",
+                  isActive("/auth") ? "bg-blue-50" : "active:bg-gray-100"
+                )}
+              />
+              <User className="relative z-10 h-5 w-5" />
+              <span className="relative z-10 text-[9px] font-semibold leading-none">
                 Sign In
               </span>
               {isActive("/auth") && (
-                <div className="w-4 h-0.5 bg-blue-600 rounded-full mt-0.5" />
+                <div className="relative z-10 w-4 h-0.5 bg-blue-600 rounded-full mt-0.5" />
               )}
             </Link>
           )}
