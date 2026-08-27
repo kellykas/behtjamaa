@@ -124,12 +124,13 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
               </div>
 
               {/* Arms */}
+              {/* Right arm - extends toward listener during praying */}
               <div
                 className={`absolute top-16 -right-4 w-8 h-20 rounded-full transition-all duration-700 ${
                   phase === "preaching"
                     ? "rotate-[-30deg] origin-top"
                     : phase === "praying"
-                    ? "rotate-[-60deg] origin-top"
+                    ? "rotate-[-80deg] origin-top translate-x-4"
                     : "rotate-0"
                 }`}
                 style={{
@@ -143,12 +144,13 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
                   style={{ background: "#8B6914" }}
                 />
               </div>
+              {/* Left arm - stays down or slightly raised */}
               <div
                 className={`absolute top-16 -left-4 w-8 h-20 rounded-full transition-all duration-700 ${
                   phase === "preaching"
                     ? "rotate-[30deg] origin-top"
                     : phase === "praying"
-                    ? "rotate-[60deg] origin-top"
+                    ? "rotate-[20deg] origin-top"
                     : "rotate-0"
                 }`}
                 style={{
@@ -217,10 +219,10 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-2 bg-white/80 rounded-b" />
               </div>
 
-              {/* Arms */}
+              {/* Arms - clasped in prayer during praying phase */}
               <div
                 className={`absolute top-12 -left-3 w-6 h-16 rounded-full transition-all duration-700 ${
-                  phase === "praying" ? "rotate-[45deg] origin-top" : "rotate-0"
+                  phase === "praying" ? "rotate-[60deg] origin-top" : "rotate-0"
                 }`}
                 style={{
                   background: "linear-gradient(180deg, #27ae60 0%, #1e8449 100%)",
@@ -231,7 +233,7 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
               </div>
               <div
                 className={`absolute top-12 -right-3 w-6 h-16 rounded-full transition-all duration-700 ${
-                  phase === "praying" ? "rotate-[-45deg] origin-top" : "rotate-0"
+                  phase === "praying" ? "rotate-[-60deg] origin-top" : "rotate-0"
                 }`}
                 style={{
                   background: "linear-gradient(180deg, #27ae60 0%, #1e8449 100%)",
@@ -262,15 +264,32 @@ const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
             </div>
           )}
 
-          {/* Prayer glow */}
+          {/* Prayer glow - between preacher and listener */}
           {phase === "praying" && (
             <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] rounded-full"
+              className="absolute top-[80px] left-[160px] md:left-[200px] w-[160px] h-[160px] rounded-full"
               style={{
-                background: "radial-gradient(circle, rgba(255,215,0,0.3) 0%, transparent 70%)",
+                background: "radial-gradient(circle, rgba(255,215,0,0.4) 0%, rgba(255,215,0,0.1) 40%, transparent 70%)",
                 animation: "prayer-glow 2s ease-in-out infinite",
+                filter: "blur(10px)",
               }}
             />
+          )}
+
+          {/* Praying hands effect - particles rising */}
+          {phase === "praying" && (
+            <div className="absolute top-[60px] left-[180px] md:left-[220px]">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="absolute w-1.5 h-1.5 rounded-full bg-yellow-400/60"
+                  style={{
+                    animation: `float-particle 2s ease-out ${i * 0.4}s infinite`,
+                    left: `${i * 8}px`,
+                  }}
+                />
+              ))}
+            </div>
           )}
 
           {/* Cross symbol during praying */}
