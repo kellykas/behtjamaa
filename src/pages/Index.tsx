@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
@@ -516,8 +516,7 @@ const FeaturedEpisodes = () => {
   const [activeIdx, setActiveIdx] = useState(0);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [audios, setAudios] = useState<Record<string, HTMLAudioElement>>({});
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-  const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
 
   useEffect(() => {
     supabase
@@ -560,7 +559,6 @@ const FeaturedEpisodes = () => {
   const goTo = useCallback((idx: number) => {
     const clamped = Math.max(0, Math.min(idx, episodes.length - 1));
     setActiveIdx(clamped);
-    setIsAutoPlaying(false);
   }, [episodes.length]);
 
   const goNext = useCallback(() => {
@@ -571,15 +569,6 @@ const FeaturedEpisodes = () => {
     goTo(activeIdx <= 0 ? episodes.length - 1 : activeIdx - 1);
   }, [activeIdx, episodes.length, goTo]);
 
-  // Auto-advance carousel every 4s when autoPlaying
-  useEffect(() => {
-    if (isAutoPlaying && episodes.length > 1) {
-      autoScrollRef.current = setInterval(() => {
-        setActiveIdx((prev) => (prev >= episodes.length - 1 ? 0 : prev + 1));
-      }, 4000);
-    }
-    return () => { if (autoScrollRef.current) clearInterval(autoScrollRef.current); };
-  }, [isAutoPlaying, episodes.length]);
 
   const activeEpisode = episodes[activeIdx] || null;
 
@@ -615,8 +604,7 @@ const FeaturedEpisodes = () => {
           <div
             className="relative mx-auto"
             style={{ height: 380, maxWidth: 700 }}
-            onMouseEnter={() => setIsAutoPlaying(false)}
-            onMouseLeave={() => setIsAutoPlaying(true)}
+
           >
             {episodes.map((ep, i) => (
               <CoverFlowCard
