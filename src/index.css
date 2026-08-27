@@ -155,6 +155,26 @@
   75% { transform: translate(15px, 25px) scale(1.02); }
 }
 
+/* ── Podcast carousel ──────────────────────────────────────── */
+.carousel-card {
+  perspective: 800px;
+}
+
+/* Hide scrollbar on carousel */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Equalizer bars animation */
+@keyframes eq-bar {
+  0% { height: 20%; }
+  100% { height: 100%; }
+}
+
 /* Noise texture overlay for glass realism */
 .auth-noise {
   position: absolute;

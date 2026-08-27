@@ -1,11 +1,11 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
@@ -265,51 +265,105 @@ const DailyScripture = () => {
 };
 
 /* ─── Audio Player + Episodes ─────────────────────────────────── */
-const AudioPlayer = ({ episode }: { episode: Tables<"episodes"> }) => {
-  const [playing, setPlaying] = useState(false);
-  const [audio] = useState(() => episode.audio_url ? new Audio(episode.audio_url) : null);
-
-  useEffect(() => {
-    if (!audio) return;
-    const onEnd = () => setPlaying(false);
-    audio.addEventListener("ended", onEnd);
-    return () => { audio.removeEventListener("ended", onEnd); audio.pause(); };
-  }, [audio]);
-
-  const toggle = () => {
-    if (!audio) return;
-    if (playing) audio.pause(); else audio.play();
-    setPlaying(!playing);
-  };
-
-  return (
-    <div className="rounded-lg border bg-card text-card-foreground shadow-sm hover:shadow-md transition-all duration-300">
-      <div className="p-6">
-        {episode.thumbnail_url && (
-          <img src={episode.thumbnail_url} alt={episode.title} className="w-full h-40 object-cover rounded-md mb-4" />
-        )}
-        <div className="flex items-center gap-2 mb-2">
-          <Badge className="bg-blue-100 text-blue-800 border-transparent text-xs">{episode.category}</Badge>
-          {episode.featured && <Badge className="bg-amber-100 text-amber-800 border-transparent text-xs">Featured</Badge>}
-        </div>
-        <h3 className="font-semibold text-lg mb-1">{episode.title}</h3>
-        {episode.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{episode.description}</p>}
-        {episode.duration && <p className="text-xs text-muted-foreground mb-3">Duration: {episode.duration}</p>}
-        {episode.audio_url ? (
-          <button onClick={toggle} className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-primary-foreground transition-colors w-full">
-            {playing ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
-            {playing ? "Pause" : "Play Episode"}
-          </button>
-        ) : (
-          <p className="text-xs text-muted-foreground italic">Audio coming soon</p>
-        )}
+/* ── Podcast Carousel Card ────────────────────────────────────── */
+const CarouselCard = ({
+  episode,
+  isActive,
+  onPlay,
+  playing,
+}: {
+  episode: Tables<"episodes">;
+  isActive: boolean;
+  onPlay: () => void;
+  playing: boolean;
+}) => (
+  <div
+    className="carousel-card relative shrink-0 rounded-2xl overflow-hidden transition-all duration-500 cursor-pointer select-none"
+    style={{
+      width: isActive ? 280 : 220,
+      height: isActive ? 360 : 300,
+      opacity: isActive ? 1 : 0.6,
+      transform: isActive ? "scale(1) rotateY(0)" : "scale(0.85) rotateY(0)",
+      transition: "all 500ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+    }}
+    onClick={onPlay}
+  >
+    {/* Thumbnail */}
+    {episode.thumbnail_url ? (
+      <img
+        src={episode.thumbnail_url}
+        alt={episode.title}
+        className="absolute inset-0 w-full h-full object-cover"
+        draggable={false}
+      />
+    ) : (
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
+        <Music className="h-16 w-16 text-white/30" />
       </div>
-    </div>
-  );
-};
+    )}
 
+    {/* Dark gradient overlay */}
+    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+    {/* Glass border */}
+    <div
+      className="absolute inset-0 rounded-2xl pointer-events-none"
+      style={{
+        border: "1px solid rgba(255,255,255,0.15)",
+        boxShadow: isActive
+          ? "0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)"
+          : "0 4px 16px rgba(0,0,0,0.3)",
+      }}
+    />
+
+    {/* Content overlay at bottom */}
+    <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+      <div className="flex items-center gap-2 mb-1">
+        <Badge className="bg-white/20 text-white border-white/20 text-[10px] backdrop-blur-sm">{episode.category}</Badge>
+        {episode.featured && <Badge className="bg-amber-400/20 text-amber-300 border-amber-400/20 text-[10px] backdrop-blur-sm">Featured</Badge>}
+      </div>
+      <h3 className="text-white font-bold text-sm leading-tight mb-0.5 truncate">{episode.title}</h3>
+      {episode.description && (
+        <p className="text-white/60 text-xs line-clamp-1">{episode.description}</p>
+      )}
+
+      {/* Play button — only visible on active card */}
+      {episode.audio_url && isActive && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onPlay(); }}
+          className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full text-xs font-semibold h-8 px-4 bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm border border-white/20 transition-all duration-200"
+        >
+          {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3 fill-white" />}
+          {playing ? "Pause" : "Play"}
+        </button>
+      )}
+    </div>
+
+    {/* Playing indicator dots */}
+    {playing && (
+      <div className="absolute top-3 right-3 z-10 flex items-end gap-0.5 h-4">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="w-0.5 bg-white rounded-full"
+            style={{
+              animation: `eq-bar 0.8s ease-in-out ${i * 0.15}s infinite alternate`,
+              height: "100%",
+            }}
+          />
+        ))}
+      </div>
+    )}
+  </div>
+);
+
+/* ── Featured Episodes Carousel ──────────────────────────────── */
 const FeaturedEpisodes = () => {
   const [episodes, setEpisodes] = useState<Tables<"episodes">[]>([]);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
+  const [audios, setAudios] = useState<Record<string, HTMLAudioElement>>({});
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase
@@ -317,33 +371,143 @@ const FeaturedEpisodes = () => {
       .select("*")
       .eq("published", true)
       .order("published_at", { ascending: false })
-      .limit(6)
-      .then(({ data }) => setEpisodes(data || []));
+      .limit(8)
+      .then(({ data }) => {
+        const eps = data || [];
+        setEpisodes(eps);
+        // Pre-create audio objects
+        const map: Record<string, HTMLAudioElement> = {};
+        eps.forEach((ep) => {
+          if (ep.audio_url) map[ep.id] = new Audio(ep.audio_url);
+        });
+        setAudios(map);
+      });
+    return () => { Object.values(audios).forEach((a) => a.pause()); };
   }, []);
 
+  const togglePlay = (idx: number) => {
+    const ep = episodes[idx];
+    if (!ep?.audio_url) return;
+    const audio = audios[ep.id];
+    if (!audio) return;
+    if (playingIdx === idx) {
+      audio.pause();
+      setPlayingIdx(null);
+    } else {
+      // Stop previous
+      if (playingIdx !== null) { audios[episodes[playingIdx]?.id]?.pause(); }
+      audio.currentTime = 0;
+      audio.play();
+      setPlayingIdx(idx);
+      audio.onended = () => setPlayingIdx(null);
+    }
+  };
+
+  const scrollTo = (idx: number) => {
+    const clamped = Math.max(0, Math.min(idx, episodes.length - 1));
+    setActiveIdx(clamped);
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = window.innerWidth < 768 ? 230 : 300;
+    const center = el.clientWidth / 2;
+    el.scrollTo({ left: clamped * cardWidth + cardWidth / 2 - center, behavior: "smooth" });
+  };
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = window.innerWidth < 768 ? 230 : 300;
+    const center = el.scrollLeft + el.clientWidth / 2;
+    const idx = Math.round((center - cardWidth / 2) / cardWidth);
+    setActiveIdx(Math.max(0, Math.min(idx, episodes.length - 1)));
+  };
+
   return (
-    <section id="featured" className="py-20 px-4 scroll-mt-20">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <Badge className="mb-3">Podcast</Badge>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Featured Episodes</h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Powerful sermons, inspiring testimonies, and life-changing Bible teachings to strengthen your walk with Christ.
-          </p>
+    <section id="featured" className="py-20 overflow-hidden scroll-mt-20">
+      <div className="text-center mb-12 px-4">
+        <Badge className="mb-3">Podcast</Badge>
+        <h2 className="text-3xl md:text-4xl font-bold mb-4">Featured Episodes</h2>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Swipe to explore — powerful sermons, testimonies, and Bible teachings.
+        </p>
+      </div>
+
+      {episodes.length === 0 ? (
+        <div className="text-center py-12 px-4">
+          <p className="text-muted-foreground text-lg">No episodes available yet.</p>
+          <p className="text-muted-foreground">Check back soon!</p>
         </div>
-        {episodes.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground text-lg">No episodes available yet.</p>
-            <p className="text-muted-foreground">Check back soon!</p>
+      ) : (
+        <>
+          {/* Carousel */}
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex items-center gap-4 px-4 pb-6 overflow-x-auto scroll-smooth snap-x snap-mandatory"
+            style={{
+              scrollSnapType: "x mandatory",
+              WebkitOverflowScrolling: "touch",
+              scrollbarWidth: "none",
+              msOverflowStyle: "none",
+            }}
+          >
+            {/* Left spacer for centering first card */}
+            <div className="shrink-0 w-[calc(50vw-160px)] md:w-[calc(50vw-160px)]" />
+
+            {episodes.map((ep, i) => (
+              <div
+                key={ep.id}
+                className="snap-center shrink-0"
+                style={{ scrollSnapAlign: "center" }}
+              >
+                <CarouselCard
+                  episode={ep}
+                  isActive={i === activeIdx}
+                  onPlay={() => togglePlay(i)}
+                  playing={playingIdx === i}
+                />
+              </div>
+            ))}
+
+            {/* Right spacer */}
+            <div className="shrink-0 w-[calc(50vw-160px)] md:w-[calc(50vw-160px)]" />
           </div>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {episodes.map((ep) => (
-              <AudioPlayer key={ep.id} episode={ep} />
+
+          {/* Navigation dots */}
+          <div className="flex justify-center gap-2 mt-6">
+            {episodes.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => scrollTo(i)}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: i === activeIdx ? 24 : 8,
+                  height: 8,
+                  background: i === activeIdx ? "#2563eb" : "rgba(0,0,0,0.15)",
+                }}
+              />
             ))}
           </div>
-        )}
-      </div>
+
+          {/* Arrow buttons */}
+          {activeIdx > 0 && (
+            <button
+              onClick={() => scrollTo(activeIdx - 1)}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm shadow-lg flex items-center justify-center hover:bg-white transition-all duration-200 hidden md:flex"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+            </button>
+          )}
+          {activeIdx < episodes.length - 1 && (
+            <button
+              onClick={() => scrollTo(activeIdx + 1)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm shadow-lg flex items-center justify-center hover:bg-white transition-all duration-200 hidden md:flex"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
+          )}
+        </>
+      )}
     </section>
   );
 };
