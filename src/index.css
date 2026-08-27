@@ -106,6 +106,67 @@
   transition-duration: 100ms;
 }
 
+/* ── Auth page rich glass background ────────────────────────── */
+.auth-bg {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0c1220 0%, #162032 30%, #1a1a2e 60%, #0f0f23 100%);
+}
+
+/* Floating color orbs behind the glass */
+.auth-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.6;
+  animation: orb-float 20s ease-in-out infinite;
+  will-change: transform;
+}
+.auth-orb-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(59,130,246,0.5) 0%, transparent 70%);
+  top: -10%;
+  left: -5%;
+  animation-delay: 0s;
+}
+.auth-orb-2 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(168,85,247,0.4) 0%, transparent 70%);
+  bottom: -10%;
+  right: -5%;
+  animation-delay: -7s;
+}
+.auth-orb-3 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(236,72,153,0.35) 0%, transparent 70%);
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  animation-delay: -14s;
+}
+
+@keyframes orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -20px) scale(1.05); }
+  50% { transform: translate(-20px, 15px) scale(0.95); }
+  75% { transform: translate(15px, 25px) scale(1.02); }
+}
+
+/* Noise texture overlay for glass realism */
+.auth-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  z-index: 1;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
 @layer utilities {
   .gradient-hero {
     background: linear-gradient(135deg, hsl(210 60% 45%), hsl(220 55% 50%), hsl(200 50% 60%));

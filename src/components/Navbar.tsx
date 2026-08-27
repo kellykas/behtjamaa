@@ -356,19 +356,24 @@ const Navbar = () => {
         onMouseLeave={() => setHovered(false)}
       >
         <div
-          className="flex items-center rounded-full border"
+          className="relative flex items-center rounded-full overflow-hidden"
           style={{
             ...glassStyle,
-            borderColor: compact ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.5)",
             padding: compact ? "6px 6px" : "8px 8px",
             gap: compact ? 2 : 4,
             boxShadow: compact
-              ? "0 2px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03)"
-              : "0 4px 24px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.04)",
+              ? "0 2px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03), inset 0 1px 0 0 rgba(255,255,255,0.12)"
+              : "0 4px 24px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.04), inset 0 1px 0 0 rgba(255,255,255,0.2), inset 0 -1px 0 0 rgba(255,255,255,0.05)",
+            border: `1px solid ${compact ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.4)"}`,
             transition: `padding 400ms ${EASE_SPRING}, gap 300ms ${EASE_SMOOTH}, box-shadow 400ms ${EASE_SMOOTH}, border-color 300ms ease, transform 300ms ${EASE_SPRING}`,
             transform: hovered && shrunk ? "scale(1.03)" : "scale(1)",
           }}
         >
+          {/* Edge highlight — top shine */}
+          <div
+            className="absolute inset-x-0 top-0 h-px rounded-full pointer-events-none"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
+          />
           {NAV_ITEMS.map((item) => (
             <NavItemLink key={item.to} item={item} />
           ))}
