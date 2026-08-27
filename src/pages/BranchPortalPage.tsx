@@ -228,20 +228,24 @@ const BranchPortalPage = () => {
       is_live: evForm.is_live || false,
       event_status: evForm.event_status || "upcoming",
     };
+    const isEditing = !!editingId;
     let error;
-    if (editingId) {
+    let savedId: string | null = null;
+    if (isEditing) {
       ({ error } = await supabase.from("branch_events").update(basePayload).eq("id", editingId));
+      savedId = editingId;
     } else {
-      ({ error } = await supabase.from("branch_events").insert(basePayload));
+      const { data: inserted, error: insertErr } = await supabase.from("branch_events").insert(basePayload).select("id").single();
+      error = insertErr;
+      savedId = inserted?.id || null;
     }
     // Try to save image_url and images separately (may fail if columns don't exist yet)
-    if (!error) {
+    if (!error && savedId) {
       const imgPayload: Record<string, unknown> = {};
       if (evForm.image_url) imgPayload.image_url = evForm.image_url;
       if (allImages.length > 0) imgPayload.images = allImages;
       if (Object.keys(imgPayload).length > 0) {
-        const { data: saved } = await supabase.from("branch_events").select("id").eq("branch_id", branch!.id).order("created_at", { ascending: false }).limit(1).single();
-        if (saved) await supabase.from("branch_events").update(imgPayload).eq("id", saved.id);
+        await supabase.from("branch_events").update(imgPayload).eq("id", savedId);
       }
     }
     if (error) {
@@ -253,12 +257,13 @@ const BranchPortalPage = () => {
     setEvForm({ title: "", description: "", stream_url: "", scheduled_at: "", is_live: false, image_url: "", event_status: "upcoming" });
     setEventImages([]);
     fetchBranchData();
-    toast({ title: editingId ? "Event updated" : "Event created" });
+    toast({ title: isEditing ? "Event updated" : "Event created" });
   };
 
   const handleServiceSave = async () => {
+    const isEditing = !!editingId;
     const payload = { branch_id: branch!.id, ...svForm };
-    if (editingId) {
+    if (isEditing) {
       await supabase.from("branch_services").update(svForm).eq("id", editingId);
     } else {
       const { data } = await supabase.from("branch_services").select("sort_order").eq("branch_id", branch!.id).order("sort_order", { ascending: false }).limit(1);
@@ -268,12 +273,13 @@ const BranchPortalPage = () => {
     setEditingId(null);
     setSvForm({ title: "", description: "", icon: "", bible_verse: "" });
     fetchBranchData();
-    toast({ title: editingId ? "Service updated" : "Service created" });
+    toast({ title: isEditing ? "Service updated" : "Service created" });
   };
 
   const handleEpisodeSave = async () => {
+    const isEditing = !!editingId;
     const payload = { branch_id: branch!.id, ...epForm, published_at: epForm.published ? new Date().toISOString() : null };
-    if (editingId) {
+    if (isEditing) {
       await supabase.from("branch_episodes").update(epForm).eq("id", editingId);
     } else {
       await supabase.from("branch_episodes").insert(payload);
@@ -282,12 +288,13 @@ const BranchPortalPage = () => {
     setEditingId(null);
     setEpForm({ title: "", description: "", audio_url: "", thumbnail_url: "", category: "sermon", published: false });
     fetchBranchData();
-    toast({ title: editingId ? "Episode updated" : "Episode created" });
+    toast({ title: isEditing ? "Episode updated" : "Episode created" });
   };
 
   const handleStoreSave = async () => {
+    const isEditing = !!editingId;
     const payload = { branch_id: branch!.id, ...stForm };
-    if (editingId) {
+    if (isEditing) {
       await supabase.from("store_items").update(stForm).eq("id", editingId);
     } else {
       await supabase.from("store_items").insert(payload);
@@ -296,7 +303,7 @@ const BranchPortalPage = () => {
     setEditingId(null);
     setStForm({ name: "", description: "", price: 0, image_url: "", category: "", stock: 10 });
     fetchBranchData();
-    toast({ title: editingId ? "Item updated" : "Item created" });
+    toast({ title: isEditing ? "Item updated" : "Item created" });
   };
 
   const handlePrayerStatus = async (id: string, status: string) => {
@@ -550,22 +557,43 @@ const BranchPortalPage = () => {
                                         toast({ title: "Password too short", description: "Minimum 6 characters", variant: "destructive" });
                                         return;
                                       }
+                                      // Check for existing membership to prevent duplicates
+                                      const { data: existingMember } = await supabase
+                                        .from("branch_members")
+                                        .select("id")
+                                        .eq("branch_id", branch!.id)
+                                        .eq("role", "member")
+                                        .maybeSingle();
+                                      // Only insert if no existing member row (avoids duplicates)
+                                      if (!existingMember) {
+                                        const { error: memErr } = await supabase.from("branch_members").insert({
+                                          branch_id: branch!.id,
+                                          role: "member",
+                                          has_login: true,
+                                        });
+                                        if (memErr) {
+                                          toast({ title: "Error adding member", description: memErr.message, variant: "destructive" });
+                                          return;
+                                        }
+                                      }
                                       // Create login credential
-                                      await supabase.from("member_login_credentials").insert({
+                                      const { error: credErr } = await supabase.from("member_login_credentials").insert({
                                         branch_id: branch!.id,
                                         membership_request_id: req.id,
                                         email: req.email,
                                         full_name: req.full_name,
                                         temp_password: tempPassword,
                                       });
-                                      // Add to branch_members with login flag
-                                      await supabase.from("branch_members").insert({
-                                        branch_id: branch!.id,
-                                        role: "member",
-                                        has_login: true,
-                                      });
-                                      // Mark request as approved with password
-                                      await supabase.from("membership_requests").update({ status: "approved", temp_password: tempPassword }).eq("id", req.id);
+                                      if (credErr) {
+                                        toast({ title: "Error creating login", description: credErr.message, variant: "destructive" });
+                                        return;
+                                      }
+                                      // Mark request as approved
+                                      const { error: reqErr } = await supabase.from("membership_requests").update({ status: "approved", temp_password: tempPassword }).eq("id", req.id);
+                                      if (reqErr) {
+                                        toast({ title: "Error approving request", description: reqErr.message, variant: "destructive" });
+                                        return;
+                                      }
                                       setApprovingRequest(null);
                                       setTempPassword("");
                                       fetchBranchData();

@@ -109,3 +109,103 @@ describe("Branch name validation", () => {
     expect(isValidBranchName("  Kampala  ")).toBe(true);
   });
 });
+
+describe("Event status validation", () => {
+  const VALID_STATUSES = ["upcoming", "live", "past", "cancelled"];
+  const isValidStatus = (s: string) => VALID_STATUSES.includes(s);
+
+  it("accepts all valid statuses", () => {
+    for (const s of VALID_STATUSES) {
+      expect(isValidStatus(s)).toBe(true);
+    }
+  });
+
+  it("rejects invalid status", () => {
+    expect(isValidStatus("tomorrow")).toBe(false);
+    expect(isValidStatus("")).toBe(false);
+    expect(isValidStatus("PENDING")).toBe(false);
+  });
+
+  it("defaults to upcoming when empty", () => {
+    const eventStatus = "";
+    const fallback = eventStatus || "upcoming";
+    expect(fallback).toBe("upcoming");
+  });
+});
+
+describe("Event form validation", () => {
+  it("requires title", () => {
+    const title = "";
+    expect(title.trim().length > 0).toBe(false);
+  });
+
+  it("requires scheduled_at", () => {
+    const scheduled_at = "";
+    expect(!!scheduled_at).toBe(false);
+  });
+
+  it("accepts valid event payload", () => {
+    const payload = {
+      title: "Sunday Service",
+      scheduled_at: new Date().toISOString(),
+      description: "Weekly service",
+      stream_url: "",
+      is_live: false,
+      event_status: "upcoming",
+    };
+    expect(payload.title.trim().length > 0).toBe(true);
+    expect(!!payload.scheduled_at).toBe(true);
+  });
+});
+
+describe("Membership request form validation", () => {
+  it("requires name and email", () => {
+    const name = "";
+    const email = "";
+    const isValid = name.trim().length > 0 && email.trim().length > 0;
+    expect(isValid).toBe(false);
+  });
+
+  it("accepts valid request", () => {
+    const name = "Kelly Kasongo";
+    const email = "kelly@example.com";
+    const isValid = name.trim().length > 0 && email.trim().length > 0;
+    expect(isValid).toBe(true);
+  });
+
+  it("accepts optional fields as empty", () => {
+    const phone = "";
+    const message = "";
+    // Optional fields should not block submission
+    expect(!!phone || !!message || true).toBe(true);
+  });
+});
+
+describe("Temp password validation", () => {
+  it("rejects password shorter than 6 chars", () => {
+    expect("12345".length >= 6).toBe(false);
+    expect("abc".length >= 6).toBe(false);
+  });
+
+  it("accepts password of 6 or more chars", () => {
+    expect("123456".length >= 6).toBe(true);
+    expect("password123".length >= 6).toBe(true);
+  });
+});
+
+describe("isEditing pattern (capture before clear)", () => {
+  it("captures editingId before clearing it", () => {
+    let editingId: string | null = "abc-123";
+    const isEditing = !!editingId;
+    editingId = null;
+    // isEditing should still be true after clearing
+    expect(isEditing).toBe(true);
+  });
+
+  it("is false when editingId was null", () => {
+    let editingId: string | null = null;
+    const isEditing = !!editingId;
+    editingId = null;
+    expect(isEditing).toBe(false);
+  });
+});

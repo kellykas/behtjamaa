@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.member_login_credentials (
 ALTER TABLE public.member_login_credentials ENABLE ROW LEVEL SECURITY;
 
 -- Only branch leaders and admins can manage login credentials
+DROP POLICY IF EXISTS "Branch leaders can manage login credentials" ON public.member_login_credentials;
 CREATE POLICY "Branch leaders can manage login credentials" ON public.member_login_credentials
   FOR ALL USING (
     public.has_role(auth.uid(), 'admin'::public.app_role)

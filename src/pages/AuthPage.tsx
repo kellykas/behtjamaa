@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
@@ -21,14 +21,46 @@ const AuthPage = () => {
   const returnTo = searchParams.get("returnTo") || "/";
   const { toast } = useToast();
 
+  // Link approved membership requests to the signed-in user
+  const linkMembership = async (userId: string, userEmail: string) => {
+    const { data: requests } = await supabase
+      .from("membership_requests")
+      .select("id, branch_id")
+      .eq("email", userEmail)
+      .eq("status", "approved");
+    if (requests && requests.length > 0) {
+      for (const req of requests) {
+        // Check if already linked
+        const { data: existing } = await supabase
+          .from("branch_members")
+          .select("id")
+          .eq("branch_id", req.branch_id)
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (!existing) {
+          await supabase.from("branch_members").insert({
+            branch_id: req.branch_id,
+            user_id: userId,
+            role: "member",
+            has_login: true,
+          });
+        }
+      }
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
+      // Link membership after successful sign-in
+      if (data.user) {
+        await linkMembership(data.user.id, data.user.email || email);
+      }
       toast({ title: "Welcome back!" });
       navigate(returnTo, { replace: true });
     }
@@ -49,31 +81,38 @@ const AuthPage = () => {
     if (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } else {
-      // Check if this email has an approved membership request and auto-add to branch
+      // Check if this email has an approved membership request
       if (data.user) {
         const { data: requests } = await supabase
           .from("membership_requests")
-          .select("*, branches!inner(id)")
+          .select("branch_id, id")
           .eq("email", email)
           .eq("status", "approved");
         if (requests && requests.length > 0) {
-          for (const req of requests) {
-            // Add to branch_members
-            await supabase.from("branch_members").insert({
-              branch_id: req.branch_id,
-              user_id: data.user.id,
-              role: "member",
-              has_login: true,
-            });
-          }
-          toast({ title: "Welcome!", description: "Your account has been linked to your branch membership." });
+          toast({
+            title: "Check your email",
+            description: "We sent you a confirmation link. Once confirmed, your account will be linked to your branch membership.",
+          });
         } else {
           toast({ title: "Check your email", description: "We sent you a confirmation link." });
         }
-        navigate(returnTo, { replace: true });
+      } else {
+        toast({ title: "Check your email", description: "We sent you a confirmation link." });
       }
+      // Do NOT navigate away — user needs to confirm email first
     }
   };
+
+  // Link membership on page load if user just confirmed email
+  useEffect(() => {
+    const checkAndLink = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await linkMembership(user.id, user.email || "");
+      }
+    };
+    checkAndLink();
+  }, []);
 
   const handleGoogleSignIn = async () => {
     const { error } = await lovable.auth.signInWithOAuth("google", {
