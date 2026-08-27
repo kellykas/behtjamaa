@@ -272,6 +272,12 @@
   100% { transform: translateY(-30px) scale(1.5); opacity: 0; }
 }
 
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
 .splash-orb {
   will-change: transform;
 }
