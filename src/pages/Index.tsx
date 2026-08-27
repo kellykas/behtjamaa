@@ -9,116 +9,13 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
+import { Navbar } from "@/components/Navbar";
 
-/* ─── Navbar ──────────────────────────────────────────────────── */
-const Navbar = () => {
-  const { user, signOut } = useAuth();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [myBranch, setMyBranch] = useState<{ slug: string; name: string } | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    supabase
-      .from("branches")
-      .select("slug, name")
-      .eq("leader_user_id", user.id)
-      .eq("active", true)
-      .single()
-      .then(({ data }) => {
-        if (data) setMyBranch(data);
-      });
-  }, [user]);
-
-  return (
-    <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b px-4 py-3">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
-            <Play className="h-5 w-5 text-primary-foreground fill-primary-foreground" />
-          </div>
-          <div>
-            <h2 className="font-bold text-lg leading-tight">BEHT JAMAA</h2>
-            <p className="text-[10px] text-muted-foreground leading-tight">Youth Evangelistic Ministry</p>
-          </div>
-        </Link>
-
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-5">
-          <Link to="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">About</Link>
-          <Link to="/services" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Services</Link>
-          <Link to="/live" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <Calendar className="h-3.5 w-3.5" />
-            Live
-            <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded leading-none">LIVE</span>
-          </Link>
-          <Link to="/prayer" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Prayer</Link>
-          <Link to="/members" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Members</Link>
-          <Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Contact</Link>
-          {user && myBranch && (
-            <Link to={`/branches/${myBranch.slug}`} className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-              <Building2 className="h-3.5 w-3.5" /> My Branch
-            </Link>
-          )}
-          {user ? (
-            <button onClick={signOut} className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-9 px-4 hover:bg-primary/90 transition-colors">
-              <LogOut className="h-4 w-4 mr-2" /> Sign Out
-            </button>
-          ) : (
-            <Link to="/auth" className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground h-9 px-4 hover:bg-primary/90 transition-colors">
-              Sign In
-            </Link>
-          )}
-          <Link to="/donate" className="inline-flex items-center justify-center rounded-md text-sm font-medium bg-brand-accent text-brand-accent-foreground h-9 px-4 hover:bg-brand-accent/90 transition-colors">
-            Donate
-          </Link>
-        </div>
-
-        <button className="md:hidden p-2" onClick={() => setMobileOpen(!mobileOpen)}>
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </div>
-
-      {mobileOpen && (
-        <div className="md:hidden border-t mt-3 pt-3 space-y-2">
-          {[
-            { to: "/about", label: "About", icon: BookOpen },
-            { to: "/services", label: "Services", icon: Theater },
-            { to: "/live", label: "Live", icon: Calendar, badge: true },
-            { to: "/prayer", label: "Prayer", icon: Heart },
-            { to: "/members", label: "Members", icon: Users },
-            { to: "/contact", label: "Contact", icon: Mail },
-          ].map((item) => (
-            <Link key={item.to} to={item.to} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-2 py-2" onClick={() => setMobileOpen(false)}>
-              <item.icon className="h-4 w-4" /> {item.label}
-              {item.badge && <span className="bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded">LIVE</span>}
-            </Link>
-          ))}
-          {user && myBranch && (
-            <Link to={`/branches/${myBranch.slug}`} className="flex items-center gap-2 text-sm font-medium text-primary px-2 py-2" onClick={() => setMobileOpen(false)}>
-              <Building2 className="h-4 w-4" /> My Branch Portal
-            </Link>
-          )}
-          {user ? (
-            <button onClick={() => { signOut(); setMobileOpen(false); }} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-2 py-2 w-full">
-              <LogOut className="h-4 w-4" /> Sign Out
-            </button>
-          ) : (
-            <Link to="/auth" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground px-2 py-2" onClick={() => setMobileOpen(false)}>
-              <LogIn className="h-4 w-4" /> Sign In
-            </Link>
-          )}
-          <Link to="/donate" className="flex items-center gap-2 text-sm font-medium text-brand-accent px-2 py-2" onClick={() => setMobileOpen(false)}>
-            <HeartHandshake className="h-4 w-4" /> Donate
-          </Link>
-        </div>
-      )}
-    </nav>
-  );
-};
 
 /* ─── Hero ────────────────────────────────────────────────────── */
 const HeroSection = () => (
-  <section className="relative py-24 px-4 gradient-hero text-primary-foreground overflow-hidden">
+  <section className="relative pt-32 pb-24 px-4 gradient-hero text-primary-foreground overflow-hidden">
     <div className="absolute inset-0 bg-background/10" />
     <div className="relative max-w-6xl mx-auto text-center">
       <Badge className="mb-6 bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 text-sm px-4 py-1.5">
@@ -509,7 +406,7 @@ const DonateCTA = () => (
 
 /* ─── Footer ──────────────────────────────────────────────────── */
 const Footer = () => (
-  <footer className="bg-primary text-primary-foreground">
+  <footer className="bg-primary text-primary-foreground pb-24 md:pb-12">
     <div className="max-w-6xl mx-auto px-4 py-12">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
         <div className="md:col-span-2">
