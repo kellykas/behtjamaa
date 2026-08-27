@@ -1,348 +1,225 @@
 import { useState, useEffect } from "react";
 
-const SplashScreen = ({ onComplete }: { onComplete: () => void }) => {
-  const [phase, setPhase] = useState<"enter" | "preaching" | "praying" | "exit">("enter");
+export function SplashScreen({ onComplete }: { onComplete: () => void }) {
+  const [phase, setPhase] = useState<"enter" | "closed" | "glow" | "open" | "read" | "exit">("enter");
 
   useEffect(() => {
-    // Animation timeline
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setPhase("preaching"), 500));
-    timers.push(setTimeout(() => setPhase("praying"), 2500));
-    timers.push(setTimeout(() => setPhase("exit"), 4000));
-    timers.push(setTimeout(() => onComplete(), 4800));
+    const timers = [
+      setTimeout(() => setPhase("closed"), 600),
+      setTimeout(() => setPhase("glow"), 1400),
+      setTimeout(() => setPhase("open"), 2200),
+      setTimeout(() => setPhase("read"), 3200),
+      setTimeout(() => setPhase("exit"), 4600),
+      setTimeout(() => onComplete(), 5400),
+    ];
     return () => timers.forEach(clearTimeout);
   }, [onComplete]);
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-700 ${
-        phase === "exit" ? "opacity-0 pointer-events-none" : "opacity-100"
+      className={`fixed inset-0 z-[9999] flex items-center justify-center transition-opacity duration-800 ${
+        phase === "enter" || phase === "exit" ? "opacity-0" : "opacity-100"
       }`}
-      style={{
-        background: "linear-gradient(135deg, #0c1220 0%, #162032 40%, #1a1a2e 70%, #0f0f23 100%)",
-      }}
+      style={{ background: "linear-gradient(135deg, #0c1220 0%, #162032 50%, #1a1a2e 100%)" }}
     >
       {/* Ambient orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div
-          className="absolute w-[600px] h-[600px] rounded-full splash-orb"
-          style={{
-            background: "radial-gradient(circle, rgba(59,130,246,0.3) 0%, transparent 70%)",
-            top: "-15%",
-            left: "10%",
-            filter: "blur(80px)",
-            animation: "orb-drift-1 12s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute w-[500px] h-[500px] rounded-full splash-orb"
-          style={{
-            background: "radial-gradient(circle, rgba(168,85,247,0.25) 0%, transparent 70%)",
-            bottom: "-10%",
-            right: "15%",
-            filter: "blur(80px)",
-            animation: "orb-drift-2 14s ease-in-out infinite",
-          }}
-        />
-        <div
-          className="absolute w-[400px] h-[400px] rounded-full splash-orb"
-          style={{
-            background: "radial-gradient(circle, rgba(236,72,153,0.2) 0%, transparent 70%)",
-            top: "40%",
-            left: "50%",
-            filter: "blur(80px)",
-            animation: "orb-drift-3 10s ease-in-out infinite",
-          }}
-        />
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-[20%] left-[15%] w-64 h-64 rounded-full bg-blue-600/20 blur-[100px]" style={{ animation: "float-orb 8s ease-in-out infinite" }} />
+        <div className="absolute bottom-[20%] right-[15%] w-48 h-48 rounded-full bg-purple-600/15 blur-[80px]" style={{ animation: "float-orb 10s ease-in-out infinite 2s" }} />
+        <div className="absolute top-[50%] left-[50%] w-40 h-40 rounded-full bg-amber-500/10 blur-[60px] -translate-x-1/2 -translate-y-1/2" style={{ animation: "float-orb 12s ease-in-out infinite 4s" }} />
       </div>
 
-      {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center">
-        {/* Scene container */}
-        <div className="relative w-[320px] h-[280px] md:w-[400px] md:h-[340px]">
-          {/* Ground / Platform */}
-          <div
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[280px] h-[60px] md:w-[340px] rounded-full"
-            style={{
-              background: "linear-gradient(180deg, rgba(59,130,246,0.2) 0%, transparent 100%)",
-              filter: "blur(20px)",
-              animation: "pulse-glow 3s ease-in-out infinite",
-            }}
+      {/* Bible SVG */}
+      <div
+        className="relative z-10"
+        style={{
+          transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)",
+          transform: phase === "open" || phase === "read" ? "scale(1.1)" : "scale(1)",
+        }}
+      >
+        <svg viewBox="0 0 320 240" width="320" height="240" className="drop-shadow-2xl">
+          {/* Left page (back cover) */}
+          <rect
+            x={phase === "open" || phase === "read" ? "20" : "60"}
+            y="30"
+            width="120"
+            height="180"
+            rx="4"
+            fill="#5c3317"
+            stroke="#3d220f"
+            strokeWidth="1.5"
+            style={{ transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+          />
+          {/* Left page inner */}
+          <rect
+            x={phase === "open" || phase === "read" ? "28" : "68"}
+            y="38"
+            width="104"
+            height="164"
+            rx="2"
+            fill="#f5f0e8"
+            style={{ transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+          />
+          {/* Right page (front cover) */}
+          <rect
+            x={phase === "open" || phase === "read" ? "180" : "140"}
+            y="30"
+            width="120"
+            height="180"
+            rx="4"
+            fill="#5c3317"
+            stroke="#3d220f"
+            strokeWidth="1.5"
+            style={{ transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+          />
+          {/* Right page inner */}
+          <rect
+            x={phase === "open" || phase === "read" ? "188" : "148"}
+            y="38"
+            width="104"
+            height="164"
+            rx="2"
+            fill="#f5f0e8"
+            style={{ transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+          />
+          {/* Spine */}
+          <rect
+            x="150"
+            y="28"
+            width="20"
+            height="184"
+            rx="2"
+            fill="#4a2a12"
+            style={{ transition: "all 1s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
           />
 
-          {/* Preacher figure */}
-          <div
-            className={`absolute bottom-[40px] left-[60px] md:left-[80px] transition-all duration-1000 ${
-              phase === "preaching" || phase === "praying"
-                ? "opacity-100 translate-y-0"
-                : "opacity-0 translate-y-8"
-            }`}
-            style={{ animationDelay: "0.2s" }}
-          >
-            {/* Body */}
-            <div className="relative">
-              {/* Head */}
-              <div
-                className="w-16 h-16 md:w-20 md:h-20 rounded-full relative"
-                style={{
-                  background: "linear-gradient(135deg, #8B6914 0%, #A0792B 50%, #6B4F10 100%)",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.1)",
-                }}
-              >
-                {/* Eyes */}
-                <div className="absolute top-[35%] left-[25%] w-2 h-2.5 rounded-full bg-white">
-                  <div className="absolute top-0.5 left-0.5 w-1 h-1.5 rounded-full bg-[#1a1a2e]" />
-                </div>
-                <div className="absolute top-[35%] right-[25%] w-2 h-2.5 rounded-full bg-white">
-                  <div className="absolute top-0.5 left-0.5 w-1 h-1.5 rounded-full bg-[#1a1a2e]" />
-                </div>
-                {/* Mouth - changes with phase */}
-                <div
-                  className={`absolute bottom-[25%] left-1/2 -translate-x-1/2 rounded-full transition-all duration-500 ${
-                    phase === "preaching" ? "w-4 h-3 bg-[#c0392b]" : "w-5 h-1 bg-[#c0392b]"
-                  }`}
-                />
-                {/* Hair */}
-                <div
-                  className="absolute -top-1 left-1 right-1 h-6 rounded-t-full"
-                  style={{ background: "linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%)" }}
-                />
-              </div>
+          {/* Cross on cover (visible when closed) */}
+          {phase === "closed" || phase === "enter" || phase === "glow" ? (
+            <g style={{ transition: "opacity 0.8s", opacity: phase === "glow" ? 0.4 : 1 }}>
+              <rect x="152" y="85" width="16" height="50" rx="2" fill="#d4a554" />
+              <rect x="138" y="95" width="44" height="12" rx="2" fill="#d4a554" />
+            </g>
+          ) : null}
 
-              {/* Body / Suit */}
-              <div
-                className="w-20 h-24 md:w-24 md:h-28 -mt-2 rounded-t-2xl"
-                style={{
-                  background: "linear-gradient(180deg, #1e3a5f 0%, #152d4a 100%)",
-                  boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
-                }}
-              >
-                {/* Collar */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-3 bg-white/90 rounded-b-lg" />
-                {/* Tie */}
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 w-3 h-8 bg-red-600 rounded-b-full" />
-              </div>
+          {/* Golden glow effect */}
+          {(phase === "glow" || phase === "open" || phase === "read") && (
+            <>
+              <ellipse cx="160" cy="120" rx="60" ry="40" fill="url(#bibleGlow)" style={{ animation: "pulse-glow 2s ease-in-out infinite" }} />
+              <defs>
+                <radialGradient id="bibleGlow">
+                  <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="#fbbf24" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+            </>
+          )}
 
-              {/* Arms */}
-              {/* Right arm - extends toward listener during praying */}
-              <div
-                className={`absolute top-16 -right-4 w-8 h-20 rounded-full transition-all duration-700 ${
-                  phase === "preaching"
-                    ? "rotate-[-30deg] origin-top"
-                    : phase === "praying"
-                    ? "rotate-[-80deg] origin-top translate-x-4"
-                    : "rotate-0"
-                }`}
-                style={{
-                  background: "linear-gradient(180deg, #1e3a5f 0%, #152d4a 100%)",
-                  borderRadius: "40%",
-                }}
-              >
-                {/* Hand */}
-                <div
-                  className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full"
-                  style={{ background: "#8B6914" }}
-                />
-              </div>
-              {/* Left arm - stays down or slightly raised */}
-              <div
-                className={`absolute top-16 -left-4 w-8 h-20 rounded-full transition-all duration-700 ${
-                  phase === "preaching"
-                    ? "rotate-[30deg] origin-top"
-                    : phase === "praying"
-                    ? "rotate-[20deg] origin-top"
-                    : "rotate-0"
-                }`}
-                style={{
-                  background: "linear-gradient(180deg, #1e3a5f 0%, #152d4a 100%)",
-                  borderRadius: "40%",
-                }}
-              >
-                <div
-                  className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-6 h-6 rounded-full"
-                  style={{ background: "#8B6914" }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Listener / Congregant figure */}
-          <div
-            className={`absolute bottom-[40px] right-[60px] md:right-[80px] transition-all duration-1000 ${
-              phase === "preaching"
-                ? "opacity-100 translate-y-0"
-                : phase === "praying"
-                ? "opacity-100 translate-y-0 scale-95"
-                : "opacity-0 translate-y-8"
-            }`}
-          >
-            <div className="relative">
-              {/* Head */}
-              <div
-                className="w-14 h-14 md:w-18 md:h-18 rounded-full relative"
-                style={{
-                  background: "linear-gradient(135deg, #6B4F10 0%, #8B6914 50%, #5A4210 100%)",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.1)",
-                  width: "3.5rem",
-                  height: "3.5rem",
-                }}
-              >
-                {/* Eyes */}
-                <div className="absolute top-[35%] left-[25%] w-1.5 h-2 rounded-full bg-white">
-                  <div className="absolute top-0.5 left-0.5 w-1 h-1 rounded-full bg-[#1a1a2e]" />
-                </div>
-                <div className="absolute top-[35%] right-[25%] w-1.5 h-2 rounded-full bg-white">
-                  <div className="absolute top-0.5 left-0.5 w-1 h-1 rounded-full bg-[#1a1a2e]" />
-                </div>
-                {/* Mouth */}
-                <div
-                  className={`absolute bottom-[25%] left-1/2 -translate-x-1/2 rounded-full transition-all duration-500 ${
-                    phase === "praying" ? "w-3 h-1.5 bg-[#c0392b]" : "w-3 h-1 bg-[#c0392b]"
-                  }`}
-                />
-                {/* Hair */}
-                <div
-                  className="absolute -top-1 left-0.5 right-0.5 h-5 rounded-t-full"
-                  style={{ background: "linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%)" }}
-                />
-              </div>
-
-              {/* Body / Casual shirt */}
-              <div
-                className="w-16 h-20 -mt-1 rounded-t-xl"
-                style={{
-                  background: "linear-gradient(180deg, #27ae60 0%, #1e8449 100%)",
-                  boxShadow: "0 4px 15px rgba(0,0,0,0.3)",
-                }}
-              >
-                {/* Collar */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-2 bg-white/80 rounded-b" />
-              </div>
-
-              {/* Arms - clasped in prayer during praying phase */}
-              <div
-                className={`absolute top-12 -left-3 w-6 h-16 rounded-full transition-all duration-700 ${
-                  phase === "praying" ? "rotate-[60deg] origin-top" : "rotate-0"
-                }`}
-                style={{
-                  background: "linear-gradient(180deg, #27ae60 0%, #1e8449 100%)",
-                  borderRadius: "40%",
-                }}
-              >
-                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full" style={{ background: "#6B4F10" }} />
-              </div>
-              <div
-                className={`absolute top-12 -right-3 w-6 h-16 rounded-full transition-all duration-700 ${
-                  phase === "praying" ? "rotate-[-60deg] origin-top" : "rotate-0"
-                }`}
-                style={{
-                  background: "linear-gradient(180deg, #27ae60 0%, #1e8449 100%)",
-                  borderRadius: "40%",
-                }}
-              >
-                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-5 h-5 rounded-full" style={{ background: "#6B4F10" }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Speech/Prayer waves */}
-          {phase === "preaching" && (
-            <div className="absolute top-[60px] left-[140px] md:left-[170px]">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="absolute rounded-full border-2 border-blue-400/40"
+          {/* Left page text lines (when open) */}
+          {(phase === "open" || phase === "read") && (
+            <g style={{ transition: "opacity 1s 0.5s", opacity: phase === "read" ? 1 : 0.6 }}>
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((i) => (
+                <rect
+                  key={`l${i}`}
+                  x={phase === "open" || phase === "read" ? "38" : "78"}
+                  y={50 + i * 11}
+                  width={60 + (i % 3) * 12}
+                  height="3"
+                  rx="1.5"
+                  fill="#94a3b8"
                   style={{
-                    width: `${20 + i * 20}px`,
-                    height: `${20 + i * 20}px`,
-                    top: `${-i * 15}px`,
-                    left: `${-i * 10}px`,
-                    animation: `speech-pulse 1.5s ease-out ${i * 0.3}s infinite`,
+                    transition: `all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 50}ms`,
+                    opacity: phase === "read" ? 1 : 0,
                   }}
                 />
               ))}
-            </div>
+              {/* Verse number on left */}
+              <text
+                x={phase === "open" || phase === "read" ? "40" : "80"}
+                y="66"
+                fontSize="8"
+                fill="#6366f1"
+                fontWeight="bold"
+                style={{ transition: "all 1s 0.8s", opacity: phase === "read" ? 1 : 0 }}
+              >
+                1
+              </text>
+            </g>
           )}
 
-          {/* Prayer glow - between preacher and listener */}
-          {phase === "praying" && (
-            <div
-              className="absolute top-[80px] left-[160px] md:left-[200px] w-[160px] h-[160px] rounded-full"
-              style={{
-                background: "radial-gradient(circle, rgba(255,215,0,0.4) 0%, rgba(255,215,0,0.1) 40%, transparent 70%)",
-                animation: "prayer-glow 2s ease-in-out infinite",
-                filter: "blur(10px)",
-              }}
-            />
-          )}
-
-          {/* Praying hands effect - particles rising */}
-          {phase === "praying" && (
-            <div className="absolute top-[60px] left-[180px] md:left-[220px]">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="absolute w-1.5 h-1.5 rounded-full bg-yellow-400/60"
+          {/* Right page text lines (when open) */}
+          {(phase === "open" || phase === "read") && (
+            <g style={{ transition: "opacity 1s 0.6s", opacity: phase === "read" ? 1 : 0.6 }}>
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].map((i) => (
+                <rect
+                  key={`r${i}`}
+                  x={phase === "open" || phase === "read" ? "198" : "158"}
+                  y={50 + i * 11}
+                  width={65 + (i % 2) * 15}
+                  height="3"
+                  rx="1.5"
+                  fill="#94a3b8"
                   style={{
-                    animation: `float-particle 2s ease-out ${i * 0.4}s infinite`,
-                    left: `${i * 8}px`,
+                    transition: `all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 50 + 100}ms`,
+                    opacity: phase === "read" ? 1 : 0,
                   }}
                 />
               ))}
-            </div>
+            </g>
           )}
 
-          {/* Cross symbol during praying */}
-          {phase === "praying" && (
-            <div
-              className="absolute -top-4 left-1/2 -translate-x-1/2 text-yellow-400/60"
-              style={{ animation: "float-up 2s ease-in-out infinite" }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="10" y="2" width="4" height="20" rx="1" />
-                <rect x="4" y="8" width="16" height="4" rx="1" />
-              </svg>
-            </div>
+          {/* Golden sparkle particles */}
+          {phase === "read" && (
+            <>
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <circle
+                  key={`spark${i}`}
+                  cx={100 + i * 30}
+                  cy={80 + (i % 3) * 30}
+                  r="2"
+                  fill="#fbbf24"
+                  style={{ animation: `sparkle-float 2s ease-in-out ${i * 300}ms infinite` }}
+                />
+              ))}
+            </>
           )}
-        </div>
+        </svg>
+      </div>
 
-        {/* Text */}
-        <div className="mt-8 text-center">
-          <h2
-            className={`text-2xl md:text-3xl font-bold text-white mb-2 transition-all duration-700 ${
-              phase === "enter" ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
-            }`}
-          >
-            BEHT JAMAA
-          </h2>
-          <p
-            className={`text-white/50 text-sm transition-all duration-700 delay-200 ${
-              phase === "enter" ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
-            }`}
-          >
-            {phase === "preaching"
-              ? "Winning Souls for Christ..."
-              : phase === "praying"
-              ? "Empowering Through Prayer..."
-              : "Boys Evangelists of the Holy Trinity"}
-          </p>
-        </div>
+      {/* Text */}
+      <div
+        className="absolute bottom-[18%] text-center"
+        style={{ transition: "all 0.8s ease", opacity: phase !== "enter" && phase !== "exit" ? 1 : 0 }}
+      >
+        <h1
+          className="text-3xl font-bold tracking-[0.3em] text-white mb-2"
+          style={{
+            textShadow: "0 0 30px rgba(251,191,36,0.4), 0 0 60px rgba(251,191,36,0.2)",
+          }}
+        >
+          BEHT JAMAA
+        </h1>
+        <p
+          className="text-sm tracking-widest text-amber-200/60"
+          style={{ transition: "all 0.5s" }}
+        >
+          {phase === "closed" || phase === "enter"
+            ? "The Word of God"
+            : phase === "glow"
+            ? "His Light Shines"
+            : "Faith • Hope • Love"}
+        </p>
+      </div>
 
-        {/* Loading dots */}
-        <div className="mt-6 flex gap-2">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="w-2 h-2 rounded-full bg-white/30"
-              style={{
-                animation: `dot-pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
-              }}
-            />
-          ))}
-        </div>
+      {/* Loading dots */}
+      <div className="absolute bottom-10 flex gap-2">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="w-1.5 h-1.5 rounded-full bg-amber-400/60"
+            style={{ animation: `dot-pulse 1.4s ease-in-out ${i * 200}ms infinite` }}
+          />
+        ))}
       </div>
     </div>
   );
-};
-
-export default SplashScreen;
+}
