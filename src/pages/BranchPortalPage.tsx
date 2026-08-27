@@ -387,13 +387,13 @@ const BranchPortalPage = () => {
       {/* Branch Header */}
       <div className="relative">
         {branch.banner_url && (
-          <div className="h-48 md:h-64 overflow-hidden">
+          <div className="h-56 md:h-72 relative overflow-hidden">
             <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
           </div>
         )}
-        <div className={`max-w-6xl mx-auto px-4 ${branch.banner_url ? "relative -mt-20" : "pt-8"}`}>
-          <Button variant="ghost" onClick={() => navigate("/branches")} className="mb-4">
+        <div className={`max-w-6xl mx-auto px-4 ${branch.banner_url ? "relative -mt-24" : "pt-8"}`}>
+          <Button variant="ghost" onClick={() => navigate("/branches")} className="mb-3">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Branches
           </Button>
           <div className="flex items-start gap-4 mb-6">
@@ -404,15 +404,15 @@ const BranchPortalPage = () => {
                 <Building2 className="h-8 w-8 md:h-10 md:w-10 text-primary-foreground" />
               </div>
             )}
-            <div>
-              <h1 className="text-2xl md:text-4xl font-bold">{branch.name}</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold truncate">{branch.name}</h1>
               {branch.location && (
-                <p className="text-muted-foreground flex items-center gap-1 mt-1">
-                  <MapPin className="h-4 w-4" /> {branch.location}
+                <p className="text-muted-foreground flex items-center gap-1 mt-1 truncate">
+                  <MapPin className="h-4 w-4 shrink-0" /> <span className="truncate">{branch.location}</span>
                 </p>
               )}
               {branch.leader_name && (
-                <p className="text-sm text-muted-foreground mt-1">Led by <span className="font-medium text-foreground">{branch.leader_name}</span></p>
+                <p className="text-sm text-muted-foreground mt-1 truncate">Led by <span className="font-medium text-foreground">{branch.leader_name}</span></p>
               )}
             </div>
           </div>
