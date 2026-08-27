@@ -137,12 +137,14 @@ const ServicesPreview = () => (
   </section>
 );
 
-/* ─── Events Carousel — Case Studies Style ────────────────────── */
+/* ─── Events Carousel — Case Studies Style (Improved) ─────────── */
 const EventsPreview = () => {
   const [events, setEvents] = useState<Tables<"branch_events">[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchDelta, setTouchDelta] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     supabase
@@ -164,15 +166,34 @@ const EventsPreview = () => {
     if (activeIdx > 0) setActiveIdx((i) => i - 1);
   };
 
+  // Touch/swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+    setIsDragging(true);
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    setTouchDelta(e.touches[0].clientX - touchStart);
+  };
+  const handleTouchEnd = () => {
+    if (Math.abs(touchDelta) > 60) {
+      if (touchDelta < 0 && activeIdx < events.length - 1) goNext();
+      else if (touchDelta > 0 && activeIdx > 0) goPrev();
+    }
+    setTouchStart(null);
+    setTouchDelta(0);
+    setIsDragging(false);
+  };
+
   if (!loading && events.length === 0) return null;
 
   return (
-    <section className="py-20 px-4" style={{ background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)" }}>
+    <section className="py-24 px-4" style={{ background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)" }}>
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-14">
-          <Badge className="mb-3">Events</Badge>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">What We've Planned</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-slate-900 text-white mb-4">Events</span>
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4">What We've Planned</h2>
+          <p className="text-slate-500 max-w-2xl mx-auto text-lg">
             Upcoming events, workshops, and gatherings across our branches.
           </p>
         </div>
@@ -187,39 +208,44 @@ const EventsPreview = () => {
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-2/3" />
-                    <div className="flex gap-8 pt-4">
-                      <Skeleton className="h-12 w-20" />
-                      <Skeleton className="h-12 w-20" />
-                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="relative">
-            <div ref={scrollRef} className="overflow-hidden">
+          <div
+            className="relative"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            <div className="overflow-hidden">
               <div
-                className="flex gap-6 transition-transform duration-700 ease-out"
-                style={{ transform: `translateX(calc(-${activeIdx} * (min(700px, 100vw - 2rem) + 1.5rem)))` }}
+                className="flex gap-6 transition-transform"
+                style={{
+                  transform: `translateX(calc(-${activeIdx} * (min(700px, 100vw - 2rem) + 1.5rem))${isDragging ? ` + ${touchDelta}px` : ""})`,
+                  transitionDuration: isDragging ? "0ms" : "600ms",
+                  transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+                }}
               >
-                {events.map((event, i) => (
+                {events.map((event) => (
                   <div
                     key={event.id}
-                    className="shrink-0 rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-500"
+                    className="shrink-0 rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-500 group"
                     style={{ width: "min(700px, calc(100vw - 2rem))" }}
                   >
                     <div className="flex flex-col md:flex-row">
                       {/* Image */}
                       <div className="w-full md:w-[320px] h-[280px] md:h-auto shrink-0 relative overflow-hidden">
                         {event.images && Array.isArray(event.images) && event.images.length > 0 ? (
-                          <img src={event.images[0]} alt={event.title} className="w-full h-full object-cover" />
+                          <img src={event.images[0]} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                             <Calendar className="h-16 w-16 text-white/30" />
                           </div>
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/15" />
                         {event.event_status === "live" && (
                           <div className="absolute top-4 left-4">
                             <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500 text-white text-xs font-bold shadow-lg">
@@ -234,16 +260,16 @@ const EventsPreview = () => {
                       <div className="flex-1 p-8">
                         <div className="flex items-center gap-2 mb-3">
                           {(event as any).branches?.name && (
-                            <Badge className="bg-blue-50 text-blue-700 border-blue-100 text-xs">{(event as any).branches.name}</Badge>
+                            <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-medium border border-blue-100">{(event as any).branches.name}</span>
                           )}
-                          <Badge className={`text-xs ${event.event_status === "live" ? "bg-red-100 text-red-700 border-red-100" : "bg-green-100 text-green-700 border-green-100"}`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${event.event_status === "live" ? "bg-red-50 text-red-700 border border-red-100" : "bg-emerald-50 text-emerald-700 border border-emerald-100"}`}>
                             {event.event_status === "live" ? "Happening Now" : "Upcoming"}
-                          </Badge>
+                          </span>
                         </div>
 
-                        <h3 className="text-2xl font-bold text-slate-900 mb-3 leading-tight">{event.title}</h3>
+                        <h3 className="text-2xl font-bold text-slate-900 mb-3 leading-tight group-hover:text-blue-600 transition-colors">{event.title}</h3>
                         {event.description && (
-                          <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-3">{event.description}</p>
+                          <p className="text-slate-500 text-sm leading-relaxed mb-5 line-clamp-3">{event.description}</p>
                         )}
 
                         <div className="flex items-center gap-6 mb-6">
@@ -263,11 +289,11 @@ const EventsPreview = () => {
 
                         <div className="flex items-center gap-4">
                           {event.stream_url && (
-                            <a href={event.stream_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                            <a href={event.stream_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-all hover:shadow-lg hover:shadow-slate-900/20">
                               <Play className="h-4 w-4" /> Watch Live
                             </a>
                           )}
-                          <Link to={`/branches/${(event as any).branches?.slug || ""}`} className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:gap-3 transition-all">
+                          <Link to={`/branches/${(event as any).branches?.slug || ""}`} className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:gap-3 transition-all">
                             View Branch <ArrowRight className="h-4 w-4" />
                           </Link>
                         </div>
@@ -297,11 +323,12 @@ const EventsPreview = () => {
                   <button
                     key={i}
                     onClick={() => setActiveIdx(i)}
-                    className="rounded-full transition-all duration-300"
+                    className="rounded-full transition-all"
                     style={{
-                      width: i === activeIdx ? 24 : 8,
+                      width: i === activeIdx ? 32 : 8,
                       height: 8,
-                      background: i === activeIdx ? "#1e293b" : "#e2e8f0",
+                      background: i === activeIdx ? "#0f172a" : "#e2e8f0",
+                      transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
                     }}
                   />
                 ))}
@@ -313,7 +340,7 @@ const EventsPreview = () => {
         {!loading && events.length > 0 && (
           <div className="text-center mt-10">
             <Link to="/branches">
-              <Button variant="outline" size="lg" className="gap-2">
+              <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-full px-8 py-6 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
                 Explore All Events <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -329,6 +356,9 @@ const BranchesPreview = () => {
   const [branches, setBranches] = useState<Tables<"branches">[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchDelta, setTouchDelta] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     supabase
@@ -350,15 +380,34 @@ const BranchesPreview = () => {
     if (activeIdx > 0) setActiveIdx((i) => i - 1);
   };
 
+  // Touch/swipe handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+    setIsDragging(true);
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    setTouchDelta(e.touches[0].clientX - touchStart);
+  };
+  const handleTouchEnd = () => {
+    if (Math.abs(touchDelta) > 60) {
+      if (touchDelta < 0 && activeIdx < branches.length - 1) goNext();
+      else if (touchDelta > 0 && activeIdx > 0) goPrev();
+    }
+    setTouchStart(null);
+    setTouchDelta(0);
+    setIsDragging(false);
+  };
+
   if (!loading && branches.length === 0) return null;
 
   return (
-    <section className="py-20 px-4">
+    <section className="py-24 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-14">
-          <Badge className="mb-3">Our Branches</Badge>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">BEHT JAMAA Worldwide</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium bg-slate-100 text-slate-700 mb-4">Our Branches</span>
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 mb-4">BEHT JAMAA Worldwide</h2>
+          <p className="text-slate-500 max-w-2xl mx-auto text-lg">
             Find a branch near you and join a community of young people transforming lives for Jesus Christ.
           </p>
         </div>
@@ -367,7 +416,7 @@ const BranchesPreview = () => {
           <div className="flex gap-6 overflow-hidden">
             {[1, 2, 3].map((i) => (
               <div key={i} className="shrink-0 w-[340px] rounded-3xl overflow-hidden bg-white shadow-lg">
-                <Skeleton className="h-[240px] w-full" />
+                <Skeleton className="h-[280px] w-full" />
                 <div className="p-6 space-y-3">
                   <Skeleton className="h-6 w-3/4" />
                   <Skeleton className="h-4 w-full" />
@@ -377,44 +426,53 @@ const BranchesPreview = () => {
             ))}
           </div>
         ) : (
-          <div className="relative">
+          <div
+            className="relative"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             <div className="overflow-hidden">
               <div
-                className="flex gap-6 transition-transform duration-700 ease-out"
-                style={{ transform: `translateX(calc(-${activeIdx} * (min(340px, calc((100vw - 2rem) / 1.1)) + 1.5rem)))` }}
+                className="flex gap-6 transition-transform"
+                style={{
+                  transform: `translateX(calc(-${activeIdx} * (min(340px, calc((100vw - 2rem) / 1.1)) + 1.5rem))${isDragging ? ` + ${touchDelta}px` : ""})`,
+                  transitionDuration: isDragging ? "0ms" : "600ms",
+                  transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+                }}
               >
                 {branches.map((branch) => (
                   <Link
                     key={branch.id}
                     to={`/branches/${branch.slug}`}
-                    className="shrink-0 group rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                    className="shrink-0 group rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-100"
                     style={{ width: "min(340px, calc((100vw - 2rem) / 1.1))" }}
                   >
                     {/* Banner */}
-                    <div className="h-[240px] relative overflow-hidden">
+                    <div className="h-[280px] relative overflow-hidden">
                       {branch.banner_url ? (
-                        <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center">
                           <Building2 className="h-16 w-16 text-white/25" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                       {/* Branch name overlay */}
                       <div className="absolute bottom-0 left-0 right-0 p-6">
                         <div className="flex items-center gap-3">
                           {branch.logo_url ? (
-                            <img src={branch.logo_url} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-lg" />
+                            <img src={branch.logo_url} alt="" className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xl" />
                           ) : (
-                            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
-                              <Building2 className="h-6 w-6 text-white" />
+                            <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                              <Building2 className="h-7 w-7 text-white" />
                             </div>
                           )}
                           <div>
-                            <h3 className="font-bold text-white text-lg drop-shadow-lg">{branch.name}</h3>
+                            <h3 className="font-bold text-white text-xl drop-shadow-lg">{branch.name}</h3>
                             {branch.location && (
-                              <p className="text-white/80 text-xs flex items-center gap-1">
-                                <MapPin className="h-3 w-3" /> {branch.location}
+                              <p className="text-white/80 text-sm flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5" /> {branch.location}
                               </p>
                             )}
                           </div>
@@ -428,11 +486,11 @@ const BranchesPreview = () => {
                         <p className="text-sm text-slate-500 leading-relaxed mb-4 line-clamp-2">{branch.description}</p>
                       )}
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-semibold text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                        <span className="text-sm font-semibold text-blue-600 inline-flex items-center gap-1 group-hover:gap-2 transition-all">
                           View Portal <ArrowRight className="h-4 w-4" />
                         </span>
-                        <div className="flex items-center gap-1 text-amber-500">
-                          <Star className="h-4 w-4 fill-amber-400" />
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2 h-2 rounded-full bg-emerald-400" />
                           <span className="text-xs font-medium text-slate-500">Active</span>
                         </div>
                       </div>
@@ -461,11 +519,12 @@ const BranchesPreview = () => {
                   <button
                     key={i}
                     onClick={() => setActiveIdx(i)}
-                    className="rounded-full transition-all duration-300"
+                    className="rounded-full transition-all"
                     style={{
-                      width: i === activeIdx ? 24 : 8,
+                      width: i === activeIdx ? 32 : 8,
                       height: 8,
-                      background: i === activeIdx ? "#1e293b" : "#e2e8f0",
+                      background: i === activeIdx ? "#0f172a" : "#e2e8f0",
+                      transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
                     }}
                   />
                 ))}
@@ -477,7 +536,7 @@ const BranchesPreview = () => {
         {!loading && branches.length > 0 && (
           <div className="text-center mt-10">
             <Link to="/branches">
-              <Button variant="outline" size="lg" className="gap-2">
+              <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-full px-8 py-6 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
                 View All Branches <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -611,6 +670,9 @@ const FeaturedEpisodes = () => {
   const [activeIdx, setActiveIdx] = useState(0);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [audios, setAudios] = useState<Record<string, HTMLAudioElement>>({});
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchDelta, setTouchDelta] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     supabase
@@ -657,6 +719,25 @@ const FeaturedEpisodes = () => {
   const goNext = useCallback(() => { goTo(activeIdx >= episodes.length - 1 ? 0 : activeIdx + 1); }, [activeIdx, episodes.length, goTo]);
   const goPrev = useCallback(() => { goTo(activeIdx <= 0 ? episodes.length - 1 : activeIdx - 1); }, [activeIdx, episodes.length, goTo]);
 
+  // Touch/swipe handlers for museum gallery
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.touches[0].clientX);
+    setIsDragging(true);
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    setTouchDelta(e.touches[0].clientX - touchStart);
+  };
+  const handleTouchEnd = () => {
+    if (Math.abs(touchDelta) > 60) {
+      if (touchDelta < 0) goNext();
+      else if (touchDelta > 0) goPrev();
+    }
+    setTouchStart(null);
+    setTouchDelta(0);
+    setIsDragging(false);
+  };
+
   const activeEpisode = episodes[activeIdx] || null;
 
   return (
@@ -685,7 +766,13 @@ const FeaturedEpisodes = () => {
       ) : (
         <div className="relative z-10">
           {/* Museum Gallery — 3D Perspective Carousel */}
-          <div className="relative mx-auto overflow-hidden" style={{ height: 420, maxWidth: 900, perspective: "1200px" }}>
+          <div
+            className="relative mx-auto overflow-hidden"
+            style={{ height: 420, maxWidth: 900, perspective: "1200px" }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             {/* Back cards (furthest) */}
             {episodes.map((ep, i) => {
               const offset = i - activeIdx;
@@ -711,10 +798,10 @@ const FeaturedEpisodes = () => {
                   style={{
                     width: cardWidth,
                     height: cardHeight,
-                    opacity,
+                    opacity: isDragging ? (isCenter ? 1 : 0.6) : opacity,
                     zIndex,
-                    transform: `translate(-50%, -50%) translateX(${translateX}px) rotateY(${rotateY}deg) scale(${scale})`,
-                    transition: "all 650ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+                    transform: `translate(-50%, -50%) translateX(${isDragging && isCenter ? touchDelta * 0.3 : translateX}px) rotateY(${isDragging && isCenter ? touchDelta * 0.05 : rotateY}deg) scale(${scale})`,
+                    transition: isDragging ? "none" : "all 650ms cubic-bezier(0.34, 1.56, 0.64, 1)",
                     transformStyle: "preserve-3d",
                   }}
                   onClick={() => goTo(i)}
