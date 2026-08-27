@@ -293,7 +293,7 @@ const EventsPreview = () => {
                               <Play className="h-4 w-4" /> Watch Live
                             </a>
                           )}
-                          <Link to={`/branches/${(event as any).branches?.slug || ""}`} className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:gap-3 transition-all">
+                          <Link to={`/branches/${(event as any).branches?.slug || ""}/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:gap-3 transition-all">
                             View Branch <ArrowRight className="h-4 w-4" />
                           </Link>
                         </div>
