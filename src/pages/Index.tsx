@@ -1,11 +1,11 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2 } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
@@ -137,10 +137,198 @@ const ServicesPreview = () => (
   </section>
 );
 
-/* ─── Branches Preview ─────────────────────────────────────── */
+/* ─── Events Carousel — Case Studies Style ────────────────────── */
+const EventsPreview = () => {
+  const [events, setEvents] = useState<Tables<"branch_events">[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    supabase
+      .from("branch_events")
+      .select("*, branches!inner(name, slug)")
+      .in("event_status", ["upcoming", "live"])
+      .order("scheduled_at", { ascending: true })
+      .limit(8)
+      .then(({ data }) => {
+        setEvents((data as any) || []);
+        setLoading(false);
+      });
+  }, []);
+
+  const goNext = () => {
+    if (activeIdx < events.length - 1) setActiveIdx((i) => i + 1);
+  };
+  const goPrev = () => {
+    if (activeIdx > 0) setActiveIdx((i) => i - 1);
+  };
+
+  if (!loading && events.length === 0) return null;
+
+  return (
+    <section className="py-20 px-4" style={{ background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)" }}>
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-14">
+          <Badge className="mb-3">Events</Badge>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">What We've Planned</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto">
+            Upcoming events, workshops, and gatherings across our branches.
+          </p>
+        </div>
+
+        {loading ? (
+          <div className="flex gap-6 overflow-hidden">
+            {[1, 2].map((i) => (
+              <div key={i} className="shrink-0 w-[700px] rounded-3xl overflow-hidden bg-white shadow-lg">
+                <div className="flex flex-col md:flex-row">
+                  <Skeleton className="w-full md:w-[320px] h-[280px] shrink-0" />
+                  <div className="flex-1 p-8 space-y-4">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <div className="flex gap-8 pt-4">
+                      <Skeleton className="h-12 w-20" />
+                      <Skeleton className="h-12 w-20" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="relative">
+            <div ref={scrollRef} className="overflow-hidden">
+              <div
+                className="flex gap-6 transition-transform duration-700 ease-out"
+                style={{ transform: `translateX(calc(-${activeIdx} * (min(700px, 100vw - 2rem) + 1.5rem)))` }}
+              >
+                {events.map((event, i) => (
+                  <div
+                    key={event.id}
+                    className="shrink-0 rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-xl transition-all duration-500"
+                    style={{ width: "min(700px, calc(100vw - 2rem))" }}
+                  >
+                    <div className="flex flex-col md:flex-row">
+                      {/* Image */}
+                      <div className="w-full md:w-[320px] h-[280px] md:h-auto shrink-0 relative overflow-hidden">
+                        {event.images && Array.isArray(event.images) && event.images.length > 0 ? (
+                          <img src={event.images[0]} alt={event.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                            <Calendar className="h-16 w-16 text-white/30" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/10" />
+                        {event.event_status === "live" && (
+                          <div className="absolute top-4 left-4">
+                            <span className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500 text-white text-xs font-bold shadow-lg">
+                              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                              LIVE
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 p-8">
+                        <div className="flex items-center gap-2 mb-3">
+                          {(event as any).branches?.name && (
+                            <Badge className="bg-blue-50 text-blue-700 border-blue-100 text-xs">{(event as any).branches.name}</Badge>
+                          )}
+                          <Badge className={`text-xs ${event.event_status === "live" ? "bg-red-100 text-red-700 border-red-100" : "bg-green-100 text-green-700 border-green-100"}`}>
+                            {event.event_status === "live" ? "Happening Now" : "Upcoming"}
+                          </Badge>
+                        </div>
+
+                        <h3 className="text-2xl font-bold text-slate-900 mb-3 leading-tight">{event.title}</h3>
+                        {event.description && (
+                          <p className="text-slate-500 text-sm leading-relaxed mb-4 line-clamp-3">{event.description}</p>
+                        )}
+
+                        <div className="flex items-center gap-6 mb-6">
+                          {event.scheduled_at && (
+                            <div className="flex items-center gap-2 text-slate-500 text-sm">
+                              <Clock className="h-4 w-4" />
+                              <span>{new Date(event.scheduled_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                            </div>
+                          )}
+                          {event.location && (
+                            <div className="flex items-center gap-2 text-slate-500 text-sm">
+                              <MapPinned className="h-4 w-4" />
+                              <span>{event.location}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-4">
+                          {event.stream_url && (
+                            <a href={event.stream_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors">
+                              <Play className="h-4 w-4" /> Watch Live
+                            </a>
+                          )}
+                          <Link to={`/branches/${(event as any).branches?.slug || ""}`} className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:gap-3 transition-all">
+                            View Branch <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Arrows */}
+            {activeIdx > 0 && (
+              <button onClick={goPrev} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100">
+                <ChevronLeft className="h-5 w-5 text-slate-700" />
+              </button>
+            )}
+            {activeIdx < events.length - 1 && (
+              <button onClick={goNext} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100">
+                <ChevronRight className="h-5 w-5 text-slate-700" />
+              </button>
+            )}
+
+            {/* Dots */}
+            {events.length > 1 && (
+              <div className="flex justify-center gap-2 mt-8">
+                {events.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveIdx(i)}
+                    className="rounded-full transition-all duration-300"
+                    style={{
+                      width: i === activeIdx ? 24 : 8,
+                      height: 8,
+                      background: i === activeIdx ? "#1e293b" : "#e2e8f0",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!loading && events.length > 0 && (
+          <div className="text-center mt-10">
+            <Link to="/branches">
+              <Button variant="outline" size="lg" className="gap-2">
+                Explore All Events <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+/* ─── Branches Preview — Improved Horizontal Carousel ─────────── */
 const BranchesPreview = () => {
   const [branches, setBranches] = useState<Tables<"branches">[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeIdx, setActiveIdx] = useState(0);
 
   useEffect(() => {
     supabase
@@ -148,12 +336,19 @@ const BranchesPreview = () => {
       .select("*")
       .eq("active", true)
       .order("name")
-      .limit(6)
+      .limit(8)
       .then(({ data }) => {
         setBranches(data || []);
         setLoading(false);
       });
   }, []);
+
+  const goNext = () => {
+    if (activeIdx < branches.length - 1) setActiveIdx((i) => i + 1);
+  };
+  const goPrev = () => {
+    if (activeIdx > 0) setActiveIdx((i) => i - 1);
+  };
 
   if (!loading && branches.length === 0) return null;
 
@@ -167,68 +362,123 @@ const BranchesPreview = () => {
             Find a branch near you and join a community of young people transforming lives for Jesus Christ.
           </p>
         </div>
+
         {loading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <Skeleton className="h-32 w-full" />
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full shrink-0" />
-                    <div className="space-y-1.5 flex-1">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-2/3" />
-                </CardContent>
-              </Card>
+          <div className="flex gap-6 overflow-hidden">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="shrink-0 w-[340px] rounded-3xl overflow-hidden bg-white shadow-lg">
+                <Skeleton className="h-[240px] w-full" />
+                <div className="p-6 space-y-3">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              </div>
             ))}
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {branches.map((branch) => (
-              <Link key={branch.id} to={`/branches/${branch.slug}`}>
-                <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 h-full">
-                  {branch.banner_url && (
-                    <div className="h-32 overflow-hidden">
-                      <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    </div>
-                  )}
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-3 mb-3">
-                      {branch.logo_url ? (
-                        <img src={branch.logo_url} alt="" className="w-10 h-10 rounded-full object-cover border" />
+          <div className="relative">
+            <div className="overflow-hidden">
+              <div
+                className="flex gap-6 transition-transform duration-700 ease-out"
+                style={{ transform: `translateX(calc(-${activeIdx} * (min(340px, calc((100vw - 2rem) / 1.1)) + 1.5rem)))` }}
+              >
+                {branches.map((branch) => (
+                  <Link
+                    key={branch.id}
+                    to={`/branches/${branch.slug}`}
+                    className="shrink-0 group rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+                    style={{ width: "min(340px, calc((100vw - 2rem) / 1.1))" }}
+                  >
+                    {/* Banner */}
+                    <div className="h-[240px] relative overflow-hidden">
+                      {branch.banner_url ? (
+                        <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0">
-                          <Building2 className="h-5 w-5 text-primary-foreground" />
+                        <div className="w-full h-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center">
+                          <Building2 className="h-16 w-16 text-white/25" />
                         </div>
                       )}
-                      <div className="min-w-0">
-                        <h3 className="font-bold truncate">{branch.name}</h3>
-                        {branch.location && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <MapPin className="h-3 w-3" /> {branch.location}
-                          </p>
-                        )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      {/* Branch name overlay */}
+                      <div className="absolute bottom-0 left-0 right-0 p-6">
+                        <div className="flex items-center gap-3">
+                          {branch.logo_url ? (
+                            <img src={branch.logo_url} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-lg" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                              <Building2 className="h-6 w-6 text-white" />
+                            </div>
+                          )}
+                          <div>
+                            <h3 className="font-bold text-white text-lg drop-shadow-lg">{branch.name}</h3>
+                            {branch.location && (
+                              <p className="text-white/80 text-xs flex items-center gap-1">
+                                <MapPin className="h-3 w-3" /> {branch.location}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    {branch.description && <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{branch.description}</p>}
-                    <span className="text-sm font-medium text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
-                      View Portal <ExternalLink className="h-3.5 w-3.5" />
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+
+                    {/* Content */}
+                    <div className="p-6">
+                      {branch.description && (
+                        <p className="text-sm text-slate-500 leading-relaxed mb-4 line-clamp-2">{branch.description}</p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-primary inline-flex items-center gap-1 group-hover:gap-2 transition-all">
+                          View Portal <ArrowRight className="h-4 w-4" />
+                        </span>
+                        <div className="flex items-center gap-1 text-amber-500">
+                          <Star className="h-4 w-4 fill-amber-400" />
+                          <span className="text-xs font-medium text-slate-500">Active</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Arrows */}
+            {activeIdx > 0 && (
+              <button onClick={goPrev} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100">
+                <ChevronLeft className="h-5 w-5 text-slate-700" />
+              </button>
+            )}
+            {activeIdx < branches.length - 1 && (
+              <button onClick={goNext} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100">
+                <ChevronRight className="h-5 w-5 text-slate-700" />
+              </button>
+            )}
+
+            {/* Dots */}
+            {branches.length > 1 && (
+              <div className="flex justify-center gap-2 mt-8">
+                {branches.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveIdx(i)}
+                    className="rounded-full transition-all duration-300"
+                    style={{
+                      width: i === activeIdx ? 24 : 8,
+                      height: 8,
+                      background: i === activeIdx ? "#1e293b" : "#e2e8f0",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
+
         {!loading && branches.length > 0 && (
-          <div className="text-center">
+          <div className="text-center mt-10">
             <Link to="/branches">
               <Button variant="outline" size="lg" className="gap-2">
-                View All Branches <ExternalLink className="h-4 w-4" />
+                View All Branches <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -262,194 +512,44 @@ const DailyScripture = () => {
   );
 };
 
-/* ─── Spotify-Style Podcast Carousel ──────────────────────────── */
+/* ─── Podcast — 3D Museum Gallery Style ───────────────────────── */
 
-// Color orbs that bleed through the glass cards
-const CarouselOrbs = ({ activeEpisode }: { activeEpisode: Tables<"episodes"> | null }) => {
-  // Generate orb colors from the active episode's category or a default
-  const colors = activeEpisode?.category === "Worship"
-    ? ["rgba(59,130,246,0.5)", "rgba(168,85,247,0.4)", "rgba(236,72,153,0.35)"]
-    : activeEpisode?.category === "Sermon"
-    ? ["rgba(239,68,68,0.5)", "rgba(245,158,11,0.4)", "rgba(239,68,68,0.3)"]
-    : activeEpisode?.category === "Testimony"
-    ? ["rgba(16,185,129,0.5)", "rgba(59,130,246,0.4)", "rgba(16,185,129,0.3)"]
-    : ["rgba(59,130,246,0.5)", "rgba(168,85,247,0.4)", "rgba(236,72,153,0.35)"];
-
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Orb 1 — top center */}
-      <div
-        className="carousel-orb"
-        style={{
-          position: "absolute",
-          width: 400,
-          height: 400,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${colors[0]} 0%, transparent 70%)`,
-          filter: "blur(60px)",
-          top: "5%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          animation: "orb-drift-1 16s ease-in-out infinite",
-        }}
-      />
-      {/* Orb 2 — left */}
-      <div
-        className="carousel-orb"
-        style={{
-          position: "absolute",
-          width: 350,
-          height: 350,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${colors[1]} 0%, transparent 70%)`,
-          filter: "blur(60px)",
-          top: "30%",
-          left: "5%",
-          animation: "orb-drift-2 14s ease-in-out infinite",
-          animationDelay: "-3s",
-        }}
-      />
-      {/* Orb 3 — right */}
-      <div
-        className="carousel-orb"
-        style={{
-          position: "absolute",
-          width: 350,
-          height: 350,
-          borderRadius: "50%",
-          background: `radial-gradient(circle, ${colors[2]} 0%, transparent 70%)`,
-          filter: "blur(60px)",
-          top: "30%",
-          right: "5%",
-          animation: "orb-drift-3 18s ease-in-out infinite",
-          animationDelay: "-7s",
-        }}
-      />
-    </div>
-  );
-};
-
-// Individual cover-flow card
-const CoverFlowCard = ({
-  episode,
-  offset,
-  onPlay,
-  playing,
-  onClick,
-}: {
-  episode: Tables<"episodes">;
-  offset: number;
-  onPlay: () => void;
-  playing: boolean;
-  onClick: () => void;
-}) => {
-  const absOffset = Math.abs(offset);
-  const isCenter = offset === 0;
-  const isLeft = offset < 0;
-
-  // Cover-flow math
-  const rotateY = isCenter ? 0 : isLeft ? 40 : -40;
-  const scale = isCenter ? 1 : absOffset === 1 ? 0.78 : 0.55;
-  const translateX = isCenter ? 0 : isLeft ? -55 : 55;
-  const opacity = isCenter ? 1 : absOffset === 1 ? 0.8 : 0.35;
-  const zIndex = 10 - absOffset;
-
-  return (
+// Glass overlay for the active podcast card
+const PodcastGlassOverlay = ({ episode, playing }: { episode: Tables<"episodes">; playing: boolean }) => (
+  <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
     <div
-      className="carousel-cover-card absolute top-1/2 left-1/2 cursor-pointer select-none"
+      className="rounded-2xl p-5"
       style={{
-        width: isCenter ? 260 : 210,
-        height: isCenter ? 340 : 280,
-        opacity,
-        zIndex,
-        transform: `translate(-50%, -50%) translateX(${translateX}px) perspective(900px) rotateY(${rotateY}deg) scale(${scale})`,
-        transition: "all 550ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+        background: "rgba(0,0,0,0.45)",
+        backdropFilter: "blur(20px) saturate(180%)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.3)",
       }}
-      onClick={onClick}
     >
-      {/* Card body */}
-      <div className="relative w-full h-full rounded-2xl overflow-hidden">
-        {/* Thumbnail */}
-        {episode.thumbnail_url ? (
-          <img
-            src={episode.thumbnail_url}
-            alt={episode.title}
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{
-              transform: isCenter ? "scale(1.08)" : "scale(1)",
-              transition: "transform 600ms ease-out",
-            }}
-            draggable={false}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
-            <Music className="h-16 w-16 text-white/20" />
-          </div>
-        )}
-
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-        {/* Glass border + inner glow */}
-        <div
-          className="absolute inset-0 rounded-2xl pointer-events-none"
-          style={{
-            border: isCenter ? "1.5px solid rgba(255,255,255,0.22)" : "1px solid rgba(255,255,255,0.1)",
-            boxShadow: isCenter
-              ? "0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 -1px 0 rgba(255,255,255,0.05)"
-              : "0 8px 30px rgba(0,0,0,0.4)",
-            transition: "all 550ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-          }}
-        />
-
-        {/* Content */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
-          <Badge className="bg-white/15 text-white border-white/15 text-[10px] backdrop-blur-md mb-2">{episode.category}</Badge>
-          <h3 className="text-white font-bold text-sm leading-tight drop-shadow-lg truncate">{episode.title}</h3>
-          {episode.description && (
-            <p className="text-white/50 text-xs line-clamp-1 mt-0.5">{episode.description}</p>
-          )}
-
-          {/* Play button — center card only */}
-          {episode.audio_url && isCenter && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onPlay(); }}
-              className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-full text-xs font-semibold h-8 px-5 carousel-play-btn"
-              style={{
-                background: playing ? "rgba(239,68,68,0.35)" : "rgba(255,255,255,0.18)",
-                backdropFilter: "blur(16px)",
-                border: playing ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(255,255,255,0.25)",
-                color: "white",
-                boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
-              }}
-            >
-              {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3 fill-white" />}
-              {playing ? "Pause" : "Play"}
-            </button>
-          )}
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <p className="text-white font-bold text-lg leading-tight">{episode.title}</p>
+          <p className="text-white/50 text-xs mt-1">{episode.category}</p>
         </div>
-
-        {/* Equalizer when playing */}
-        {playing && isCenter && (
-          <div className="absolute top-3 right-3 z-10 flex items-end gap-[3px] h-4">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="carousel-eq-bar w-[3px] bg-red-400 rounded-full"
-                style={{
-                  animationDelay: `${i * 0.12}s`,
-                }}
-              />
-            ))}
-          </div>
+        {episode.featured && (
+          <span className="px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-bold border border-amber-400/20">★ Featured</span>
         )}
       </div>
+      {episode.description && (
+        <p className="text-white/60 text-xs italic leading-relaxed line-clamp-2 mb-3">
+          "{episode.description}"
+        </p>
+      )}
+      <div className="flex items-center gap-4 text-white/40 text-[11px]">
+        <span>Category: {episode.category}</span>
+        {episode.duration && <span>Duration: {episode.duration}</span>}
+      </div>
     </div>
-  );
-};
+  </div>
+);
 
-// Player bar at the bottom
-const PlayerBar = ({
+// Player bar below the gallery
+const PodcastPlayerBar = ({
   episode,
   playing,
   onToggle,
@@ -463,48 +563,43 @@ const PlayerBar = ({
   onNext: () => void;
 }) => {
   if (!episode) return null;
-
   return (
-    <div className="carousel-player-bar mx-auto mt-6 flex items-center gap-3 py-3 px-4 rounded-2xl max-w-lg"
+    <div
+      className="mx-auto mt-8 flex items-center gap-4 py-4 px-6 rounded-2xl max-w-md"
       style={{
-        background: "rgba(255,255,255,0.12)",
-        backdropFilter: "blur(20px) saturate(180%)",
-        border: "1px solid rgba(255,255,255,0.15)",
-        boxShadow: "0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1)",
+        background: "rgba(0,0,0,0.3)",
+        backdropFilter: "blur(24px) saturate(180%)",
+        border: "1px solid rgba(255,255,255,0.1)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
       }}
     >
-      {/* Thumbnail */}
       {episode.thumbnail_url ? (
-        <img src={episode.thumbnail_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
+        <img src={episode.thumbnail_url} alt="" className="w-12 h-12 rounded-xl object-cover" />
       ) : (
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
-          <Music className="h-4 w-4 text-white/50" />
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <Music className="h-5 w-5 text-white/50" />
         </div>
       )}
-
-      {/* Track info */}
       <div className="flex-1 min-w-0">
         <p className="text-white font-semibold text-sm truncate">{episode.title}</p>
         <p className="text-white/50 text-xs truncate">{episode.category}</p>
       </div>
-
-      {/* Controls */}
       <div className="flex items-center gap-1">
-        <button onClick={onPrev} className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all">
-          <SkipBack className="h-4 w-4" />
+        <button onClick={onPrev} className="w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all">
+          <ChevronLeft className="h-4 w-4" />
         </button>
         <button
           onClick={onToggle}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
           style={{
-            background: playing ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.2)",
-            border: "1px solid rgba(255,255,255,0.2)",
+            background: playing ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.15)",
+            border: "1px solid rgba(255,255,255,0.15)",
           }}
         >
-          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 fill-white" />}
+          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-white" />}
         </button>
-        <button onClick={onNext} className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-all">
-          <SkipForward className="h-4 w-4" />
+        <button onClick={onNext} className="w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all">
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -516,7 +611,6 @@ const FeaturedEpisodes = () => {
   const [activeIdx, setActiveIdx] = useState(0);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [audios, setAudios] = useState<Record<string, HTMLAudioElement>>({});
-
 
   useEffect(() => {
     supabase
@@ -539,56 +633,46 @@ const FeaturedEpisodes = () => {
     };
   }, []);
 
-  const togglePlay = useCallback((idx: number) => {
-    const ep = episodes[idx];
-    if (!ep?.audio_url) return;
-    const audio = audios[ep.id];
-    if (!audio) return;
-    if (playingIdx === idx) {
-      audio.pause();
-      setPlayingIdx(null);
-    } else {
-      if (playingIdx !== null) audios[episodes[playingIdx]?.id]?.pause();
-      audio.currentTime = 0;
-      audio.play();
-      setPlayingIdx(idx);
-      audio.onended = () => setPlayingIdx(null);
-    }
-  }, [episodes, audios, playingIdx]);
+  const togglePlay = useCallback(
+    (idx: number) => {
+      const ep = episodes[idx];
+      if (!ep?.audio_url) return;
+      const audio = audios[ep.id];
+      if (!audio) return;
+      if (playingIdx === idx) {
+        audio.pause();
+        setPlayingIdx(null);
+      } else {
+        if (playingIdx !== null) audios[episodes[playingIdx]?.id]?.pause();
+        audio.currentTime = 0;
+        audio.play();
+        setPlayingIdx(idx);
+        audio.onended = () => setPlayingIdx(null);
+      }
+    },
+    [episodes, audios, playingIdx]
+  );
 
-  const goTo = useCallback((idx: number) => {
-    const clamped = Math.max(0, Math.min(idx, episodes.length - 1));
-    setActiveIdx(clamped);
-  }, [episodes.length]);
-
-  const goNext = useCallback(() => {
-    goTo(activeIdx >= episodes.length - 1 ? 0 : activeIdx + 1);
-  }, [activeIdx, episodes.length, goTo]);
-
-  const goPrev = useCallback(() => {
-    goTo(activeIdx <= 0 ? episodes.length - 1 : activeIdx - 1);
-  }, [activeIdx, episodes.length, goTo]);
-
+  const goTo = useCallback((idx: number) => { setActiveIdx(Math.max(0, Math.min(idx, episodes.length - 1))); }, [episodes.length]);
+  const goNext = useCallback(() => { goTo(activeIdx >= episodes.length - 1 ? 0 : activeIdx + 1); }, [activeIdx, episodes.length, goTo]);
+  const goPrev = useCallback(() => { goTo(activeIdx <= 0 ? episodes.length - 1 : activeIdx - 1); }, [activeIdx, episodes.length, goTo]);
 
   const activeEpisode = episodes[activeIdx] || null;
 
   return (
-    <section id="featured" className="scroll-mt-20 relative overflow-hidden"
-      style={{
-        background: "linear-gradient(180deg, hsl(222 47% 8%) 0%, hsl(230 40% 10%) 50%, hsl(222 47% 8%) 100%)",
-        paddingTop: 80,
-        paddingBottom: 80,
-      }}
-    >
-      {/* Background orbs */}
-      <CarouselOrbs activeEpisode={activeEpisode} />
+    <section id="featured" className="scroll-mt-20 relative overflow-hidden" style={{ background: "linear-gradient(180deg, #1a1a2e 0%, #16213e 40%, #0f3460 70%, #1a1a2e 100%)", paddingTop: 80, paddingBottom: 80 }}>
+      {/* Ambient light orbs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute w-[500px] h-[500px] rounded-full opacity-30" style={{ background: "radial-gradient(circle, rgba(59,130,246,0.4) 0%, transparent 70%)", top: "-10%", left: "20%", filter: "blur(80px)" }} />
+        <div className="absolute w-[400px] h-[400px] rounded-full opacity-25" style={{ background: "radial-gradient(circle, rgba(168,85,247,0.35) 0%, transparent 70%)", bottom: "-5%", right: "15%", filter: "blur(80px)" }} />
+      </div>
 
       {/* Title */}
-      <div className="text-center mb-8 px-4 relative z-10">
+      <div className="text-center mb-10 px-4 relative z-10">
         <Badge className="mb-3 bg-white/10 text-white border-white/15 backdrop-blur-md">Podcast</Badge>
         <h2 className="text-3xl md:text-4xl font-bold mb-3 text-white">Featured Episodes</h2>
         <p className="text-white/50 max-w-lg mx-auto text-sm">
-          Swipe or hover to explore — sermons, testimonies, and Bible teachings.
+          Explore our collection of sermons, testimonies, and Bible teachings.
         </p>
       </div>
 
@@ -599,54 +683,76 @@ const FeaturedEpisodes = () => {
           <p className="text-white/30 text-sm">Check back soon!</p>
         </div>
       ) : (
-        <>
-          {/* Cover-flow container */}
-          <div
-            className="relative mx-auto"
-            style={{ height: 380, maxWidth: 700 }}
+        <div className="relative z-10">
+          {/* Museum Gallery — 3D Perspective Carousel */}
+          <div className="relative mx-auto overflow-hidden" style={{ height: 420, maxWidth: 900, perspective: "1200px" }}>
+            {/* Back cards (furthest) */}
+            {episodes.map((ep, i) => {
+              const offset = i - activeIdx;
+              const absOffset = Math.abs(offset);
+              if (absOffset > 3) return null;
 
-          >
-            {episodes.map((ep, i) => (
-              <CoverFlowCard
-                key={ep.id}
-                episode={ep}
-                offset={i - activeIdx}
-                onPlay={() => togglePlay(i)}
-                playing={playingIdx === i}
-                onClick={() => goTo(i)}
-              />
-            ))}
+              const isCenter = offset === 0;
+              const isLeft = offset < 0;
 
-            {/* Arrow buttons — desktop */}
-            <button
-              onClick={goPrev}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center hidden md:flex transition-all duration-300 hover:scale-110 active:scale-95"
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.7)",
-              }}
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={goNext}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full items-center justify-center hidden md:flex transition-all duration-300 hover:scale-110 active:scale-95"
-              style={{
-                background: "rgba(255,255,255,0.1)",
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.15)",
-                color: "rgba(255,255,255,0.7)",
-              }}
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
+              // Museum perspective math
+              const translateX = isCenter ? 0 : isLeft ? -(180 + absOffset * 40) : (180 + absOffset * 40);
+              const rotateY = isCenter ? 0 : isLeft ? 35 + absOffset * 5 : -(35 + absOffset * 5);
+              const scale = isCenter ? 1 : absOffset === 1 ? 0.75 : absOffset === 2 ? 0.55 : 0.4;
+              const opacity = isCenter ? 1 : absOffset === 1 ? 0.7 : absOffset === 2 ? 0.4 : 0.2;
+              const zIndex = 10 - absOffset;
+              const cardWidth = isCenter ? 420 : 340;
+              const cardHeight = isCenter ? 380 : 300;
+
+              return (
+                <div
+                  key={ep.id}
+                  className="absolute top-1/2 left-1/2 cursor-pointer museum-card"
+                  style={{
+                    width: cardWidth,
+                    height: cardHeight,
+                    opacity,
+                    zIndex,
+                    transform: `translate(-50%, -50%) translateX(${translateX}px) rotateY(${rotateY}deg) scale(${scale})`,
+                    transition: "all 650ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+                    transformStyle: "preserve-3d",
+                  }}
+                  onClick={() => goTo(i)}
+                >
+                  <div className="relative w-full h-full rounded-2xl overflow-hidden">
+                    {/* Thumbnail */}
+                    {ep.thumbnail_url ? (
+                      <img src={ep.thumbnail_url} alt={ep.title} className="absolute inset-0 w-full h-full object-cover" style={{ transform: isCenter ? "scale(1.05)" : "scale(1)", transition: "transform 700ms ease-out" }} draggable={false} />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
+                        <Music className="h-20 w-20 text-white/20" />
+                      </div>
+                    )}
+
+                    {/* Subtle gradient for depth */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+
+                    {/* Glass border */}
+                    <div className="absolute inset-0 rounded-2xl pointer-events-none" style={{ border: isCenter ? "1.5px solid rgba(255,255,255,0.2)" : "1px solid rgba(255,255,255,0.08)", boxShadow: isCenter ? "0 24px 64px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)" : "0 12px 40px rgba(0,0,0,0.3)" }} />
+
+                    {/* Play indicator on side cards */}
+                    {!isCenter && ep.audio_url && (
+                      <div className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20">
+                        <Play className="h-3 w-3 text-white fill-white" />
+                      </div>
+                    )}
+
+                    {/* Glass overlay — center card only */}
+                    {isCenter && <PodcastGlassOverlay episode={ep} playing={playingIdx === i} />}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
-          {/* Player bar */}
+          {/* Player Bar */}
           <div className="relative z-10 px-4">
-            <PlayerBar
+            <PodcastPlayerBar
               episode={activeEpisode}
               playing={playingIdx === activeIdx}
               onToggle={() => togglePlay(activeIdx)}
@@ -655,7 +761,7 @@ const FeaturedEpisodes = () => {
             />
           </div>
 
-          {/* Navigation dots */}
+          {/* Dots */}
           <div className="flex justify-center gap-2 mt-6 relative z-10">
             {episodes.map((_, i) => (
               <button
@@ -671,7 +777,7 @@ const FeaturedEpisodes = () => {
               />
             ))}
           </div>
-        </>
+        </div>
       )}
     </section>
   );
@@ -798,6 +904,7 @@ const Footer = () => (
 const Index = () => (
   <div className="min-h-screen gradient-subtle">
     <HeroSection />
+    <EventsPreview />
     <BranchesPreview />
     <BeliefSection />
     <DailyScripture />
