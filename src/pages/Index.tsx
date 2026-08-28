@@ -9,12 +9,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
+import { useSiteSettings } from "@/hooks/useContent";
 
 /* ─── Hero ────────────────────────────────────────────────────── */
-const HeroSection = () => (
+const HeroSection = () => {
+  const { settings } = useSiteSettings();
+  const heroImage = settings.hero_image_url || "";
+  return (
   <section
-    className="relative pt-32 pb-24 px-4 gradient-hero hero-bg-image text-primary-foreground overflow-hidden"
-    style={{ backgroundImage: "url('/hero.jpg')" }}
+    className={`relative pt-32 pb-24 px-4 ${heroImage ? "hero-bg-image" : "gradient-hero"} text-primary-foreground overflow-hidden`}
+    style={heroImage ? { backgroundImage: `url('${heroImage}')` } : undefined}
   >
     <div className="relative max-w-6xl mx-auto text-center">
       <Badge className="mb-6 bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 text-sm px-4 py-1.5">
@@ -45,7 +49,8 @@ const HeroSection = () => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 /* ─── Vision / Mission / Confession ──────────────────────────── */
 const beliefItems = [

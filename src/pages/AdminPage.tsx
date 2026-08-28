@@ -77,6 +77,7 @@ const AdminPage = () => {
   const [editingEpId, setEditingEpId] = useState<string | null>(null);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [uploadingThumb, setUploadingThumb] = useState(false);
+  const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
 
   // Event form
@@ -270,6 +271,29 @@ const AdminPage = () => {
       clearInterval(progressInterval);
       setUploadingAudio(false);
       setTimeout(() => setAudioProgress(0), 1000);
+    }
+  };
+
+  const handleHeroImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be under 10MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingHeroImage(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const fileName = `hero-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("profile-avatars").upload(fileName, file, { cacheControl: "3600", upsert: true });
+      if (error) throw error;
+      const { data } = supabase.storage.from("profile-avatars").getPublicUrl(fileName);
+      await handleSaveSetting("hero_image_url", data.publicUrl);
+      toast({ title: "Hero image uploaded" });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingHeroImage(false);
     }
   };
 
@@ -739,6 +763,19 @@ const AdminPage = () => {
                         <Button size="sm" onClick={() => handleSaveSetting("glass_intensity", siteSettings.glass_intensity || "60")}>
                           <Save className="h-4 w-4 mr-2" /> Save Appearance
                         </Button>
+                      </div>
+
+                      {/* Hero Image Upload */}
+                      <div className="space-y-3 pt-4 border-t">
+                        <Label className="text-sm font-medium">Hero Background Image</Label>
+                        <p className="text-xs text-muted-foreground">Upload the background image for the home page hero section.</p>
+                        {siteSettings.hero_image_url && (
+                          <div className="relative w-full h-40 rounded-lg overflow-hidden border">
+                            <img src={siteSettings.hero_image_url} alt="Hero preview" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                        <Input type="file" accept="image/*" onChange={handleHeroImageUpload} disabled={uploadingHeroImage} />
+                        {uploadingHeroImage && <Progress value={50} className="h-2" />}
                       </div>
                     </CardContent>
                   </Card>
