@@ -33,9 +33,9 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-black/55" />
 
       {/* Content — bottom-aligned with clearance for navbar + bottom nav */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-16 sm:pt-24 md:pt-44 pb-28 md:pb-20 flex flex-col justify-end">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-14 sm:pt-20 md:pt-44 pb-28 md:pb-20 flex flex-col justify-end">
         {/* Top badges row */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 sm:mb-10">
           {/* Pill badges */}
           <div className="hidden sm:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20 w-fit">
             <span className="text-white/90 text-sm font-medium">Reach</span>
@@ -66,13 +66,13 @@ const HeroSection = () => {
 
         {/* Headline */}
         <div className="max-w-2xl">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-2 sm:mb-3 leading-[1.05] tracking-tight">
+          <h1 className="text-[2.5rem] sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-3 sm:mb-3 leading-[1.05] tracking-tight">
             BEHT JAMAA
           </h1>
-          <h2 className="text-lg sm:text-xl md:text-3xl font-bold text-amber-400 mb-4 sm:mb-5 md:mb-6 md:tracking-wide uppercase leading-tight">
+          <h2 className="text-xl sm:text-xl md:text-3xl font-bold text-amber-400 mb-5 sm:mb-5 md:mb-6 md:tracking-wide uppercase leading-snug">
             Boyz Evangelists of the Holy Trinity
           </h2>
-          <p className="text-sm sm:text-lg md:text-xl text-white/70 mb-6 sm:mb-8 max-w-lg leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-white/70 mb-6 sm:mb-8 max-w-lg leading-relaxed">
             Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
           </p>
         </div>
