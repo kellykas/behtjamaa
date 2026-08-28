@@ -32,8 +32,8 @@ const HeroSection = () => {
       {/* Solid overlay for text readability */}
       <div className="absolute inset-0 bg-black/55" />
 
-      {/* Content — normal flow, pushed to bottom */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-24 sm:pt-32 md:pt-44 pb-16 md:pb-20 flex flex-col justify-end min-h-screen">
+      {/* Content — bottom-aligned with clearance for navbar + bottom nav */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-16 sm:pt-24 md:pt-44 pb-24 md:pb-20 flex flex-col justify-end min-h-screen">
         {/* Top badges row */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-8">
           {/* Pill badges */}
@@ -69,16 +69,16 @@ const HeroSection = () => {
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-1 sm:mb-2 leading-[1.1] tracking-tight">
             BEHT JAMAA
           </h1>
-          <h2 className="text-sm sm:text-lg md:text-2xl font-bold text-amber-400 mb-3 sm:mb-4 tracking-wide uppercase leading-snug">
+          <h2 className="text-[14px] sm:text-lg md:text-2xl font-bold text-amber-400 mb-3 sm:mb-4 md:tracking-wide uppercase leading-tight">
             Boyz Evangelists of the Holy Trinity
           </h2>
-          <p className="text-xs sm:text-base md:text-lg text-white/70 mb-4 sm:mb-8 max-w-lg leading-relaxed">
+          <p className="text-[12px] sm:text-base md:text-lg text-white/70 mb-4 sm:mb-6 md:mb-8 max-w-lg leading-relaxed">
             Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
           </p>
         </div>
 
         {/* Search bar — glass pill */}
-        <div className="w-full max-w-3xl mt-1 sm:mt-2">
+        <div className="w-full max-w-3xl mt-2 sm:mt-3">
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-2">
             {/* Tabs */}
             <div className="flex gap-1 mb-2 px-2">
@@ -130,7 +130,7 @@ const HeroSection = () => {
           </div>
 
           {/* Quick links */}
-          <div className="flex flex-wrap gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3 pb-2 sm:pb-0">
             <Link to="/branches" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
               <Building2 className="h-3 w-3" /> Find a Branch
             </Link>
