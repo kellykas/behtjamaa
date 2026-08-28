@@ -18,7 +18,7 @@ const HeroSection = () => {
   const [searchTab, setSearchTab] = useState<"events" | "branches" | "podcasts">("events");
 
   return (
-    <section className="relative min-h-[85vh] flex items-end overflow-hidden">
+    <section className="relative min-h-screen flex items-end overflow-hidden">
       {/* Background image or gradient */}
       {heroImage ? (
         <div
@@ -33,56 +33,58 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
 
-      {/* Top nav pills + trust badge */}
-      <div className="absolute top-28 left-0 right-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
-          {/* Pill badges */}
-          <div className="hidden md:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20">
-            <span className="text-white/90 text-sm font-medium">🌟 Reach</span>
-            <span className="text-white/40 mx-1.5">•</span>
-            <span className="text-white/90 text-sm font-medium">⛪ Worship</span>
-            <span className="text-white/40 mx-1.5">•</span>
-            <span className="text-white/90 text-sm font-medium">🤝 Serve</span>
-          </div>
-
-          {/* Trust badge */}
-          <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md rounded-full pl-1.5 pr-4 py-1.5 border border-white/20">
-            <div className="flex -space-x-2">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold"
-                  style={{ zIndex: 3 - i }}
-                >
-                  {"BJT"[i]}
-                </div>
-              ))}
+      {/* Top badges — below navbar */}
+      <div className="absolute top-36 md:top-40 left-0 right-0 z-10">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            {/* Pill badges */}
+            <div className="hidden sm:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20 w-fit">
+              <span className="text-white/90 text-sm font-medium">🌟 Reach</span>
+              <span className="text-white/40 mx-1.5">•</span>
+              <span className="text-white/90 text-sm font-medium">⛪ Worship</span>
+              <span className="text-white/40 mx-1.5">•</span>
+              <span className="text-white/90 text-sm font-medium">🤝 Serve</span>
             </div>
-            <div className="text-right">
-              <p className="text-white text-xs font-bold leading-tight">Trusted by 25K+</p>
-              <p className="text-white/60 text-[10px] leading-tight">Youth Members</p>
+
+            {/* Trust badge */}
+            <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full pl-1.5 pr-3.5 py-1.5 border border-white/20 w-fit">
+              <div className="flex -space-x-2">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="w-7 h-7 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold"
+                    style={{ zIndex: 3 - i }}
+                  >
+                    {"BJT"[i]}
+                  </div>
+                ))}
+              </div>
+              <div className="text-right">
+                <p className="text-white text-xs font-bold leading-tight">Trusted by 25K+</p>
+                <p className="text-white/60 text-[10px] leading-tight">Youth Members</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main content — left aligned */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pb-16 md:pb-20">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pb-20 md:pb-24">
         <div className="max-w-2xl">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-[1.1] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-[1.15] tracking-tight">
             Reach Young Souls
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-purple-300">
               For Christ
             </span>
           </h1>
-          <p className="text-base md:text-lg text-white/70 mb-8 max-w-lg leading-relaxed">
+          <p className="text-sm sm:text-base md:text-lg text-white/70 mb-8 max-w-lg leading-relaxed">
             Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
           </p>
         </div>
 
         {/* Search bar — glass pill */}
-        <div className="w-full max-w-3xl">
+        <div className="w-full max-w-3xl mt-2">
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-2">
             {/* Tabs */}
             <div className="flex gap-1 mb-2 px-2">
@@ -103,7 +105,7 @@ const HeroSection = () => {
 
             {/* Search input row */}
             <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center gap-3 bg-white rounded-xl px-4 py-3">
+              <div className="flex-1 flex items-center gap-2 sm:gap-3 bg-white rounded-xl px-3 sm:px-4 py-2.5 sm:py-3">
                 <Search className="h-5 w-5 text-slate-400 shrink-0" />
                 <input
                   type="text"
@@ -125,7 +127,7 @@ const HeroSection = () => {
                     ? "/branches"
                     : "/"
                 }
-                className="h-12 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold text-sm flex items-center gap-2 transition-all shadow-lg shadow-purple-500/25 shrink-0"
+                className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold text-sm flex items-center gap-2 transition-all shadow-lg shadow-purple-500/25 shrink-0"
               >
                 <Search className="h-4 w-4" />
                 Search
@@ -134,7 +136,7 @@ const HeroSection = () => {
           </div>
 
           {/* Quick links */}
-          <div className="flex flex-wrap gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-3">
             <Link to="/branches" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
               <Building2 className="h-3 w-3" /> Find a Branch
             </Link>
