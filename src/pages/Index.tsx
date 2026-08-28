@@ -38,11 +38,11 @@ const HeroSection = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
           {/* Pill badges */}
           <div className="hidden sm:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20 w-fit">
-            <span className="text-white/90 text-sm font-medium">🌟 Reach</span>
+            <span className="text-white/90 text-sm font-medium">Reach</span>
             <span className="text-white/40 mx-1.5">•</span>
-            <span className="text-white/90 text-sm font-medium">⛪ Worship</span>
+            <span className="text-white/90 text-sm font-medium">and</span>
             <span className="text-white/40 mx-1.5">•</span>
-            <span className="text-white/90 text-sm font-medium">🤝 Serve</span>
+            <span className="text-white/90 text-sm font-medium">Preach</span>
           </div>
 
           {/* Trust badge */}
