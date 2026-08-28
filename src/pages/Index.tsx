@@ -18,7 +18,7 @@ const HeroSection = () => {
   const [searchTab, setSearchTab] = useState<"events" | "branches" | "podcasts">("events");
 
   return (
-    <section className="relative min-h-screen overflow-hidden">
+    <section className="relative h-auto min-h-[85vh] md:min-h-screen overflow-hidden">
       {/* Background image or gradient */}
       {heroImage ? (
         <div
@@ -33,7 +33,7 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-black/55" />
 
       {/* Content — bottom-aligned with clearance for navbar + bottom nav */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-16 sm:pt-24 md:pt-44 pb-24 md:pb-20 flex flex-col justify-end min-h-screen">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-16 sm:pt-24 md:pt-44 pb-24 md:pb-20 flex flex-col justify-end">
         {/* Top badges row */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-8">
           {/* Pill badges */}
