@@ -1,4 +1,4 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,40 +15,139 @@ import { useSiteSettings } from "@/hooks/useContent";
 const HeroSection = () => {
   const { settings } = useSiteSettings();
   const heroImage = settings.hero_image_url || "";
+  const [searchTab, setSearchTab] = useState<"events" | "branches" | "podcasts">("events");
+
   return (
-  <section
-    className={`relative pt-32 pb-24 px-4 ${heroImage ? "hero-bg-image" : "gradient-hero"} text-primary-foreground overflow-hidden`}
-    style={heroImage ? { backgroundImage: `url('${heroImage}')` } : undefined}
-  >
-    <div className="relative max-w-6xl mx-auto text-center">
-      <Badge className="mb-6 bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 text-sm px-4 py-1.5">
-        Youth Evangelistic Ministry
-      </Badge>
-      <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-2 leading-tight animate-fade-in uppercase">
-        Boys Evangelists
-      </h1>
-      <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-tight animate-fade-in uppercase">
-        of the Holy Trinity
-      </h1>
-      <p className="text-lg md:text-xl mb-3 font-medium opacity-95">
-        BEHT JAMAA
-      </p>
-      <p className="text-base md:text-lg mb-10 max-w-2xl mx-auto opacity-80 leading-relaxed">
-        Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <a href="#services" className="inline-flex items-center justify-center gap-2 h-12 rounded-md bg-brand-accent hover:bg-brand-accent/90 text-brand-accent-foreground font-semibold px-8 transition-colors">
-          Our Services
-        </a>
-        <a href="#featured" className="inline-flex items-center justify-center gap-2 h-12 rounded-md border border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary bg-transparent font-medium px-8 transition-colors">
-          <Play className="h-5 w-5" /> Start Listening
-        </a>
-        <Link to="/auth" className="inline-flex items-center justify-center gap-2 h-12 rounded-md bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground font-medium px-8 transition-colors">
-          Join Us
-        </Link>
+    <section className="relative min-h-[85vh] flex items-end overflow-hidden">
+      {/* Background image or gradient */}
+      {heroImage ? (
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url('${heroImage}')` }}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+      )}
+
+      {/* Gradient overlays for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+
+      {/* Top nav pills + trust badge */}
+      <div className="absolute top-28 left-0 right-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
+          {/* Pill badges */}
+          <div className="hidden md:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20">
+            <span className="text-white/90 text-sm font-medium">🌟 Reach</span>
+            <span className="text-white/40 mx-1.5">•</span>
+            <span className="text-white/90 text-sm font-medium">⛪ Worship</span>
+            <span className="text-white/40 mx-1.5">•</span>
+            <span className="text-white/90 text-sm font-medium">🤝 Serve</span>
+          </div>
+
+          {/* Trust badge */}
+          <div className="flex items-center gap-3 bg-white/15 backdrop-blur-md rounded-full pl-1.5 pr-4 py-1.5 border border-white/20">
+            <div className="flex -space-x-2">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-8 h-8 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold"
+                  style={{ zIndex: 3 - i }}
+                >
+                  {"BJT"[i]}
+                </div>
+              ))}
+            </div>
+            <div className="text-right">
+              <p className="text-white text-xs font-bold leading-tight">Trusted by 25K+</p>
+              <p className="text-white/60 text-[10px] leading-tight">Youth Members</p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </section>
+
+      {/* Main content — left aligned */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pb-16 md:pb-20">
+        <div className="max-w-2xl">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-4 leading-[1.1] tracking-tight">
+            Reach Young Souls
+            <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-purple-300">
+              For Christ
+            </span>
+          </h1>
+          <p className="text-base md:text-lg text-white/70 mb-8 max-w-lg leading-relaxed">
+            Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
+          </p>
+        </div>
+
+        {/* Search bar — glass pill */}
+        <div className="w-full max-w-3xl">
+          <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-2">
+            {/* Tabs */}
+            <div className="flex gap-1 mb-2 px-2">
+              {(["events", "branches", "podcasts"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setSearchTab(tab)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize transition-all ${
+                    searchTab === tab
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-white/60 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Search input row */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-3 bg-white rounded-xl px-4 py-3">
+                <Search className="h-5 w-5 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder={
+                    searchTab === "events"
+                      ? "Search events, workshops, gatherings..."
+                      : searchTab === "branches"
+                      ? "Search branches by location..."
+                      : "Search podcasts, sermons, testimonies..."
+                  }
+                  className="flex-1 bg-transparent text-slate-900 text-sm placeholder:text-slate-400 outline-none"
+                />
+              </div>
+              <Link
+                to={
+                  searchTab === "events"
+                    ? "/"
+                    : searchTab === "branches"
+                    ? "/branches"
+                    : "/"
+                }
+                className="h-12 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold text-sm flex items-center gap-2 transition-all shadow-lg shadow-purple-500/25 shrink-0"
+              >
+                <Search className="h-4 w-4" />
+                Search
+              </Link>
+            </div>
+          </div>
+
+          {/* Quick links */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Link to="/branches" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
+              <Building2 className="h-3 w-3" /> Find a Branch
+            </Link>
+            <a href="#featured" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
+              <Play className="h-3 w-3" /> Listen Now
+            </a>
+            <Link to="/auth" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
+              <Users className="h-3 w-3" /> Join Us
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 };
 
