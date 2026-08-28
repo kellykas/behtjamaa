@@ -33,9 +33,9 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-black/55" />
 
       {/* Content — normal flow, pushed to bottom */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-40 md:pt-44 pb-16 md:pb-20 flex flex-col justify-end min-h-screen">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-24 sm:pt-32 md:pt-44 pb-16 md:pb-20 flex flex-col justify-end min-h-screen">
         {/* Top badges row */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-8">
           {/* Pill badges */}
           <div className="hidden sm:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20 w-fit">
             <span className="text-white/90 text-sm font-medium">Reach</span>
@@ -66,19 +66,19 @@ const HeroSection = () => {
 
         {/* Headline */}
         <div className="max-w-2xl">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-2 leading-[1.1] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-1 sm:mb-2 leading-[1.1] tracking-tight">
             BEHT JAMAA
           </h1>
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-amber-400 mb-4 tracking-wide uppercase">
+          <h2 className="text-sm sm:text-lg md:text-2xl font-bold text-amber-400 mb-3 sm:mb-4 tracking-wide uppercase leading-snug">
             Boyz Evangelists of the Holy Trinity
           </h2>
-          <p className="text-sm sm:text-base md:text-lg text-white/70 mb-8 max-w-lg leading-relaxed">
+          <p className="text-xs sm:text-base md:text-lg text-white/70 mb-4 sm:mb-8 max-w-lg leading-relaxed">
             Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
           </p>
         </div>
 
         {/* Search bar — glass pill */}
-        <div className="w-full max-w-3xl mt-2">
+        <div className="w-full max-w-3xl mt-1 sm:mt-2">
           <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-2">
             {/* Tabs */}
             <div className="flex gap-1 mb-2 px-2">
