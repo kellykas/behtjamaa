@@ -1,4 +1,4 @@
-const CACHE_NAME = "behtjamaa-v1";
+const CACHE_NAME = "behtjamaa-v3";
 const PRECACHE_URLS = [
   "/",
   "/index.html",
