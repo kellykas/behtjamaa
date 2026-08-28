@@ -12,8 +12,10 @@ import { getDailyVerse } from "@/lib/dailyScripture";
 
 /* ─── Hero ────────────────────────────────────────────────────── */
 const HeroSection = () => (
-  <section className="relative pt-32 pb-24 px-4 gradient-hero text-primary-foreground overflow-hidden">
-    <div className="absolute inset-0 bg-background/10" />
+  <section
+    className="relative pt-32 pb-24 px-4 gradient-hero hero-bg-image text-primary-foreground overflow-hidden"
+    style={{ backgroundImage: "url('/hero.jpg')" }}
+  >
     <div className="relative max-w-6xl mx-auto text-center">
       <Badge className="mb-6 bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30 text-sm px-4 py-1.5">
         Youth Evangelistic Ministry
