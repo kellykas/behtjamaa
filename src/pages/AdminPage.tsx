@@ -285,13 +285,26 @@ const AdminPage = () => {
     try {
       const ext = file.name.split(".").pop();
       const fileName = `hero-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("profile-avatars").upload(fileName, file, { cacheControl: "3600", upsert: true });
-      if (error) throw error;
-      const { data } = supabase.storage.from("profile-avatars").getPublicUrl(fileName);
-      await handleSaveSetting("hero_image_url", data.publicUrl);
-      toast({ title: "Hero image uploaded" });
+      toast({ title: "Uploading image..." });
+      const { error: uploadError } = await supabase.storage.from("profile-avatars").upload(fileName, file, { cacheControl: "3600", upsert: true });
+      if (uploadError) {
+        toast({ title: "Storage upload failed", description: uploadError.message, variant: "destructive" });
+        throw uploadError;
+      }
+      const { data: urlData } = supabase.storage.from("profile-avatars").getPublicUrl(fileName);
+      if (!urlData?.publicUrl) {
+        toast({ title: "Failed to get image URL", variant: "destructive" });
+        return;
+      }
+      const { error: saveError } = await supabase.from("site_settings").upsert({ key: "hero_image_url", value: urlData.publicUrl }, { onConflict: "key" });
+      if (saveError) {
+        toast({ title: "Failed to save setting", description: saveError.message, variant: "destructive" });
+        throw saveError;
+      }
+      setSiteSettings((prev) => ({ ...prev, hero_image_url: urlData.publicUrl }));
+      toast({ title: "Hero image uploaded successfully" });
     } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+      toast({ title: "Upload failed", description: err.message || "Unknown error", variant: "destructive" });
     } finally {
       setUploadingHeroImage(false);
     }
