@@ -18,7 +18,7 @@ const HeroSection = () => {
   const [searchTab, setSearchTab] = useState<"events" | "branches" | "podcasts">("events");
 
   return (
-    <section className="relative h-auto min-h-[85vh] md:min-h-screen overflow-hidden">
+    <section className="relative min-h-screen overflow-hidden">
       {/* Background image or gradient */}
       {heroImage ? (
         <div
@@ -33,9 +33,9 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-black/55" />
 
       {/* Content — bottom-aligned with clearance for navbar + bottom nav */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-16 sm:pt-24 md:pt-44 pb-24 md:pb-20 flex flex-col justify-end">
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-16 sm:pt-24 md:pt-44 pb-28 md:pb-20 flex flex-col justify-end">
         {/* Top badges row */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 sm:mb-8">
           {/* Pill badges */}
           <div className="hidden sm:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20 w-fit">
             <span className="text-white/90 text-sm font-medium">Reach</span>
@@ -66,13 +66,13 @@ const HeroSection = () => {
 
         {/* Headline */}
         <div className="max-w-2xl">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-1 sm:mb-2 leading-[1.1] tracking-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white mb-2 sm:mb-3 leading-[1.05] tracking-tight">
             BEHT JAMAA
           </h1>
-          <h2 className="text-[14px] sm:text-lg md:text-2xl font-bold text-amber-400 mb-3 sm:mb-4 md:tracking-wide uppercase leading-tight">
+          <h2 className="text-lg sm:text-xl md:text-3xl font-bold text-amber-400 mb-4 sm:mb-5 md:mb-6 md:tracking-wide uppercase leading-tight">
             Boyz Evangelists of the Holy Trinity
           </h2>
-          <p className="text-[12px] sm:text-base md:text-lg text-white/70 mb-4 sm:mb-6 md:mb-8 max-w-lg leading-relaxed">
+          <p className="text-sm sm:text-lg md:text-xl text-white/70 mb-6 sm:mb-8 max-w-lg leading-relaxed">
             Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
           </p>
         </div>
@@ -130,7 +130,7 @@ const HeroSection = () => {
           </div>
 
           {/* Quick links */}
-          <div className="flex flex-wrap gap-2 mt-3 pb-2 sm:pb-0">
+          <div className="flex flex-wrap gap-2 mt-4 pb-2 sm:pb-0">
             <Link to="/branches" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
               <Building2 className="h-3 w-3" /> Find a Branch
             </Link>
