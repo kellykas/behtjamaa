@@ -18,7 +18,7 @@ const HeroSection = () => {
   const [searchTab, setSearchTab] = useState<"events" | "branches" | "podcasts">("events");
 
   return (
-    <section className="relative min-h-screen flex items-end overflow-hidden">
+    <section className="relative min-h-screen overflow-hidden">
       {/* Background image or gradient */}
       {heroImage ? (
         <div
@@ -33,43 +33,40 @@ const HeroSection = () => {
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
       <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
 
-      {/* Top badges — below navbar */}
-      <div className="absolute top-36 md:top-40 left-0 right-0 z-10">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            {/* Pill badges */}
-            <div className="hidden sm:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20 w-fit">
-              <span className="text-white/90 text-sm font-medium">🌟 Reach</span>
-              <span className="text-white/40 mx-1.5">•</span>
-              <span className="text-white/90 text-sm font-medium">⛪ Worship</span>
-              <span className="text-white/40 mx-1.5">•</span>
-              <span className="text-white/90 text-sm font-medium">🤝 Serve</span>
-            </div>
+      {/* Content — normal flow, pushed to bottom */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-40 md:pt-44 pb-16 md:pb-20 flex flex-col justify-end min-h-screen">
+        {/* Top badges row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+          {/* Pill badges */}
+          <div className="hidden sm:flex items-center gap-1 bg-white/15 backdrop-blur-md rounded-full px-5 py-2.5 border border-white/20 w-fit">
+            <span className="text-white/90 text-sm font-medium">🌟 Reach</span>
+            <span className="text-white/40 mx-1.5">•</span>
+            <span className="text-white/90 text-sm font-medium">⛪ Worship</span>
+            <span className="text-white/40 mx-1.5">•</span>
+            <span className="text-white/90 text-sm font-medium">🤝 Serve</span>
+          </div>
 
-            {/* Trust badge */}
-            <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full pl-1.5 pr-3.5 py-1.5 border border-white/20 w-fit">
-              <div className="flex -space-x-2">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="w-7 h-7 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold"
-                    style={{ zIndex: 3 - i }}
-                  >
-                    {"BJT"[i]}
-                  </div>
-                ))}
-              </div>
-              <div className="text-right">
-                <p className="text-white text-xs font-bold leading-tight">Trusted by 25K+</p>
-                <p className="text-white/60 text-[10px] leading-tight">Youth Members</p>
-              </div>
+          {/* Trust badge */}
+          <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full pl-1.5 pr-3.5 py-1.5 border border-white/20 w-fit">
+            <div className="flex -space-x-2">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="w-7 h-7 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold"
+                  style={{ zIndex: 3 - i }}
+                >
+                  {"BJT"[i]}
+                </div>
+              ))}
+            </div>
+            <div className="text-right">
+              <p className="text-white text-xs font-bold leading-tight">Trusted by 25K+</p>
+              <p className="text-white/60 text-[10px] leading-tight">Youth Members</p>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Main content — left aligned */}
-      <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pb-20 md:pb-24">
+        {/* Headline */}
         <div className="max-w-2xl">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-[1.15] tracking-tight">
             Reach Young Souls
