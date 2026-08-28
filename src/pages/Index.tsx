@@ -26,12 +26,11 @@ const HeroSection = () => {
           style={{ backgroundImage: `url('${heroImage}')` }}
         />
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+        <div className="absolute inset-0 bg-[#1a2744]" />
       )}
 
-      {/* Gradient overlays for text readability */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/50" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+      {/* Solid overlay for text readability */}
+      <div className="absolute inset-0 bg-black/55" />
 
       {/* Content — normal flow, pushed to bottom */}
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-40 md:pt-44 pb-16 md:pb-20 flex flex-col justify-end min-h-screen">
@@ -47,12 +46,11 @@ const HeroSection = () => {
           </div>
 
           {/* Trust badge */}
-          <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full pl-1.5 pr-3.5 py-1.5 border border-white/20 w-fit">
-            <div className="flex -space-x-2">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-7 h-7 rounded-full border-2 border-white/30 bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold"
+          <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full pl-1.5 pr-3.5 py-1.5 border border-white/20 w-fit">              <div className="flex -space-x-2">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="w-7 h-7 rounded-full border-2 border-white/30 bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold"
                   style={{ zIndex: 3 - i }}
                 >
                   {"BJT"[i]}
@@ -68,13 +66,12 @@ const HeroSection = () => {
 
         {/* Headline */}
         <div className="max-w-2xl">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-[1.15] tracking-tight">
-            Reach Young Souls
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-blue-400 to-purple-300">
-              For Christ
-            </span>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-2 leading-[1.1] tracking-tight">
+            BEHT JAMAA
           </h1>
+          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-amber-400 mb-4 tracking-wide uppercase">
+            Boyz Evangelists of the Holy Trinity
+          </h2>
           <p className="text-sm sm:text-base md:text-lg text-white/70 mb-8 max-w-lg leading-relaxed">
             Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
           </p>
@@ -124,7 +121,7 @@ const HeroSection = () => {
                     ? "/branches"
                     : "/"
                 }
-                className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold text-sm flex items-center gap-2 transition-all shadow-lg shadow-purple-500/25 shrink-0"
+                className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center gap-2 transition-all shadow-lg shrink-0"
               >
                 <Search className="h-4 w-4" />
                 Search
