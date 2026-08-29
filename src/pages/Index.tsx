@@ -46,21 +46,8 @@ const HeroSection = () => {
           </div>
 
           {/* Trust badge */}
-          <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full pl-1.5 pr-3.5 py-1.5 border border-white/20 w-fit">              <div className="flex -space-x-2">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="w-7 h-7 rounded-full border-2 border-white/30 bg-blue-600 flex items-center justify-center text-white text-[10px] font-bold"
-                  style={{ zIndex: 3 - i }}
-                >
-                  {"BJT"[i]}
-                </div>
-              ))}
-            </div>
-            <div className="text-right">
-              <p className="text-white text-xs font-bold leading-tight">Trusted by 25K+</p>
-              <p className="text-white/60 text-[10px] leading-tight">Youth Members</p>
-            </div>
+          <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full px-4 py-1.5 border border-white/20 w-fit">
+            <span className="text-white text-sm font-bold">✝️ Jesus Loves You</span>
           </div>
         </div>
 
