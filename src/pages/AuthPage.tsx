@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/hooks/useContent";
-import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Church, Cross, Users, Building2, Calendar, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Church, Cross, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ── Glass input ────── */
@@ -255,32 +255,7 @@ const AuthPage = () => {
             </p>
           </div>
 
-          {/* Stats row */}
-          <div className="relative z-10 flex items-center gap-5 mt-10">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1.5 mb-1">
-                <Building2 className="w-3.5 h-3.5 text-blue-400" />
-                <p className="text-2xl font-bold text-white">12+</p>
-              </div>
-              <p className="text-white/40 text-[11px]">Branches</p>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1.5 mb-1">
-                <Users className="w-3.5 h-3.5 text-emerald-400" />
-                <p className="text-2xl font-bold text-white">25K+</p>
-              </div>
-              <p className="text-white/40 text-[11px]">Members</p>
-            </div>
-            <div className="w-px h-8 bg-white/10" />
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1.5 mb-1">
-                <Calendar className="w-3.5 h-3.5 text-amber-400" />
-                <p className="text-2xl font-bold text-white">100+</p>
-              </div>
-              <p className="text-white/40 text-[11px]">Events</p>
-            </div>
-          </div>
+          {/* Stats row removed */}
         </div>
 
         {/* Right panel — form */}
