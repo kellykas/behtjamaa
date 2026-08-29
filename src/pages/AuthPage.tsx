@@ -24,7 +24,7 @@ const GlassInput = ({
     )}
     <Input
       className={cn(
-        "h-12 pl-10 bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/25",
+        "h-10 pl-10 bg-white/[0.06] border-white/[0.08] text-white placeholder:text-white/25",
         "focus:bg-white/[0.1] focus:border-blue-500/40 focus:ring-blue-500/20 focus:ring-1",
         "backdrop-blur-sm transition-all duration-300 rounded-xl",
         Icon ? "pl-10" : "pl-4",
@@ -238,26 +238,26 @@ const AuthPage = () => {
         <div className="auth-orb auth-orb-3" />
         <div className="auth-noise" />
 
-        <Card className="w-full max-w-md relative z-10 rounded-3xl" style={glassCardStyle}>
-          <CardContent className="p-8">
+        <Card className="w-full max-w-[400px] relative z-10 rounded-3xl" style={glassCardStyle}>
+          <CardContent className="p-6">
             <Button
               variant="ghost"
               size="sm"
-              className="w-fit mb-6 text-white/50 hover:text-white hover:bg-white/5"
+              className="w-fit mb-4 text-white/50 hover:text-white hover:bg-white/5 text-xs"
               onClick={() => setShowForgotPassword(false)}
             >
               <ArrowLeft className="h-4 w-4 mr-2" /> Back
             </Button>
 
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-4">
+            <div className="text-center mb-5">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-3">
                 <Lock className="w-6 h-6 text-blue-400" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-1">Reset Password</h2>
+              <h2 className="text-lg font-bold text-white mb-1">Reset Password</h2>
               <p className="text-white/40 text-sm">Enter your email to receive a reset link</p>
             </div>
 
-            <form onSubmit={handleForgotPassword} className="space-y-4">
+            <form onSubmit={handleForgotPassword} className="space-y-3">
               <GlassInput
                 icon={Mail}
                 type="email"
@@ -268,7 +268,7 @@ const AuthPage = () => {
               />
               <Button
                 type="submit"
-                className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
+                className="w-full h-10 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
                 disabled={loading}
               >
                 {loading ? "Sending..." : "Send Reset Link"}
@@ -287,24 +287,21 @@ const AuthPage = () => {
       <div className="auth-orb auth-orb-3" />
       <div className="auth-noise" />
 
-      <Card className="w-full max-w-md relative z-10 rounded-3xl" style={glassCardStyle}>
-        <CardContent className="p-8">
+      <Card className="w-full max-w-[400px] relative z-10 rounded-3xl" style={glassCardStyle}>
+        <CardContent className="p-6">
           {/* Logo / Brand */}
-          <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-4">
-              <Church className="w-6 h-6 text-blue-400" />
+          <div className="text-center mb-5">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center mx-auto mb-3">
+              <Church className="w-5 h-5 text-blue-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">BEHT JAMAA</h1>
-            <p className="text-white/35 text-sm mt-1">Welcome back to the community</p>
+            <h1 className="text-xl font-bold text-white tracking-tight">BEHT JAMAA</h1>
+            <p className="text-white/35 text-xs mt-0.5">Welcome back to the community</p>
           </div>
-
-          {/* Step indicator */}
-          <StepIndicator currentStep={2} totalSteps={4} />
 
           {/* Google button */}
           <Button
             variant="outline"
-            className="w-full h-12 mb-5 bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15] text-white rounded-xl transition-all duration-300"
+            className="w-full h-10 mb-3 bg-white/[0.04] hover:bg-white/[0.08] border-white/[0.08] hover:border-white/[0.15] text-white rounded-xl transition-all duration-300 text-sm"
             onClick={handleGoogleSignIn}
           >
             <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
@@ -317,11 +314,11 @@ const AuthPage = () => {
           </Button>
 
           {/* Divider */}
-          <div className="relative mb-5">
+          <div className="relative mb-3">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-white/[0.06]" />
             </div>
-            <div className="relative flex justify-center text-xs">
+            <div className="relative flex justify-center text-[11px]">
               <span className="px-3 text-white/25 bg-transparent">or continue with email</span>
             </div>
           </div>
@@ -345,7 +342,7 @@ const AuthPage = () => {
 
             {/* Sign In */}
             <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4 mt-5">
+              <form onSubmit={handleSignIn} className="space-y-3 mt-3">
                 <div className="space-y-1.5">
                   <Label className="text-white/50 text-xs font-medium uppercase tracking-wider">Email</Label>
                   <GlassInput
@@ -379,7 +376,7 @@ const AuthPage = () => {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] mt-2"
+                  className="w-full h-10 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] mt-1"
                   disabled={loading}
                 >
                   {loading ? "Signing in..." : "Continue"}
@@ -387,7 +384,7 @@ const AuthPage = () => {
                 <Button
                   type="button"
                   variant="link"
-                  className="w-full text-sm text-white/30 hover:text-white/60"
+                  className="w-full text-xs text-white/30 hover:text-white/60"
                   onClick={() => setShowForgotPassword(true)}
                 >
                   Forgot your password?
@@ -397,7 +394,7 @@ const AuthPage = () => {
 
             {/* Sign Up */}
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4 mt-5">
+              <form onSubmit={handleSignUp} className="space-y-3 mt-3">
                 <div className="space-y-1.5">
                   <Label className="text-white/50 text-xs font-medium uppercase tracking-wider">Display Name</Label>
                   <GlassInput
@@ -443,7 +440,7 @@ const AuthPage = () => {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full h-12 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] mt-2"
+                  className="w-full h-10 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] mt-1"
                   disabled={loading}
                 >
                   {loading ? "Creating account..." : "Continue"}
@@ -453,7 +450,7 @@ const AuthPage = () => {
           </Tabs>
 
           {/* Back to Home */}
-          <div className="mt-5 text-center">
+          <div className="mt-3 text-center">
             <Button
               variant="ghost"
               size="sm"
