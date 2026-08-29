@@ -1,4 +1,4 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned, Search } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned, Search, Cross } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,7 +47,7 @@ const HeroSection = () => {
 
           {/* Trust badge */}
           <div className="flex items-center gap-2.5 bg-white/15 backdrop-blur-md rounded-full px-4 py-1.5 border border-white/20 w-fit">
-            <span className="text-white text-sm font-bold">✝️ Jesus Loves You</span>
+            <span className="text-white text-sm font-bold flex items-center gap-1.5"><Cross className="w-4 h-4" /> Jesus Loves You</span>
           </div>
         </div>
 
