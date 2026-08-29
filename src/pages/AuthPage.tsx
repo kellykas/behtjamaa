@@ -213,16 +213,20 @@ const AuthPage = () => {
     }
   };
 
-  /* ── Premium glass card style ───────────────────────────────── */
+  /* ── Liquid glass card style ────────────────────────────────── */
   const glassCardStyle = {
-    background: `rgba(255,255,255,${bgOpacity * 0.06})`,
-    backdropFilter: `blur(${blurAmount}px) saturate(150%)`,
-    WebkitBackdropFilter: `blur(${blurAmount}px) saturate(150%)`,
-    border: "1px solid rgba(255,255,255,0.08)",
+    background: `linear-gradient(145deg, rgba(255,255,255,${bgOpacity * 0.08}) 0%, rgba(255,255,255,${bgOpacity * 0.03}) 100%)`,
+    backdropFilter: `blur(${Math.max(blurAmount, 30)}px) saturate(180%) brightness(1.1)`,
+    WebkitBackdropFilter: `blur(${Math.max(blurAmount, 30)}px) saturate(180%) brightness(1.1)`,
+    border: "1px solid rgba(255,255,255,0.12)",
     boxShadow: `
-      0 0 0 1px rgba(255,255,255,0.03),
-      0 8px 40px rgba(0,0,0,0.4),
-      inset 0 1px 0 0 rgba(255,255,255,0.06)
+      0 0 0 0.5px rgba(255,255,255,0.05),
+      0 8px 32px rgba(0,0,0,0.5),
+      0 2px 8px rgba(0,0,0,0.3),
+      inset 0 1px 0 0 rgba(255,255,255,0.1),
+      inset 0 -1px 0 0 rgba(255,255,255,0.02),
+      inset 1px 0 0 0 rgba(255,255,255,0.04),
+      inset -1px 0 0 0 rgba(255,255,255,0.04)
     `,
   } as const;
 

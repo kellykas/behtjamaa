@@ -106,89 +106,52 @@
   transition-duration: 100ms;
 }
 
-/* ── Auth page premium dark background with light streaks ────── */
+/* ── Auth page solid dark background ─────────────────────────── */
 .auth-bg {
   position: relative;
   overflow: hidden;
-  background: #0a0e1a;
+  background: #0c1222;
 }
 
-/* Animated light streaks crossing the background */
-.auth-bg::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(135deg, transparent 20%, rgba(59,130,246,0.15) 35%, transparent 50%),
-    linear-gradient(225deg, transparent 25%, rgba(217,119,6,0.12) 40%, transparent 55%),
-    linear-gradient(315deg, transparent 30%, rgba(59,130,246,0.08) 45%, transparent 60%),
-    linear-gradient(45deg, transparent 15%, rgba(217,119,6,0.06) 30%, transparent 45%);
-  animation: auth-streaks 12s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-.auth-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(59,130,246,0.2) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 50% at 80% 70%, rgba(217,119,6,0.15) 0%, transparent 70%);
-  animation: auth-glow 8s ease-in-out infinite alternate-reverse;
-}
-
-@keyframes auth-streaks {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(1deg) scale(1.02); }
-  100% { transform: rotate(-1deg) scale(1); }
-}
-
-@keyframes auth-glow {
-  0% { opacity: 0.7; }
-  50% { opacity: 1; }
-  100% { opacity: 0.8; }
-}
-
-/* Floating color orbs behind the glass */
+/* Soft ambient orbs behind the glass card */
 .auth-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.4;
+  filter: blur(120px);
+  opacity: 0.35;
   animation: orb-float 20s ease-in-out infinite;
   will-change: transform;
 }
 .auth-orb-1 {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, rgba(59,130,246,0.4) 0%, transparent 70%);
-  top: -15%;
-  left: -10%;
+  width: 400px;
+  height: 400px;
+  background: #2563eb;
+  top: 10%;
+  left: -8%;
   animation-delay: 0s;
 }
 .auth-orb-2 {
-  width: 450px;
-  height: 450px;
-  background: radial-gradient(circle, rgba(217,119,6,0.3) 0%, transparent 70%);
-  bottom: -15%;
-  right: -10%;
+  width: 350px;
+  height: 350px;
+  background: #3b82f6;
+  bottom: 10%;
+  right: -8%;
   animation-delay: -7s;
 }
 .auth-orb-3 {
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%);
-  top: 50%;
-  left: 60%;
+  width: 300px;
+  height: 300px;
+  background: #1d4ed8;
+  top: 55%;
+  left: 55%;
   transform: translate(-50%, -50%);
   animation-delay: -14s;
 }
 
 @keyframes orb-float {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(30px, -20px) scale(1.05); }
-  50% { transform: translate(-20px, 15px) scale(0.95); }
-  75% { transform: translate(15px, 25px) scale(1.02); }
+  33% { transform: translate(20px, -15px) scale(1.04); }
+  66% { transform: translate(-15px, 10px) scale(0.96); }
 }
 
 /* ── Podcast carousel cover-flow ──────────────────────────────── */
