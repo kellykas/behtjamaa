@@ -159,7 +159,7 @@ const AuthPage = () => {
   if (showForgotPassword) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-[880px] bg-white rounded-[2rem] shadow-[0_8px_60px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col md:flex-row min-h-[520px]">
+        <div className="w-full max-w-[880px] bg-white rounded-[2rem] shadow-[0_8px_60px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col md:flex-row">
           {/* Left panel — dark branding */}
           <div className="w-full md:w-[420px] bg-[#111827] p-8 md:p-10 flex flex-col justify-between relative overflow-hidden shrink-0">
             <div className="absolute inset-0 opacity-10">
@@ -228,7 +228,7 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-[880px] bg-white rounded-[2rem] shadow-[0_8px_60px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col md:flex-row min-h-[560px]">
+      <div className="w-full max-w-[880px] bg-white rounded-[2rem] shadow-[0_8px_60px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col md:flex-row">
         {/* Left panel — dark branding with stats */}
         <div className="w-full md:w-[420px] bg-[#111827] p-8 md:p-10 flex flex-col justify-between relative overflow-hidden shrink-0">
           {/* Ambient glow */}
