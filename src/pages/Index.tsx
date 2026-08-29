@@ -652,7 +652,7 @@ const DailyScripture = () => {
             <blockquote className="text-lg md:text-xl italic text-foreground/70 leading-relaxed max-w-3xl mx-auto">
               "{verse.text}"
             </blockquote>
-            <p className="text-blue-600 font-semibold text-lg mt-3">— {verse.ref}</p>
+            <p className="text-blue-600 font-semibold text-lg mt-3">{verse.ref}</p>
           </div>
         </div>
       </div>
