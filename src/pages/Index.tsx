@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
-import { useSiteSettings } from "@/hooks/useContent";
+import { useSiteSettings, useTeamMembers } from "@/hooks/useContent";
 
 /* ─── Hero ────────────────────────────────────────────────────── */
 const HeroSection = () => {
@@ -960,13 +960,28 @@ const FeaturedEpisodes = () => {
 };
 
 /* ─── Meet The Team ───────────────────────────────────────────── */
-const team = [
-  { name: "Chris Sadiki", role: "President", initials: "CS" },
-  { name: "Reagan Lescot", role: "Secretary", initials: "RL" },
-  { name: "Fab Meekboy", role: "Project Manager", initials: "FM" },
+// Shown until the admin-editable team_members data loads (or if it is unavailable)
+const defaultTeam = [
+  { id: "default-1", name: "Chris Sadiki", role: "President", avatar_url: null as string | null },
+  { id: "default-2", name: "Reagan Lescot", role: "Secretary", avatar_url: null as string | null },
+  { id: "default-3", name: "Fab Meekboy", role: "Project Manager", avatar_url: null as string | null },
 ];
 
-const TeamSection = () => (
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+const TeamSection = () => {
+  const { members } = useTeamMembers();
+  // Admin-editable members come from the team_members table; fall back while loading.
+  const team = members.length > 0 ? members : defaultTeam;
+
+  return (
   <section className="py-20 px-4 bg-background">
     <div className="max-w-6xl mx-auto">
       <div className="text-center mb-14">
@@ -978,11 +993,19 @@ const TeamSection = () => (
       </div>
       <div className="grid sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
         {team.map((member) => (
-          <Card key={member.name} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+          <Card key={member.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
             <CardContent className="pt-8 pb-6 text-center">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto mb-4">
-                <span className="text-xl font-bold text-primary-foreground">{member.initials}</span>
-              </div>
+              {member.avatar_url ? (
+                <img
+                  src={member.avatar_url}
+                  alt={member.name}
+                  className="w-20 h-20 rounded-full object-cover mx-auto mb-4"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-xl font-bold text-primary-foreground">{getInitials(member.name)}</span>
+                </div>
+              )}
               <h3 className="font-bold text-lg">{member.name}</h3>
               <p className="text-sm text-primary font-medium">{member.role}</p>
             </CardContent>
@@ -991,7 +1014,8 @@ const TeamSection = () => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 /* ─── Donate CTA ──────────────────────────────────────────────── */
 const DonateCTA = () => (

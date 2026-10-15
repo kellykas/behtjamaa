@@ -12,6 +12,7 @@ import {
   HandHeart,
   User,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +35,7 @@ const EASE_SPRING = "cubic-bezier(0.34, 1.56, 0.64, 1)";
 const EASE_SMOOTH = "cubic-bezier(0.4, 0, 0.2, 1)";
 
 const Navbar = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, hasAdminAccess } = useAuth();
   const location = useLocation();
   const [myBranch, setMyBranch] = useState<{ slug: string } | null>(null);
   const { settings } = useSiteSettings("appearance");
@@ -343,6 +344,79 @@ const Navbar = () => {
     );
   };
 
+  /* ── Admin link (admins only) ─────────────────────────────────── */
+  const AdminLink = () => {
+    if (!user || !hasAdminAccess) return null;
+    const active = isActive("/admin");
+    return (
+      <>
+        <div
+          className="bg-gray-200/60"
+          style={{
+            width: 1,
+            height: compact ? 20 : 28,
+            margin: compact ? "0 2px" : "0 4px",
+            transition: `height 400ms ${EASE_SPRING}, margin 300ms ${EASE_SMOOTH}`,
+          }}
+        />
+        <Link
+          to="/admin"
+          className="nav-item group relative flex flex-col items-center rounded-full"
+          style={{
+            padding: compact ? "6px 10px" : "8px 16px",
+            minWidth: compact ? 40 : 64,
+            gap: compact ? 0 : 2,
+            transition: `padding 400ms ${EASE_SPRING}, min-width 400ms ${EASE_SPRING}`,
+            color: active ? "#2563eb" : "#6b7280",
+          }}
+        >
+          <div
+            className="absolute inset-0 rounded-full transition-all duration-250 ease-out"
+            style={{ background: active ? "rgba(239,246,255,1)" : undefined }}
+          />
+          <div
+            className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out"
+            style={{
+              background: active ? "rgba(219,234,254,0.5)" : "rgba(243,244,246,0.6)",
+            }}
+          />
+          <Shield
+            className="relative z-10"
+            style={{
+              width: compact ? 16 : 20,
+              height: compact ? 16 : 20,
+              transition: `width 400ms ${EASE_SPRING}, height 400ms ${EASE_SPRING}`,
+              color: active ? "#2563eb" : "#6b7280",
+            }}
+          />
+          <span
+            className="relative z-10 text-[10px] font-semibold leading-none whitespace-nowrap overflow-hidden"
+            style={{
+              maxHeight: compact ? 0 : 14,
+              opacity: compact ? 0 : 1,
+              maxWidth: compact ? 0 : 80,
+              transition: `max-height 250ms ${EASE_SMOOTH}, opacity 200ms ease, max-width 400ms ${EASE_SPRING}`,
+              color: active ? "#2563eb" : "#6b7280",
+            }}
+          >
+            Admin
+          </span>
+          <div
+            className="relative z-10 bg-blue-600 rounded-full"
+            style={{
+              width: active ? (compact ? 8 : 16) : 0,
+              height: 2,
+              marginTop: 2,
+              opacity: active ? 1 : 0,
+              transform: active ? "scaleX(1)" : "scaleX(0)",
+              transition: `width 400ms ${EASE_SPRING}, opacity 250ms ease, transform 350ms ${EASE_SPRING}`,
+            }}
+          />
+        </Link>
+      </>
+    );
+  };
+
   // Hide navbar on auth-related pages
   const hideNav = location.pathname === "/auth" || location.pathname === "/reset-password";
   if (hideNav) return null;
@@ -390,6 +464,7 @@ const Navbar = () => {
 
           <AuthButton />
           <BranchLink />
+          <AdminLink />
         </div>
       </nav>
 

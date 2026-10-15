@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      branch_admins: {
+        Row: {
+          id: string
+          user_id: string | null
+          email: string
+          full_name: string
+          temp_password: string | null
+          branch_ids: string[]
+          permissions: string[]
+          is_active: boolean
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          email: string
+          full_name: string
+          temp_password?: string | null
+          branch_ids?: string[]
+          permissions?: string[]
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          email?: string
+          full_name?: string
+          temp_password?: string | null
+          branch_ids?: string[]
+          permissions?: string[]
+          is_active?: boolean
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           id: string
@@ -820,6 +862,41 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      is_branch_admin: {
+        Args: {
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      branch_admin_can: {
+        Args: {
+          _user_id: string
+          _permission: string
+        }
+        Returns: boolean
+      }
+      branch_admin_manages: {
+        Args: {
+          _user_id: string
+          _branch_id: string
+        }
+        Returns: boolean
+      }
+      link_branch_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      my_branch_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          full_name: string
+          email: string
+          branch_ids: string[]
+          permissions: string[]
+          is_active: boolean
+        }[]
       }
     }
     Enums: {

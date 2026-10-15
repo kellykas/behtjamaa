@@ -10,7 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save, Building2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save, Building2, KeyRound, UserCog } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PERMISSIONS, permissionLabel } from "@/lib/permissions";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -19,7 +21,7 @@ import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 
 const AdminPage = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isBranchAdmin, can, managesBranch, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -46,6 +48,17 @@ const AdminPage = () => {
   const [svDesc, setSvDesc] = useState("");
   const [svIcon, setSvIcon] = useState("");
   const [svVerse, setSvVerse] = useState("");
+
+  // Branch admins (super-admin managed scoped sign-ons)
+  const [branchAdmins, setBranchAdmins] = useState<any[]>([]);
+  const [baDialogOpen, setBaDialogOpen] = useState(false);
+  const [editingBaId, setEditingBaId] = useState<string | null>(null);
+  const [baName, setBaName] = useState("");
+  const [baEmail, setBaEmail] = useState("");
+  const [baPassword, setBaPassword] = useState("");
+  const [baBranchIds, setBaBranchIds] = useState<string[]>([]);
+  const [baPermissions, setBaPermissions] = useState<string[]>([]);
+  const [baActive, setBaActive] = useState(true);
 
   // Branch management
   const [branchesList, setBranchesList] = useState<Tables<"branches">[]>([]);
@@ -121,11 +134,15 @@ const AdminPage = () => {
       });
       setRoleMap(map);
     }
+
+    // Branch admins are only readable by super admins (RLS enforces this too)
+    const { data: ba } = await supabase.from("branch_admins").select("*").order("created_at", { ascending: false });
+    setBranchAdmins(ba || []);
   };
 
   useEffect(() => {
-    if (isAdmin) fetchAll();
-  }, [isAdmin]);
+    if (isAdmin || isBranchAdmin) fetchAll();
+  }, [isAdmin, isBranchAdmin]);
 
   if (authLoading) {
     return (
@@ -153,7 +170,7 @@ const AdminPage = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isBranchAdmin) {
     return (
       <div className="min-h-screen gradient-subtle flex items-center justify-center">
         <Card className="max-w-md w-full mx-4">
@@ -176,6 +193,101 @@ const AdminPage = () => {
   const resetTmForm = () => { setTmName(""); setTmRole(""); setTmBio(""); setTmAvatar(""); setEditingTmId(null); };
   const resetSvForm = () => { setSvTitle(""); setSvDesc(""); setSvIcon(""); setSvVerse(""); setEditingSvId(null); };
   const resetBrForm = () => { setBrName(""); setBrSlug(""); setBrLocation(""); setBrDesc(""); setBrLeader(""); setBrEmail(""); setBrPhone(""); setBrLogo(""); setBrBanner(""); setBrActive(true); setBrLeaderUserId(""); setEditingBranchId(null); };
+
+  // ── Scoped access (branch admins see only their branches + granted areas) ──
+  const visibleBranches = isAdmin ? branchesList : branchesList.filter((b) => managesBranch(b.id));
+  const tabPermissions = ["events", "prayers", "members", "content", "team", "services", "branches"] as const;
+  const defaultTab = tabPermissions.find((p) => can(p)) ?? (isSuperAdmin ? "branchAdmins" : "branches");
+  const hasAnyPermission = PERMISSIONS.some((p) => can(p.key));
+
+  if (!isSuperAdmin && !hasAnyPermission) {
+    return (
+      <div className="min-h-screen gradient-subtle flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="pt-8 text-center">
+            <Shield className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h1 className="text-2xl font-bold mb-2">No permissions yet</h1>
+            <p className="text-muted-foreground mb-6">
+              You are a branch admin, but a Super Admin has not granted you anything to modify yet.
+            </p>
+            <Button onClick={() => navigate("/")}>Back to Home</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── Branch admin sign-ons (super admin only) ──
+  const resetBaForm = () => {
+    setBaName(""); setBaEmail(""); setBaPassword("");
+    setBaBranchIds([]); setBaPermissions([]); setBaActive(true); setEditingBaId(null);
+  };
+
+  const generatePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    const bytes = new Uint32Array(10);
+    crypto.getRandomValues(bytes);
+    let out = "";
+    for (let i = 0; i < bytes.length; i++) out += chars[bytes[i] % chars.length];
+    return out;
+  };
+
+  const handleSaveBranchAdmin = async () => {
+    if (!baName.trim() || !baEmail.trim()) {
+      toast({ title: "Name and email are required", variant: "destructive" });
+      return;
+    }
+    if (!editingBaId && baPassword.trim().length < 6) {
+      toast({ title: "Password too short", description: "Minimum 6 characters", variant: "destructive" });
+      return;
+    }
+    const payload: any = {
+      full_name: baName.trim(),
+      email: baEmail.trim().toLowerCase(),
+      branch_ids: baBranchIds,
+      permissions: baPermissions,
+      is_active: baActive,
+    };
+    if (baPassword.trim()) payload.temp_password = baPassword.trim();
+    const { error } = editingBaId
+      ? await supabase.from("branch_admins").update(payload).eq("id", editingBaId)
+      : await supabase.from("branch_admins").insert({ ...payload, created_by: user?.id ?? null });
+    if (error) {
+      toast({ title: "Could not save branch admin", description: error.message, variant: "destructive" });
+      return;
+    }
+    setBaDialogOpen(false);
+    resetBaForm();
+    fetchAll();
+    toast({ title: editingBaId ? "Branch admin updated" : "Branch admin created" });
+  };
+
+  const handleDeleteBranchAdmin = async (id: string) => {
+    const { error } = await supabase.from("branch_admins").delete().eq("id", id);
+    if (error) {
+      toast({ title: "Could not delete", description: error.message, variant: "destructive" });
+      return;
+    }
+    fetchAll();
+    toast({ title: "Branch admin removed" });
+  };
+
+  const handleEditBranchAdmin = (ba: any) => {
+    setEditingBaId(ba.id);
+    setBaName(ba.full_name || "");
+    setBaEmail(ba.email || "");
+    setBaPassword(ba.temp_password || "");
+    setBaBranchIds(ba.branch_ids || []);
+    setBaPermissions(ba.permissions || []);
+    setBaActive(ba.is_active !== false);
+    setBaDialogOpen(true);
+  };
+
+  const toggleBaBranch = (id: string, on: boolean) =>
+    setBaBranchIds((prev) => (on ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)));
+
+  const toggleBaPermission = (key: string, on: boolean) =>
+    setBaPermissions((prev) => (on ? [...new Set([...prev, key])] : prev.filter((x) => x !== key)));
 
   const handleSaveSetting = async (key: string, value: string) => {
     await supabase.from("site_settings").upsert({ key, value }, { onConflict: "key" });
@@ -473,28 +585,35 @@ const AdminPage = () => {
         <div className="flex items-center gap-3 mb-8">
           <Shield className="h-8 w-8 text-purple-600" />
           <div>
-            <h1 className="text-4xl font-bold">Admin Panel</h1>
-            <p className="text-muted-foreground">Manage content and users</p>
+            <h1 className="text-4xl font-bold">{isSuperAdmin ? "Super Admin" : "Branch Admin"}</h1>
+            <p className="text-muted-foreground">
+              {isSuperAdmin
+                ? "Manage content, branches and admins"
+                : "Manage the areas and branches assigned to you"}
+            </p>
           </div>
         </div>
 
+        {isSuperAdmin && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card><CardContent className="pt-6 text-center"><p className="text-3xl font-bold">{episodes.length}</p><p className="text-sm text-muted-foreground">Episodes</p></CardContent></Card>
           <Card><CardContent className="pt-6 text-center"><p className="text-3xl font-bold">{prayers.length}</p><p className="text-sm text-muted-foreground">Prayers</p></CardContent></Card>
           <Card><CardContent className="pt-6 text-center"><p className="text-3xl font-bold">{events.length}</p><p className="text-sm text-muted-foreground">Events</p></CardContent></Card>
           <Card><CardContent className="pt-6 text-center"><p className="text-3xl font-bold">{profiles.length}</p><p className="text-sm text-muted-foreground">Members</p></CardContent></Card>
         </div>
+        )}
 
-        <Tabs defaultValue="episodes">
+        <Tabs defaultValue={defaultTab}>
           <TabsList className="mb-4 flex-wrap h-auto gap-1">
-            <TabsTrigger value="episodes"><Music className="h-4 w-4 mr-2" />Episodes</TabsTrigger>
-            <TabsTrigger value="prayers"><Heart className="h-4 w-4 mr-2" />Prayers</TabsTrigger>
-            <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-2" />Events</TabsTrigger>
-            <TabsTrigger value="members"><Users className="h-4 w-4 mr-2" />Members</TabsTrigger>
-            <TabsTrigger value="content"><Edit className="h-4 w-4 mr-2" />Content</TabsTrigger>
-            <TabsTrigger value="team"><Users className="h-4 w-4 mr-2" />Team</TabsTrigger>
-            <TabsTrigger value="services"><Sparkles className="h-4 w-4 mr-2" />Services</TabsTrigger>
-            <TabsTrigger value="branches"><Building2 className="h-4 w-4 mr-2" />Branches</TabsTrigger>
+            {can("events") && <TabsTrigger value="episodes"><Music className="h-4 w-4 mr-2" />Episodes</TabsTrigger>}
+            {can("prayers") && <TabsTrigger value="prayers"><Heart className="h-4 w-4 mr-2" />Prayers</TabsTrigger>}
+            {can("events") && <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-2" />Events</TabsTrigger>}
+            {can("members") && <TabsTrigger value="members"><Users className="h-4 w-4 mr-2" />Members</TabsTrigger>}
+            {can("content") && <TabsTrigger value="content"><Edit className="h-4 w-4 mr-2" />Content</TabsTrigger>}
+            {can("team") && <TabsTrigger value="team"><Users className="h-4 w-4 mr-2" />Team</TabsTrigger>}
+            {can("services") && <TabsTrigger value="services"><Sparkles className="h-4 w-4 mr-2" />Services</TabsTrigger>}
+            {can("branches") && <TabsTrigger value="branches"><Building2 className="h-4 w-4 mr-2" />Branches</TabsTrigger>}
+            {isSuperAdmin && <TabsTrigger value="branchAdmins"><UserCog className="h-4 w-4 mr-2" />Branch Admins</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="episodes">
@@ -888,11 +1007,13 @@ const AdminPage = () => {
 
           <TabsContent value="branches">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-              <h2 className="text-xl font-semibold">Ministry Branches ({branchesList.length})</h2>
+              <h2 className="text-xl font-semibold">Ministry Branches ({visibleBranches.length})</h2>
               <Dialog open={branchDialogOpen} onOpenChange={(o) => { setBranchDialogOpen(o); if (!o) resetBrForm(); }}>
+                {isSuperAdmin && (
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Branch</Button>
                 </DialogTrigger>
+                )}
                 <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader><DialogTitle>{editingBranchId ? "Edit" : "New"} Branch</DialogTitle></DialogHeader>
                   <div className="space-y-4">
@@ -950,11 +1071,11 @@ const AdminPage = () => {
                 </DialogContent>
               </Dialog>
             </div>
-            {branchesList.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">No branches yet. Add your first branch!</CardContent></Card>
+            {visibleBranches.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">{isSuperAdmin ? "No branches yet. Add your first branch!" : "You are not assigned to any branch yet."}</CardContent></Card>
             ) : (
               <div className="grid gap-3">
-                {branchesList.map((br) => (
+                {visibleBranches.map((br) => (
                   <Card key={br.id}>
                     <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="flex items-center gap-3">
@@ -971,7 +1092,7 @@ const AdminPage = () => {
                       </div>
                       <div className="flex gap-2">
                         <Button size="sm" variant="outline" onClick={() => handleEditBranch(br)}><Edit className="h-4 w-4" /></Button>
-                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteBranch(br.id)}><Trash2 className="h-4 w-4" /></Button>
+                        {isSuperAdmin && <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteBranch(br.id)}><Trash2 className="h-4 w-4" /></Button>}
                       </div>
                     </CardContent>
                   </Card>
@@ -979,6 +1100,138 @@ const AdminPage = () => {
               </div>
             )}
           </TabsContent>
+
+          {isSuperAdmin && (
+          <TabsContent value="branchAdmins">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <div>
+                <h2 className="text-xl font-semibold">Branch Admins ({branchAdmins.length})</h2>
+                <p className="text-sm text-muted-foreground">Create sign-ons, assign the branches they manage, and choose what they can modify.</p>
+              </div>
+              <Dialog open={baDialogOpen} onOpenChange={(o) => { setBaDialogOpen(o); if (!o) resetBaForm(); }}>
+                <DialogTrigger asChild>
+                  <Button><Plus className="h-4 w-4 mr-2" /> Add Branch Admin</Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                  <DialogHeader><DialogTitle>{editingBaId ? "Edit" : "New"} Branch Admin</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2"><Label>Full name</Label><Input value={baName} onChange={(e) => setBaName(e.target.value)} placeholder="e.g. Jean Kabila" /></div>
+
+                    <div className="space-y-2">
+                      <Label>Sign-on email</Label>
+                      <Input type="email" value={baEmail} onChange={(e) => setBaEmail(e.target.value)} placeholder="person@example.com" />
+                      <p className="text-xs text-muted-foreground">
+                        They create their account with this email on the sign-in page — it links to this record automatically.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Temporary password</Label>
+                      <div className="flex gap-2">
+                        <Input value={baPassword} onChange={(e) => setBaPassword(e.target.value)} placeholder="Minimum 6 characters" />
+                        <Button type="button" variant="outline" onClick={() => setBaPassword(generatePassword())} title="Generate a password">
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Share this with them so they can sign in. They can change it later.</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Branches they manage ({baBranchIds.length})</Label>
+                      <div className="max-h-44 overflow-y-auto rounded-md border p-3 space-y-2">
+                        {branchesList.length === 0 && <p className="text-sm text-muted-foreground">No branches yet.</p>}
+                        {branchesList.map((br) => (
+                          <label key={br.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <Checkbox
+                              checked={baBranchIds.includes(br.id)}
+                              onCheckedChange={(v) => toggleBaBranch(br.id, v === true)}
+                            />
+                            <span>{br.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>What they can modify ({baPermissions.length})</Label>
+                      <div className="rounded-md border p-3 space-y-3">
+                        {PERMISSIONS.map((p) => (
+                          <label key={p.key} className="flex items-start gap-2 cursor-pointer">
+                            <Checkbox
+                              className="mt-0.5"
+                              checked={baPermissions.includes(p.key)}
+                              onCheckedChange={(v) => toggleBaPermission(p.key, v === true)}
+                            />
+                            <span className="text-sm">
+                              <span className="font-medium">{p.label}</span>
+                              {p.branchScoped && (
+                                <Badge variant="secondary" className="ml-2 text-[10px]">Their branches only</Badge>
+                              )}
+                              <span className="block text-xs text-muted-foreground">{p.description}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2"><Switch checked={baActive} onCheckedChange={setBaActive} /><Label>Active</Label></div>
+                    <Button onClick={handleSaveBranchAdmin} className="w-full">{editingBaId ? "Update" : "Create"} Branch Admin</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {branchAdmins.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">No branch admins yet. Add one to give a leader scoped access.</CardContent></Card>
+            ) : (
+              <div className="grid gap-3">
+                {branchAdmins.map((ba) => {
+                  const branchNames = branchesList.filter((b) => (ba.branch_ids || []).includes(b.id)).map((b) => b.name);
+                  return (
+                    <Card key={ba.id}>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                              <UserCog className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="font-semibold">{ba.full_name}</h3>
+                                {!ba.is_active && <Badge variant="secondary">Inactive</Badge>}
+                                {ba.user_id
+                                  ? <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Signed up</Badge>
+                                  : <Badge variant="outline">Invite pending</Badge>}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{ba.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => handleEditBranchAdmin(ba)}><Edit className="h-4 w-4" /></Button>
+                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteBranchAdmin(ba.id)}><Trash2 className="h-4 w-4" /></Button>
+                          </div>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Branches: </span>
+                          {branchNames.length
+                            ? branchNames.join(", ")
+                            : <span className="text-destructive">None assigned</span>}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(ba.permissions || []).length === 0
+                            ? <span className="text-sm text-destructive">No permissions assigned</span>
+                            : (ba.permissions || []).map((k: string) => (
+                                <Badge key={k} variant="secondary" className="text-[11px]">{permissionLabel(k)}</Badge>
+                              ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
