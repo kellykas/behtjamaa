@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useTeamMember } from "@/hooks/useContent";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -35,27 +34,67 @@ function initials(name: string) {
     .toUpperCase();
 }
 
+const fallbackMember = {
+  id: "fallback",
+  name: "Team member",
+  role: "Team member",
+  bio: "",
+  avatar_url: null,
+};
+
 export default function TeamMemberEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
-  const { member, loading: memberLoading, refetch } = useTeamMember(id ?? null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    if (member) {
-      setName(member.name);
-      setRole(member.role);
-      setBio(member.bio || "");
-    }
-  }, [member]);
+  const { toast } = useToast() as unknown as {
+    toast: (props: any) => void;
+    dismiss: (id?: string) => void;
+    toasts: any[];
+  };
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
-  if (authLoading || memberLoading) {
+  const [member, setMember] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [bio, setBio] = useState("");
+
+  useEffect(() => {
+    if (!id || id.startsWith("fallback-")) {
+      setMember(fallbackMember);
+      setName(fallbackMember.name);
+      setRole(fallbackMember.role);
+      setBio(fallbackMember.bio || "");
+      setLoading(false);
+      return;
+    }
+
+    supabase
+      .from("team_members")
+      .select("*")
+      .eq("id", id)
+      .single()
+      .then(({ data, error }: { data: any; error?: any }) => {
+        if (error || !data) {
+          setMember(fallbackMember);
+          setName(fallbackMember.name);
+          setRole(fallbackMember.role);
+          setBio(fallbackMember.bio || "");
+        } else {
+          setMember(data);
+          setName(data.name);
+          setRole(data.role);
+          setBio(data.bio || "");
+        }
+        setLoading(false);
+      })
+  }, [id]);
+
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background pt-16">
         <div className="flex items-center justify-center h-[calc(100vh - 64px)]">
@@ -83,31 +122,16 @@ export default function TeamMemberEditorPage() {
     );
   }
 
-  if (!member) {
-    return (
-      <div className="min-h-screen bg-background pt-16 flex items-center justify-center">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-10 text-center">
-            <p className="text-lg font-semibold mb-2">Member not found</p>
-            <p className="text-sm text-muted-foreground mb-6">
-              This team member may have been removed.
-            </p>
-            <Button asChild variant="outline">
-              <Link to="/admin">Back to Admin</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const avatarUrl = (member as any).avatar_url as string | null;
+  const isFallback = !id || id.startsWith("fallback-");
+  const avatarUrl = isFallback
+    ? null
+    : (member as any)?.avatar_url as string | null;
   const avatarPreview = avatarFile
     ? URL.createObjectURL(avatarFile)
     : avatarUrl;
 
   const handleRemoveAvatar = async () => {
-    if (!avatarUrl) return;
+    if (!avatarUrl || isFallback) return;
     const path = `team-members/${id}${extFromUrl(avatarUrl)}`;
     const { error: storageError } = await supabase
       .storage
@@ -130,7 +154,7 @@ export default function TeamMemberEditorPage() {
   };
 
   const handleApplyAvatar = async () => {
-    if (!avatarFile || !id) return;
+    if (!avatarFile || !id || isFallback) return;
     setSaving(true);
     try {
       const ext = extFromUrl(avatarFile.name) || ".png";
@@ -160,11 +184,11 @@ export default function TeamMemberEditorPage() {
     }
   };
 
-  const [name, setName] = useState(member.name);
-  const [role, setRole] = useState(member.role);
-  const [bio, setBio] = useState(member.bio || "");
-
   const handleSave = async () => {
+    if (isFallback) {
+      toast({ title: "Unknown team member", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase
@@ -172,7 +196,7 @@ export default function TeamMemberEditorPage() {
         .update({ name, role, bio: bio || null })
         .eq("id", id);
       if (error) throw error;
-      refetch();
+      setMember({ ...member, name, role, bio: bio || null });
       toast({ title: "Saved" });
       navigate("/admin");
     } catch (err: any) {
@@ -206,7 +230,7 @@ export default function TeamMemberEditorPage() {
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
-                    alt={member.name}
+                    alt={isFallback ? "Team member" : member.name}
                     className="w-20 h-20 rounded-full object-cover"
                   />
                 ) : (
@@ -237,7 +261,7 @@ export default function TeamMemberEditorPage() {
                   size="sm"
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
-                  disabled={!isSuperAdmin}
+                  disabled={!isSuperAdmin || isFallback}
                   title="Only super admins can upload avatars"
                 >
                   <Upload className="mr-2 h-4 w-4" />
@@ -282,11 +306,21 @@ export default function TeamMemberEditorPage() {
           <div className="space-y-4 p-4 pt-2">
             <div>
               <Label htmlFor="team-name">Name</Label>
-              <Input id="team-name" value={name} onChange={(e) => setName(e.target.value)} required />
+              <Input
+                id="team-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
             <div>
               <Label htmlFor="team-role">Role</Label>
-              <Input id="team-role" value={role} onChange={(e) => setRole(e.target.value)} required />
+              <Input
+                id="team-role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                required
+              />
             </div>
             <div>
               <Label htmlFor="team-bio">Bio</Label>

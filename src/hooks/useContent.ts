@@ -70,14 +70,21 @@ export function useTeamFounders() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("team_founders" as any).select("*" as any).eq("active", true).order("sort_order" as any).then(({ data }: any) => {
+    supabase
+      .from("team_founders" as any)
+      .select("*" as any)
+      .eq("active", true)
+      .order("sort_order" as any)
+      .then(({ data }: { data?: any[] | null }) => {
         if (data && data.length > 0) {
           setFounders(data);
+        } else if (data && data.length === 0) {
+          setFounders(fallbackFounders);
         } else {
           setFounders(fallbackFounders);
         }
         setLoading(false);
-      });
+      })
   }, []);
 
   return { founders, loading, refetch: () => setLoading(true) };
