@@ -1,4 +1,4 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned, Search, Cross } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned, Search, Cross, Image as ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +9,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
-import { useSiteSettings, useTeamMembers } from "@/hooks/useContent";
+import { useSiteSettings, useTeamMembers, useTeamMember } from "@/hooks/useContent";
+import { toast } from "@/hooks/use-toast";
+
+function assetExt(url: string): string {
+  const ext = url.split("/").pop()?.split("?")[0];
+  if (!ext || !/[a-z0-9]+$/.test(ext)) return "";
+  return "." + ext.toLowerCase();
+}
 
 /* ─── Hero ────────────────────────────────────────────────────── */
 const HeroSection = () => {
@@ -995,17 +1002,48 @@ const TeamSection = () => {
         {team.map((member) => (
           <Card key={member.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
             <CardContent className="pt-8 pb-6 text-center">
-              {member.avatar_url ? (
-                <img
-                  src={member.avatar_url}
-                  alt={member.name}
-                  className="w-20 h-20 rounded-full object-cover mx-auto mb-4"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-xl font-bold text-primary-foreground">{getInitials(member.name)}</span>
+              <div className="relative inline-flex items-center justify-center mb-4">
+                {member.avatar_url ? (
+                  <img
+                    src={member.avatar_url}
+                    alt={member.name}
+                    className="w-20 h-20 rounded-full object-cover mx-auto"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto">
+                    <span className="text-xl font-bold text-primary-foreground">{getInitials(member.name)}</span>
+                  </div>
+                )}
+                <div className="absolute inset-0 rounded-full bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="flex gap-2">
+                    <Link to={`/admin/team/${member.id}`} className="p-1.5 rounded-full text-amber-700 hover:bg-amber-100 transition-colors" title="View / edit team member">
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                    {member.avatar_url ? (
+                      <button
+                        type="button"
+                        className="p-1.5 rounded-full text-red-600 hover:bg-red-50 transition-colors"
+                        title="Remove avatar"
+                        aria-label={`Remove avatar for ${member.name}`}
+                        onClick={() => {
+                          const path = `team-members/${member.id}${assetExt(member.avatar_url)}`;
+                          supabase.storage.from("profile-avatars").remove([path]).then(({ error }) => {
+                            if (error && !(error as any).message.includes("No files found")) {
+                              toast({ title: "Could not remove avatar", description: (error as any).message, variant: "destructive" });
+                              return;
+                            }
+                            supabase.from("team_members").update({ avatar_url: null }).eq("id", member.id).then(() => {
+                              toast({ title: "Avatar removed" });
+                            });
+                          });
+                        }}
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
-              )}
+              </div>
               <h3 className="font-bold text-lg">{member.name}</h3>
               <p className="text-sm text-primary font-medium">{member.role}</p>
             </CardContent>

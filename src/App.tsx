@@ -12,6 +12,7 @@ import LivePage from "./pages/LivePage";
 import PrayerPage from "./pages/PrayerPage";
 import MembersPage from "./pages/MembersPage";
 import AdminPage from "./pages/AdminPage";
+import TeamMemberEditorPage from "./pages/TeamMemberEditorPage";
 import ServicesPage from "./pages/ServicesPage";
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
@@ -47,6 +48,7 @@ const App = () => {
             <Route path="/branches/:slug" element={<BranchPortalPage />} />
             <Route path="/branches/:slug/events/:eventId" element={<EventDetailPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/team/:id" element={<TeamMemberEditorPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

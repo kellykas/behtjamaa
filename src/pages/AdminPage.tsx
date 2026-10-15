@@ -19,6 +19,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
+import { Link } from "react-router-dom";
+import { Briefcase } from "lucide-react";
 
 const AdminPage = () => {
   const { user, isAdmin, isSuperAdmin, isBranchAdmin, can, managesBranch, loading: authLoading } = useAuth();
@@ -937,23 +939,29 @@ const AdminPage = () => {
             </div>
             {teamMembers.length === 0 ? (
               <Card><CardContent className="py-8 text-center text-muted-foreground">No team members yet.</CardContent></Card>
-            ) : (
-              <div className="grid gap-3">
+            ) : (                <div className="grid gap-3">
                 {teamMembers.map((tm) => (
                   <Card key={tm.id}>
                     <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold shrink-0">
-                          {tm.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{tm.name}</h3>
+                        <Link to={`/admin/team/${tm.id}`} className="shrink-0">
+                          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold hover:bg-purple-200 transition cursor-pointer">
+                            {tm.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                          </div>
+                        </Link>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-semibold truncate">{tm.name}</h3>
+                            {tm.avatar_url ? <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : null}
+                          </div>
                           <p className="text-sm text-primary font-medium">{tm.role}</p>
                           {tm.bio && <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{tm.bio}</p>}
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEditTeamMember(tm)}><Edit className="h-4 w-4" /></Button>
+                      <div className="flex gap-2 ml-auto shrink-0">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/admin/team/${tm.id}`}><Edit className="h-4 w-4" /></Link>
+                        </Button>
                         <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteTeamMember(tm.id)}><Trash2 className="h-4 w-4" /></Button>
                       </div>
                     </CardContent>

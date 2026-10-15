@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export function useSiteSettings(section?: string) {
@@ -31,6 +31,30 @@ export function useTeamMembers() {
   }, []);
 
   return { members, loading };
+}
+
+export function useTeamMember(id: string | null) {
+  const [member, setMember] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) {
+      setMember(null);
+      setLoading(false);
+      return;
+    }
+    supabase
+      .from("team_members")
+      .select("*")
+      .eq("id", id)
+      .single()
+      .then(({ data, error }) => {
+        setMember(error ? null : data);
+        setLoading(false);
+      });
+  }, [id]);
+
+  return { member, loading, refetch: () => setLoading(true) };
 }
 
 export function useServices() {
