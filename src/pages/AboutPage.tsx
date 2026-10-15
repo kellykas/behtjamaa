@@ -1,8 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound, HeartHandshake, Trophy, Music, Mic, Star, Sparkles } from "lucide-react";
+import { ArrowLeft, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound, HeartHandshake, Trophy, Music, Mic, Star, Sparkles, Image, EyeOff } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 const stats = [
   { value: "2011", label: "Year Established", icon: Star },
@@ -44,16 +47,54 @@ const achievements = [
   },
 ];
 
-const team = [
-  { name: "Christophe Sadiki Mubira", role: "Founder & President", initials: "CS" },
-  { name: "Dieudonne Sangano", role: "Co-Founder", initials: "DS" },
-  { name: "Danny Mani", role: "Co-Founder", initials: "DM" },
-  { name: "Fabrice Muhindo", role: "Co-Founder", initials: "FM" },
+const initialsFor = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+const fallbackTeam = [
+  { name: "Christophe Sadiki Mubira", role: "Founder & President", subtitle: "", initials: "CS" },
+  { name: "Dieudonne Sangano", role: "Co-Founder", subtitle: "", initials: "DS" },
+  { name: "Danny Mani", role: "Co-Founder", subtitle: "", initials: "DM" },
+  { name: "Fabrice Muhindo", role: "Co-Founder", subtitle: "", initials: "FM" },
   { name: "Lwenga Rajabu", role: "Co-Founder & Secretary", subtitle: "aka Reagan Lescot", initials: "LR" },
 ];
 
 const AboutPage = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [team, setTeam] = useState<any[]>(fallbackTeam);
+  const [teamLoading, setTeamLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from("team_members")
+      .select("*")
+      .eq("active", true)
+      .order("sort_order")
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setTeam(data);
+        } else {
+          setTeam(fallbackTeam);
+        }
+        setTeamLoading(false);
+      });
+  }, []);
+
+  if (teamLoading) {
+    return (
+      <div className="min-h-screen gradient-subtle">
+        <div className="max-w-5xl mx-auto px-4 py-8 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen gradient-subtle">
@@ -192,10 +233,21 @@ const AboutPage = () => {
           <h2 className="text-3xl font-bold mb-8">Our Founders & Team</h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
             {team.map((m) => (
-              <Card key={m.name} className="hover:shadow-md transition-shadow">
+              <Card key={m.id} className="group relative hover:shadow-md transition-shadow">
                 <CardContent className="pt-6 text-center">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto mb-3">
-                    <span className="text-lg font-bold text-primary-foreground">{m.initials}</span>
+                  <div className="relative inline-flex items-center justify-center mb-3">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto">
+                      {m.avatar_url ? (
+                        <img src={m.avatar_url} alt={m.name} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <span className="text-lg font-bold text-primary-foreground">{initialsFor(m.name)}</span>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Link to={`/admin/team/${m.id}`} className="p-1.5 rounded-full bg-white/80 text-primary hover:bg-white transition-colors" title="Edit team member">
+                        <Eye className="w-4 h-4" />
+                      </Link>
+                    </div>
                   </div>
                   <h3 className="font-bold">{m.name}</h3>
                   {m.subtitle && <p className="text-xs text-muted-foreground italic">{m.subtitle}</p>}
