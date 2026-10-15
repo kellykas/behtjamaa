@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTeamMember } from "@/hooks/useContent";
@@ -39,8 +39,16 @@ export default function TeamMemberEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
-  const { member, loading: memberLoading } = useTeamMember(id ?? null);
+  const { member, loading: memberLoading, refetch } = useTeamMember(id ?? null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (member) {
+      setName(member.name);
+      setRole(member.role);
+      setBio(member.bio || "");
+    }
+  }, [member]);
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
@@ -152,13 +160,19 @@ export default function TeamMemberEditorPage() {
     }
   };
 
+  const [name, setName] = useState(member.name);
+  const [role, setRole] = useState(member.role);
+  const [bio, setBio] = useState(member.bio || "");
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      const payload: any = { name: member.name, role: member.role };
-      const bio = (document.getElementById("team-bio") as HTMLTextAreaElement)?.value;
-      if (bio != null) payload.bio = bio;
-      await supabase.from("team_members").update(payload).eq("id", id);
+      const { error } = await supabase
+        .from("team_members")
+        .update({ name, role, bio: bio || null })
+        .eq("id", id);
+      if (error) throw error;
+      refetch();
       toast({ title: "Saved" });
       navigate("/admin");
     } catch (err: any) {
@@ -268,18 +282,18 @@ export default function TeamMemberEditorPage() {
           <div className="space-y-4 p-4 pt-2">
             <div>
               <Label htmlFor="team-name">Name</Label>
-              <Input id="team-name" value={member.name} disabled />
+              <Input id="team-name" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div>
               <Label htmlFor="team-role">Role</Label>
-              <Input id="team-role" value={member.role} disabled />
+              <Input id="team-role" value={role} onChange={(e) => setRole(e.target.value)} required />
             </div>
             <div>
               <Label htmlFor="team-bio">Bio</Label>
               <Textarea
                 id="team-bio"
-                value={member.bio || ""}
-                onChange={() => {}}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
                 placeholder="Optional one-line bio shown on the site."
               />
             </div>

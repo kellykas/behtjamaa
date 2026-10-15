@@ -1,11 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound, HeartHandshake, Trophy, Music, Mic, Star, Sparkles, Image, EyeOff } from "lucide-react";
+import { ArrowLeft, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound, HeartHandshake, Trophy, Music, Mic, Star, Sparkles } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useTeamFounders } from "@/hooks/useContent";
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 
 const stats = [
   { value: "2011", label: "Year Established", icon: Star },
@@ -56,45 +55,9 @@ const initialsFor = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
-const fallbackTeam = [
-  { name: "Christophe Sadiki Mubira", role: "Founder & President", subtitle: "", initials: "CS" },
-  { name: "Dieudonne Sangano", role: "Co-Founder", subtitle: "", initials: "DS" },
-  { name: "Danny Mani", role: "Co-Founder", subtitle: "", initials: "DM" },
-  { name: "Fabrice Muhindo", role: "Co-Founder", subtitle: "", initials: "FM" },
-  { name: "Lwenga Rajabu", role: "Co-Founder & Secretary", subtitle: "aka Reagan Lescot", initials: "LR" },
-];
-
 const AboutPage = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [team, setTeam] = useState<any[]>(fallbackTeam);
-  const [teamLoading, setTeamLoading] = useState(true);
-
-  useEffect(() => {
-    supabase
-      .from("team_members")
-      .select("*")
-      .eq("active", true)
-      .order("sort_order")
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setTeam(data);
-        } else {
-          setTeam(fallbackTeam);
-        }
-        setTeamLoading(false);
-      });
-  }, []);
-
-  if (teamLoading) {
-    return (
-      <div className="min-h-screen gradient-subtle">
-        <div className="max-w-5xl mx-auto px-4 py-8 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      </div>
-    );
-  }
+  const { founders, loading: foundersLoading } = useTeamFounders();
 
   return (
     <div className="min-h-screen gradient-subtle">
@@ -227,12 +190,12 @@ const AboutPage = () => {
           </div>
         </section>
 
-        {/* Team */}
+        {/* Founders */}
         <section className="mb-20">
           <Badge className="mb-3">Leadership</Badge>
           <h2 className="text-3xl font-bold mb-8">Our Founders & Team</h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {team.map((m) => (
+            {founders.map((m) => (
               <Card key={m.id} className="group relative hover:shadow-md transition-shadow">
                 <CardContent className="pt-6 text-center">
                   <div className="relative inline-flex items-center justify-center mb-3">
@@ -244,7 +207,7 @@ const AboutPage = () => {
                       )}
                     </div>
                     <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Link to={`/admin/team/${m.id}`} className="p-1.5 rounded-full bg-white/80 text-primary hover:bg-white transition-colors" title="Edit team member">
+                      <Link to={`/admin/founders/${m.id}`} className="p-1.5 rounded-full bg-white/80 text-primary hover:bg-white transition-colors" title="Edit founder">
                         <Eye className="w-4 h-4" />
                       </Link>
                     </div>
@@ -252,6 +215,7 @@ const AboutPage = () => {
                   <h3 className="font-bold">{m.name}</h3>
                   {m.subtitle && <p className="text-xs text-muted-foreground italic">{m.subtitle}</p>}
                   <p className="text-sm text-primary font-medium">{m.role}</p>
+                  {m.bio && <p className="text-xs text-muted-foreground mt-2">{m.bio}</p>}
                 </CardContent>
               </Card>
             ))}

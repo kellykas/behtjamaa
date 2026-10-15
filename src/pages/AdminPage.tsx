@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
 import { Link } from "react-router-dom";
 import { Briefcase } from "lucide-react";
+import { useTeamFounders } from "@/hooks/useContent";
 
 const AdminPage = () => {
   const { user, isAdmin, isSuperAdmin, isBranchAdmin, can, managesBranch, loading: authLoading } = useAuth();
@@ -38,6 +39,7 @@ const AdminPage = () => {
   const [siteSettings, setSiteSettings] = useState<Record<string, string>>({});
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [services, setServicesList] = useState<any[]>([]);
+  const { founders } = useTeamFounders();
   const [tmDialogOpen, setTmDialogOpen] = useState(false);
   const [editingTmId, setEditingTmId] = useState<string | null>(null);
   const [tmName, setTmName] = useState("");
@@ -193,6 +195,50 @@ const AdminPage = () => {
   const resetEvForm = () => { setEvTitle(""); setEvDesc(""); setEvStreamUrl(""); setEvScheduledAt(""); setEvIsLive(false); setEditingEvId(null); };
 
   const resetTmForm = () => { setTmName(""); setTmRole(""); setTmBio(""); setTmAvatar(""); setEditingTmId(null); };
+
+  const handleSaveFounder = async () => {
+    if (!tmName.trim() || !tmRole.trim()) {
+      toast({ title: "Name and role are required", variant: "destructive" });
+      return;
+    }
+    const payload: any = {
+      name: tmName.trim(),
+      role: tmRole.trim(),
+      subtitle: tmBio.trim() || null,
+      bio: tmAvatar.trim() || null,
+      avatar_url: tmAvatar.trim() || null,
+    };
+    if (editingTmId) {
+      const existing: any = await supabase.from("team_founders" as any).select("id").eq("id", editingTmId).single();
+      if (!existing) {
+        toast({ title: "Founder not found", variant: "destructive" });
+        return;
+      }
+      await supabase.from("team_founders" as any).update(payload).eq("id", editingTmId);
+    } else {
+      const { data } = await supabase.from("team_founders" as any).select("sort_order").order("sort_order", { ascending: false }).limit(1) as any;
+      await supabase.from("team_founders" as any).insert({ ...payload, sort_order: (data?.[0]?.sort_order || 0) + 1 });
+    }
+    setTmDialogOpen(false);
+    resetTmForm();
+    fetchAll();
+    toast({ title: editingTmId ? "Founder updated" : "Founder added" });
+  };
+
+  const handleDeleteFounder = async (id: string) => {
+    await supabase.from("team_founders" as any).delete().eq("id", id);
+    fetchAll();
+    toast({ title: "Founder removed" });
+  };
+
+  const handleEditFounder = (f: any) => {
+    setEditingTmId(f.id);
+    setTmName(f.name);
+    setTmRole(f.role);
+    setTmBio(f.subtitle || "");
+    setTmAvatar(f.avatar_url || "");
+    setTmDialogOpen(true);
+  };
   const resetSvForm = () => { setSvTitle(""); setSvDesc(""); setSvIcon(""); setSvVerse(""); setEditingSvId(null); };
   const resetBrForm = () => { setBrName(""); setBrSlug(""); setBrLocation(""); setBrDesc(""); setBrLeader(""); setBrEmail(""); setBrPhone(""); setBrLogo(""); setBrBanner(""); setBrActive(true); setBrLeaderUserId(""); setEditingBranchId(null); };
 
@@ -616,6 +662,7 @@ const AdminPage = () => {
             {can("services") && <TabsTrigger value="services"><Sparkles className="h-4 w-4 mr-2" />Services</TabsTrigger>}
             {can("branches") && <TabsTrigger value="branches"><Building2 className="h-4 w-4 mr-2" />Branches</TabsTrigger>}
             {isSuperAdmin && <TabsTrigger value="branchAdmins"><UserCog className="h-4 w-4 mr-2" />Branch Admins</TabsTrigger>}
+            {can("team") && <TabsTrigger value="founders"><Users className="h-4 w-4 mr-2" />Founders</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="episodes">
@@ -918,6 +965,62 @@ const AdminPage = () => {
             })()}
           </TabsContent>
 
+          <TabsContent value="founders">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+              <h2 className="text-xl font-semibold">About Founders ({founders.length})</h2>
+              <Dialog open={tmDialogOpen} onOpenChange={(o) => { setTmDialogOpen(o); if (!o) resetTmForm(); }}>
+                <DialogTrigger asChild>
+                  <Button><Plus className="h-4 w-4 mr-2" /> Add Founder</Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                  <DialogHeader><DialogTitle>{editingTmId ? "Edit" : "Add"} Founder</DialogTitle></DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2"><Label>Name</Label><Input value={tmName} onChange={(e) => setTmName(e.target.value)} required /></div>
+                    <div className="space-y-2"><Label>Role</Label><Input value={tmRole} onChange={(e) => setTmRole(e.target.value)} required /></div>
+                    <div className="space-y-2"><Label>Subtitle</Label><Input value={tmBio} onChange={(e) => setTmBio(e.target.value)} placeholder="e.g. aka Reagan Lescot" /></div>
+                    <div className="space-y-2"><Label>Bio</Label><Textarea value={tmAvatar} onChange={(e) => setTmAvatar(e.target.value)} rows={3} /></div>
+                    <div className="space-y-2"><Label>Avatar URL</Label><Input value={tmAvatar} onChange={(e) => setTmAvatar(e.target.value)} placeholder="https://..." /></div>
+                    <Button onClick={handleSaveFounder} className="w-full">{editingTmId ? "Update" : "Add"} Founder</Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
+            {founders.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">No founders yet. Add the first one.</CardContent></Card>
+            ) : (
+              <div className="grid gap-3">
+                {founders.map((f) => (
+                  <Card key={f.id}>
+                    <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                      <div className="flex items-center gap-4">
+                        <Link to={`/admin/founders/${f.id}`} className="shrink-0">
+                          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold hover:bg-purple-200 transition cursor-pointer">
+                            {f.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                          </div>
+                        </Link>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-semibold truncate">{f.name}</h3>
+                            {f.avatar_url ? <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : null}
+                          </div>
+                          <p className="text-sm text-primary font-medium">{f.role}</p>
+                          {f.subtitle && <p className="text-xs text-muted-foreground italic">{f.subtitle}</p>}
+                          {f.bio && <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{f.bio}</p>}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-auto shrink-0">
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/admin/founders/${f.id}`}><Edit className="h-4 w-4" /></Link>
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteFounder(f.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="team">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">Team Members ({teamMembers.length})</h2>
@@ -939,7 +1042,8 @@ const AdminPage = () => {
             </div>
             {teamMembers.length === 0 ? (
               <Card><CardContent className="py-8 text-center text-muted-foreground">No team members yet.</CardContent></Card>
-            ) : (                <div className="grid gap-3">
+            ) : (
+              <div className="grid gap-3">
                 {teamMembers.map((tm) => (
                   <Card key={tm.id}>
                     <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
