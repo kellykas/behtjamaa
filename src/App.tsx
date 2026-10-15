@@ -13,6 +13,7 @@ import PrayerPage from "./pages/PrayerPage";
 import MembersPage from "./pages/MembersPage";
 import AdminPage from "./pages/AdminPage";
 import TeamMemberEditorPage from "./pages/TeamMemberEditorPage";
+import FounderEditorPage from "./pages/FounderEditorPage";
 import ServicesPage from "./pages/ServicesPage";
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
@@ -20,6 +21,8 @@ import DonatePage from "./pages/DonatePage";
 import NotFound from "./pages/NotFound";
 import BranchPortalPage from "./pages/BranchPortalPage";
 import BranchesPage from "./pages/BranchesPage";
+import StateBranchEditorPage from "./pages/StateBranchEditorPage";
+import CityBranchPortalPage from "./pages/CityBranchPortalPage";
 import EventDetailPage from "./pages/EventDetailPage";
 
 const queryClient = new QueryClient();
@@ -45,10 +48,14 @@ const App = () => {
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/donate" element={<DonatePage />} />
             <Route path="/branches" element={<BranchesPage />} />
+            <Route path="/branches/state/:id" element={<StateBranchEditorPage />} />
             <Route path="/branches/:slug" element={<BranchPortalPage />} />
+            <Route path="/branches/:stateSlug/:childSlug" element={<CityBranchPortalPage />} />
             <Route path="/branches/:slug/events/:eventId" element={<EventDetailPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/admin/team/:id" element={<TeamMemberEditorPage />} />
+            <Route path="/admin/founders" element={<AdminPage />} />
+            <Route path="/admin/founders/:id" element={<FounderEditorPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

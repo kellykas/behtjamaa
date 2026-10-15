@@ -70,6 +70,9 @@ export type Database = {
           logo_url: string | null
           banner_url: string | null
           active: boolean | null
+          parent_id: string | null
+          is_state_branch: boolean
+          state_code: string | null
           created_at: string
           updated_at: string
         }
@@ -86,6 +89,9 @@ export type Database = {
           logo_url?: string | null
           banner_url?: string | null
           active?: boolean | null
+          parent_id?: string | null
+          is_state_branch?: boolean
+          state_code?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -102,10 +108,21 @@ export type Database = {
           logo_url?: string | null
           banner_url?: string | null
           active?: boolean | null
+          parent_id?: string | null
+          is_state_branch?: boolean
+          state_code?: string | null
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "branches_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       branch_members: {
         Row: {

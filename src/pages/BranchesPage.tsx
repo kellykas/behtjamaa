@@ -18,6 +18,8 @@ import {
   ExternalLink,
   ArrowRight,
   Star,
+  Layers,
+  Plus,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
@@ -27,8 +29,12 @@ type BranchWithStats = Tables<"branches"> & {
   event_count?: number;
 };
 
+function isStateBranch(branch: BranchWithStats): boolean {
+  return Boolean((branch as any).is_state_branch);
+}
+
 const BranchesPage = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [branches, setBranches] = useState<BranchWithStats[]>([]);
   const [search, setSearch] = useState("");
@@ -99,6 +105,13 @@ const BranchesPage = () => {
             Find a branch near you and join a community of young people
             transforming lives for Jesus Christ.
           </p>
+          {isAdmin && isSuperAdmin && (
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button asChild>
+                <Link to="/branches/state/new"><Plus className="h-4 w-4 mr-2" /> Add USA State</Link>
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="relative max-w-md mx-auto mb-10">
