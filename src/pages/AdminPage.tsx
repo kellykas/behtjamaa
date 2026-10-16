@@ -743,9 +743,16 @@ const AdminPage = () => {
         return;
       }
 
+      if (baContactMethod === "direct" && baPassword.trim().length < 8) {
+        toast({ title: "Password too short", description: "For a direct account, use at least 8 characters.", variant: "destructive" });
+        setResetByProfileId(null);
+        fetchAll();
+        return;
+      }
+
       const { data: authUser, error: authError } = await supabase.auth.admin.updateUserById(
         resetByProfileId,
-        { password: generatePassword() },
+        { password: baPassword || generatePassword() },
       );
 
       if (authError) {
