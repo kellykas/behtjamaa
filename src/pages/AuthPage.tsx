@@ -46,6 +46,11 @@ const AuthPage = () => {
   const returnTo = searchParams.get("returnTo") || "/";
   const { toast } = useToast();
 
+  /**
+   * Give a brand-new account the branch membership it was approved for. The
+   * matching approved request is linked to this account by a database trigger,
+   * which is what keeps the branch roster from listing the person twice.
+   */
   const linkMembership = async (userId: string, userEmail: string) => {
     const { data: requests } = await supabase
       .from("membership_requests")
@@ -65,7 +70,6 @@ const AuthPage = () => {
             branch_id: req.branch_id,
             user_id: userId,
             role: "member",
-            has_login: true,
           });
         }
       }

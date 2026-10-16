@@ -112,6 +112,146 @@ describe("buildMemberRoster", () => {
     expect(roster[1].key).toBe("account:m1");
   });
 
+  it("shows someone who signed up after approval once, not twice", () => {
+    // The exact state after AuthPage links an approved request to a new account:
+    // an approved request plus the branch_members row that points at the account.
+    const roster = buildMemberRoster(
+      [{ id: "m1", branch_id: BRANCH_A, user_id: "u1", role: "member", joined_at: "2026-02-01T00:00:00Z" }],
+      [
+        {
+          id: "r1",
+          branch_id: BRANCH_A,
+          full_name: "Grace M",
+          email: "grace@example.com",
+          phone: "555-0100",
+          status: "approved",
+          linked_user_id: "u1",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      ],
+      [BRANCH_A],
+      profiles,
+    );
+
+    expect(roster).toHaveLength(1);
+    expect(roster[0].key).toBe("account:m1");
+    expect(roster[0].source).toBe("account");
+    expect(roster[0].awaitingSignUp).toBe(false);
+    // The account row keeps the role, so the role controls still apply to them.
+    expect(roster[0].role).toBe("member");
+    expect(roster[0].userId).toBe("u1");
+  });
+
+  it("keeps the details the request was approved with", () => {
+    const roster = buildMemberRoster(
+      [{ id: "m1", branch_id: BRANCH_A, user_id: "u2", role: "leader", joined_at: "2026-02-01T00:00:00Z" }],
+      [
+        {
+          id: "r1",
+          branch_id: BRANCH_A,
+          full_name: "Grace M",
+          email: "grace@example.com",
+          phone: "555-0100",
+          status: "approved",
+          linked_user_id: "u2",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      ],
+      [BRANCH_A],
+      profiles,
+    );
+
+    expect(roster).toHaveLength(1);
+    expect(roster[0].name).toBe("Grace M");
+    expect(roster[0].email).toBe("grace@example.com");
+    expect(roster[0].phone).toBe("555-0100");
+    // The membership itself still wins where it has its own answers.
+    expect(roster[0].role).toBe("leader");
+    expect(roster[0].joinedAt).toBe("2026-02-01T00:00:00Z");
+  });
+
+  it("folds several approved requests that all point at the same account", () => {
+    // An admin added them and they also asked to join: two approved requests,
+    // one sign-up. Both describe the person already listed as a member.
+    const roster = buildMemberRoster(
+      [{ id: "m1", branch_id: BRANCH_A, user_id: "u1", role: "member", joined_at: "2026-02-01T00:00:00Z" }],
+      [
+        { id: "r1", branch_id: BRANCH_A, full_name: "Grace M", email: "grace@example.com", phone: "555-0100", status: "approved", linked_user_id: "u1", created_at: "2026-01-01T00:00:00Z" },
+        { id: "r2", branch_id: BRANCH_A, full_name: "Grace Mwangi", email: "grace@example.com", status: "approved", linked_user_id: "u1", created_at: "2026-01-05T00:00:00Z" },
+      ],
+      [BRANCH_A],
+      profiles,
+    );
+
+    expect(roster).toHaveLength(1);
+    expect(roster[0].key).toBe("account:m1");
+    expect(roster[0].email).toBe("grace@example.com");
+  });
+
+  it("does not fold a request that was approved for another branch", () => {
+    const roster = buildMemberRoster(
+      [{ id: "m1", branch_id: BRANCH_A, user_id: "u1", role: "member", joined_at: "2026-02-01T00:00:00Z" }],
+      [
+        {
+          id: "r1",
+          branch_id: BRANCH_B,
+          full_name: "Grace M",
+          email: "grace@example.com",
+          status: "approved",
+          linked_user_id: "u1",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      ],
+      [BRANCH_A, BRANCH_B],
+      profiles,
+    );
+
+    expect(roster.map((m) => m.key)).toEqual(["account:m1", "request:r1"]);
+    expect(roster.map((m) => m.branchId)).toEqual([BRANCH_A, BRANCH_B]);
+  });
+
+  it("still lists a linked request whose membership row is gone", () => {
+    const roster = buildMemberRoster(
+      [],
+      [
+        {
+          id: "r1",
+          branch_id: BRANCH_A,
+          full_name: "Grace M",
+          email: "grace@example.com",
+          status: "approved",
+          linked_user_id: "u1",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      ],
+      [BRANCH_A],
+      profiles,
+    );
+
+    expect(roster).toHaveLength(1);
+    expect(roster[0].source).toBe("request");
+    // They do have an account, so they are not waiting to sign up.
+    expect(roster[0].awaitingSignUp).toBe(false);
+  });
+
+  it("folds each linked request into its own branch's member row", () => {
+    const roster = buildMemberRoster(
+      [
+        { id: "m1", branch_id: BRANCH_A, user_id: "u1", role: "member", joined_at: "2026-02-01T00:00:00Z" },
+        { id: "m2", branch_id: BRANCH_B, user_id: "u1", role: "member", joined_at: "2026-03-01T00:00:00Z" },
+      ],
+      [
+        { id: "r1", branch_id: BRANCH_A, full_name: "Grace M", email: "grace@example.com", status: "approved", linked_user_id: "u1", created_at: "2026-01-01T00:00:00Z" },
+        { id: "r2", branch_id: BRANCH_B, full_name: "Grace M", email: "grace2@example.com", status: "approved", linked_user_id: "u1", created_at: "2026-01-02T00:00:00Z" },
+      ],
+      [BRANCH_A, BRANCH_B],
+      profiles,
+    );
+
+    expect(roster.map((m) => m.key)).toEqual(["account:m2", "account:m1"]);
+    expect(roster.map((m) => m.email)).toEqual(["grace2@example.com", "grace@example.com"]);
+  });
+
   it("ignores rejected requests and members of other branches", () => {
     const roster = buildMemberRoster(
       [{ id: "m2", branch_id: BRANCH_B, user_id: null, role: "member", joined_at: "2026-02-01T00:00:00Z" }],

@@ -7,9 +7,10 @@
  *                               stays null for members added by an admin before
  *                               they have an account.
  *   * `membership_requests`   — someone who asked to join. `status = 'approved'`
- *                               makes them a member; they are linked to a real
- *                               account automatically the first time they sign up
- *                               with that email.
+ *                               makes them a member; once they sign up with that
+ *                               email the request is linked to their account
+ *                               (`linked_user_id`, set by a database trigger),
+ *                               so the person is not listed twice.
  *
  * Keep this module free of Supabase calls so the filtering and naming rules can
  * be unit tested.
@@ -71,6 +72,14 @@ export const profilesByUserId = (profiles: AnyRow[] | null | undefined): Profile
 const inScope = (branchIds: string[], branchId: string): boolean =>
   !!branchIds && branchIds.includes(branchId);
 
+const linkKey = (branchId: string, userId: string): string => `${branchId}:${userId}`;
+
+/** Approved join requests belonging to the managed branches. */
+const approvedRequests = (requests: AnyRow[], branchIds: string[]): AnyRow[] =>
+  (requests || []).filter(
+    (row) => row?.id && inScope(branchIds, row.branch_id) && row.status === "approved",
+  );
+
 const timeOf = (value: unknown): number => {
   const t = value ? new Date(value as string).getTime() : 0;
   return Number.isNaN(t) ? 0 : t;
@@ -84,8 +93,16 @@ export const pendingJoinRequests = (requests: AnyRow[], branchIds: string[]): An
 
 /**
  * Every member of the given branches: signed-up members from `branch_members`
- * plus approved join requests that have not been linked to an account yet.
- * Rows belonging to any other branch are dropped.
+ * plus approved join requests that have no account behind them yet. Rows
+ * belonging to any other branch are dropped.
+ *
+ * Once someone signs up, the request they were approved through is linked to
+ * their account (`membership_requests.linked_user_id`), and the two rows would
+ * otherwise describe one person twice. A linked request is folded into the
+ * account row instead: the account keeps the role and the member key (so the
+ * role controls keep working), while the request supplies the name, email and
+ * phone the branch was given. An unlinked approved request — someone added or
+ * approved who has not signed up yet — stays a row of its own.
  */
 export const buildMemberRoster = (
   branchMembers: AnyRow[],
@@ -93,28 +110,52 @@ export const buildMemberRoster = (
   branchIds: string[],
   profiles: ProfileLookup = {},
 ): RosterMember[] => {
+  const approvedRows = approvedRequests(requests, branchIds);
+
+  // A person can be left with more than one approved request (an admin added
+  // them and they also asked to join), and every one of them links to the same
+  // account once they sign up. Fold them all.
+  const linkedByAccount = new Map<string, AnyRow[]>();
+  approvedRows.forEach((row) => {
+    if (!row.linked_user_id) return;
+    const key = linkKey(row.branch_id, row.linked_user_id);
+    const linked = linkedByAccount.get(key);
+    if (linked) linked.push(row);
+    else linkedByAccount.set(key, [row]);
+  });
+
+  const folded = new Set<string>();
+
   const accounts: RosterMember[] = (branchMembers || [])
     .filter((row) => row?.id && inScope(branchIds, row.branch_id))
     .map((row) => {
       const profile = row.user_id ? profiles[row.user_id] : undefined;
+      const linkedRows = row.user_id ? linkedByAccount.get(linkKey(row.branch_id, row.user_id)) : undefined;
+      linkedRows?.forEach((linked) => folded.add(linked.id));
+      const linked = linkedRows?.[0];
+      const details = {
+        full_name: row.full_name ?? linked?.full_name,
+        email: row.email ?? linked?.email,
+        phone: row.phone ?? linked?.phone,
+      };
       return {
         key: `account:${row.id}`,
         source: "account" as const,
         id: row.id,
         branchId: row.branch_id,
-        name: memberDisplayName(row, profile),
-        email: row.email ?? null,
-        phone: row.phone ?? null,
+        name: memberDisplayName(details, profile),
+        email: details.email ?? null,
+        phone: details.phone ?? null,
         role: row.role || "member",
-        joinedAt: row.joined_at ?? row.created_at ?? null,
+        joinedAt: row.joined_at ?? row.created_at ?? linked?.created_at ?? null,
         avatarUrl: row.avatar_url ?? profile?.avatar_url ?? null,
         userId: row.user_id ?? null,
         awaitingSignUp: !row.user_id,
       };
     });
 
-  const approved: RosterMember[] = (requests || [])
-    .filter((row) => row?.id && inScope(branchIds, row.branch_id) && row.status === "approved")
+  const approved: RosterMember[] = approvedRows
+    .filter((row) => !folded.has(row.id))
     .map((row) => ({
       key: `request:${row.id}`,
       source: "request" as const,
@@ -127,7 +168,7 @@ export const buildMemberRoster = (
       joinedAt: row.created_at ?? null,
       avatarUrl: null,
       userId: null,
-      awaitingSignUp: true,
+      awaitingSignUp: !row.linked_user_id,
     }));
 
   return [...accounts, ...approved].sort((a, b) => timeOf(b.joinedAt) - timeOf(a.joinedAt));
