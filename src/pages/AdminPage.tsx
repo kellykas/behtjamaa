@@ -40,6 +40,7 @@ const AdminPage = () => {
   const [events, setEvents] = useState<Tables<"live_events">[]>([]);
   const [profiles, setProfiles] = useState<Tables<"profiles">[]>([]);
   const [resetByProfileId, setResetByProfileId] = useState<string | null>(null);
+  const [baCreatingAuthForId, setBaCreatingAuthForId] = useState<string | null>(null);
   const [roleMap, setRoleMap] = useState<Record<string, string>>({});
   const [epSearch, setEpSearch] = useState("");
 
@@ -773,6 +774,52 @@ const AdminPage = () => {
       });
     } finally {
       setResetByProfileId(null);
+      fetchAll();
+    }
+  };
+
+  const handleCreateAuthAccountForBranchAdmin = async () => {
+    if (!baCreatingAuthForId) return;
+    setBaCreatingAuthForId(baCreatingAuthForId);
+    try {
+      const ba = branchAdmins.find((b) => b.id === baCreatingAuthForId);
+      if (!ba) {
+        toast({ title: "Could not find branch admin", description: "This branch admin record no longer exists.", variant: "destructive" });
+        setBaCreatingAuthForId(null);
+        fetchAll();
+        return;
+      }
+
+      if (baContactMethod === "direct" && baPassword.trim().length < 8) {
+        toast({ title: "Password too short", description: "For a direct account, use at least 8 characters.", variant: "destructive" });
+        setBaCreatingAuthForId(null);
+        fetchAll();
+        return;
+      }
+
+      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        email: ba.email.trim().toLowerCase(),
+        password: baPassword || generatePassword(),
+        email_confirm: true,
+      });
+
+      if (authError) {
+        toast({
+          title: "Could not create account",
+          description: authError.message || "The Supabase admin API could not create this account.",
+          variant: "destructive",
+        });
+        setBaCreatingAuthForId(null);
+        fetchAll();
+        return;
+      }
+
+      toast({
+        title: "Account created",
+        description: `We created a BEHT JAMAA account for ${ba.full_name || ba.email}. Share the password with them securely and ask them to change it after they sign in.`,
+      });
+    } finally {
+      setBaCreatingAuthForId(null);
       fetchAll();
     }
   };
@@ -1532,6 +1579,16 @@ const AdminPage = () => {
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            {!ba.user_id && !baCreatingAuthForId ? (
+                              <Button size="sm" variant="outline" onClick={() => setBaCreatingAuthForId(ba.id)}>
+                                Create account
+                              </Button>
+                            ) : null}
+                            {baCreatingAuthForId === ba.id ? (
+                              <Button size="sm" variant="outline" disabled>
+                                Creating account…
+                              </Button>
+                            ) : null}
                             <Button size="sm" variant="outline" onClick={() => handleEditBranchAdmin(ba)}><Edit className="h-4 w-4" /></Button>
                             <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteBranchAdmin(ba.id)}><Trash2 className="h-4 w-4" /></Button>
                           </div>
