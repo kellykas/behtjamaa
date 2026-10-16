@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import type { UserResponse, GenerateLinkResponse, AuthError } from "@supabase/auth-js";
+
+type AdminCreateData = UserResponse extends { data: infer D } ? D : never;
+type AdminInviteData = GenerateLinkResponse extends { data: infer D } ? D : never;
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save, Building2, KeyRound, UserCog } from "lucide-react";
+import { SegmentedControl } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PERMISSIONS, permissionLabel } from "@/lib/permissions";
 import { useNavigate } from "react-router-dom";
@@ -70,10 +75,12 @@ const AdminPage = () => {
   const [editingBaId, setEditingBaId] = useState<string | null>(null);
   const [baName, setBaName] = useState("");
   const [baEmail, setBaEmail] = useState("");
-  const [baPassword, setBaPassword] = useState("");
   const [baBranchIds, setBaBranchIds] = useState<string[]>([]);
   const [baPermissions, setBaPermissions] = useState<string[]>([]);
   const [baActive, setBaActive] = useState(true);
+  const [baInviteSent, setBaInviteSent] = useState(false);
+  const [baContactMethod, setBaContactMethod] = useState<"invite" | "direct">("invite");
+  const [baPassword, setBaPassword] = useState("");
 
   // Branch management
   const [branchesList, setBranchesList] = useState<Tables<"branches">[]>([]);
@@ -284,13 +291,12 @@ const AdminPage = () => {
 
   // ── Branch admin sign-ons (super admin only) ──
   const resetBaForm = () => {
-    setBaName(""); setBaEmail(""); setBaPassword("");
-    setBaBranchIds([]); setBaPermissions([]); setBaActive(true); setEditingBaId(null);
+    setBaName(""); setBaEmail(""); setBaBranchIds([]); setBaPermissions([]); setBaActive(true); setEditingBaId(null); setBaInviteSent(false); setBaContactMethod("invite"); setBaPassword("");
   };
 
   const generatePassword = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-    const bytes = new Uint32Array(10);
+    const bytes = new Uint32Array(12);
     crypto.getRandomValues(bytes);
     let out = "";
     for (let i = 0; i < bytes.length; i++) out += chars[bytes[i] % chars.length];
@@ -302,10 +308,110 @@ const AdminPage = () => {
       toast({ title: "Name and email are required", variant: "destructive" });
       return;
     }
-    if (!editingBaId && baPassword.trim().length < 6) {
-      toast({ title: "Password too short", description: "Minimum 6 characters", variant: "destructive" });
+
+    if (!editingBaId) {
+      if (baContactMethod === "direct" && baPassword.trim().length < 8) {
+        toast({ title: "Password too short", description: "For a direct account, use at least 8 characters.", variant: "destructive" });
+        return;
+      }
+
+      const invitePayload: any = {
+        full_name: baName.trim(),
+        email: baEmail.trim().toLowerCase(),
+        branch_ids: baBranchIds,
+        permissions: baPermissions,
+        is_active: baActive,
+        created_by: user?.id ?? null,
+      };
+
+      const { error: insertError } = await supabase
+        .from("branch_admins")
+        .insert({ ...invitePayload, temp_password: null });
+      if (insertError) {
+        toast({ title: "Could not create the branch admin", description: insertError.message, variant: "destructive" });
+        return;
+      }
+
+      let authAccountId: string | null = null;
+      let authError: AuthError | null = null;
+
+      if (baContactMethod === "direct") {
+        const createResult = await supabase.auth.admin.createUser({
+          email: baEmail.trim().toLowerCase(),
+          password: baPassword,
+          email_confirm: true,
+        });
+        authError = createResult.error ?? null;
+        if (!authError && typeof (createResult as { data: AdminCreateData }).data?.user?.id === "string") {
+          authAccountId = (createResult as { data: AdminCreateData }).data.user.id;
+        }
+      } else {
+        const inviteResult = await supabase.auth.admin.generateLink({
+          type: "invite",
+          email: baEmail.trim().toLowerCase(),
+        });
+        authError = inviteResult.error ?? null;
+        if (!authError && typeof (inviteResult as { data: AdminInviteData }).data?.user?.id === "string") {
+          authAccountId = (inviteResult as { data: AdminInviteData }).data.user.id;
+        }
+      }
+
+      if (authError) {
+        toast({
+          title: "Branch admin row saved",
+          description: baContactMethod === "direct"
+            ? "The branch admin record is saved, but we could not create the BEHT JAMAA account right now."
+            : "The branch admin record is saved, but we could not send the invite link right now.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (authAccountId) {
+        const latestRow = await supabase
+          .from("branch_admins")
+          .select("id")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!latestRow.error && typeof latestRow.data?.id === "string") {
+          const linkResult = await supabase
+            .from("branch_admins")
+            .update({ user_id: authAccountId })
+            .eq("id", latestRow.data.id)
+            .select("id")
+            .single();
+
+          if (linkResult.error) {
+            console.warn("Failed to link branch_admins row to auth account:", linkResult.error);
+          }
+        } else if (latestRow.error) {
+          console.warn("Failed to find newly created branch admin row:", latestRow.error);
+        }
+      }
+
+      setBaDialogOpen(false);
+      resetBaForm();
+      fetchAll();
+
+      if (baContactMethod === "direct") {
+        toast({
+          title: "Account created",
+          description: `We created a BEHT JAMAA account for ${baEmail.trim()} and set the password you entered. They can sign in right away and change it later.`,
+        });
+      } else {
+        toast({
+          title: "Invite sent",
+          description: `We sent ${baEmail.trim()} an email with a link to choose their BEHT JAMAA password. Once they accept it, they can sign in as a branch admin.`,
+        });
+      }
       return;
     }
+
+    // Editing an existing entry: the person already has an account, so updates
+    // here are about scope, permissions and active state. A reset of the password
+    // is done through the normal email reset flow, not by storing a temp password.
     const payload: any = {
       full_name: baName.trim(),
       email: baEmail.trim().toLowerCase(),
@@ -313,10 +419,7 @@ const AdminPage = () => {
       permissions: baPermissions,
       is_active: baActive,
     };
-    if (baPassword.trim()) payload.temp_password = baPassword.trim();
-    const { error } = editingBaId
-      ? await supabase.from("branch_admins").update(payload).eq("id", editingBaId)
-      : await supabase.from("branch_admins").insert({ ...payload, created_by: user?.id ?? null });
+    const { error } = await supabase.from("branch_admins").update(payload).eq("id", editingBaId);
     if (error) {
       toast({ title: "Could not save branch admin", description: error.message, variant: "destructive" });
       return;
@@ -324,7 +427,7 @@ const AdminPage = () => {
     setBaDialogOpen(false);
     resetBaForm();
     fetchAll();
-    toast({ title: editingBaId ? "Branch admin updated" : "Branch admin created" });
+    toast({ title: "Branch admin updated" });
   };
 
   const handleDeleteBranchAdmin = async (id: string) => {
@@ -341,10 +444,11 @@ const AdminPage = () => {
     setEditingBaId(ba.id);
     setBaName(ba.full_name || "");
     setBaEmail(ba.email || "");
-    setBaPassword(ba.temp_password || "");
     setBaBranchIds(ba.branch_ids || []);
     setBaPermissions(ba.permissions || []);
     setBaActive(ba.is_active !== false);
+    setBaContactMethod(ba.user_id ? "invite" : "invite");
+    setBaPassword("");
     setBaDialogOpen(true);
   };
 
@@ -1243,20 +1347,50 @@ const AdminPage = () => {
                       <Label>Sign-on email</Label>
                       <Input type="email" value={baEmail} onChange={(e) => setBaEmail(e.target.value)} placeholder="person@example.com" />
                       <p className="text-xs text-muted-foreground">
-                        They create their account with this email on the sign-in page — it links to this record automatically.
+                        {editingBaId
+                          ? "This person already has a BEHT JAMAA account. Use the fields below to manage their name, branches, permissions or active status. Password resets go through the email reset link."
+                          : "Choose how this person should get access. With an invite, they accept a link and set their own password. With a direct account, you set the password now and they can sign in immediately."}
                       </p>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>Temporary password</Label>
-                      <div className="flex gap-2">
-                        <Input value={baPassword} onChange={(e) => setBaPassword(e.target.value)} placeholder="Minimum 6 characters" />
-                        <Button type="button" variant="outline" onClick={() => setBaPassword(generatePassword())} title="Generate a password">
-                          <KeyRound className="h-4 w-4" />
-                        </Button>
+                    {!editingBaId && (
+                      <div className="space-y-2">
+                        <Label>How should they get access?</Label>
+                        <SegmentedControl
+                          value={baContactMethod}
+                          onValueChange={(v) => setBaContactMethod(v as "invite" | "direct")}
+                          options={[
+                            { value: "invite", label: "Invite them" },
+                            { value: "direct", label: "Create account" },
+                          ]}
+                        />
                       </div>
-                      <p className="text-xs text-muted-foreground">Share this with them so they can sign in. They can change it later.</p>
-                    </div>
+                    )}
+
+                    {baContactMethod === "direct" && !editingBaId && (
+                      <div className="space-y-2">
+                        <Label>Password</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={baPassword}
+                            onChange={(e) => setBaPassword(e.target.value)}
+                            placeholder="Minimum 8 characters"
+                            type="text"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setBaPassword(generatePassword())}
+                            title="Generate a password"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          This is the password they will use to sign in until they change it.
+                        </p>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label>Branches they manage ({baBranchIds.length})</Label>
@@ -1297,7 +1431,11 @@ const AdminPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2"><Switch checked={baActive} onCheckedChange={setBaActive} /><Label>Active</Label></div>
-                    <Button onClick={handleSaveBranchAdmin} className="w-full">{editingBaId ? "Update" : "Create"} Branch Admin</Button>
+                    {baInviteSent ? (
+                      <Button variant="outline" className="w-full" onClick={() => { setBaInviteSent(false); resetBaForm(); setBaDialogOpen(false); }}>Done — close</Button>
+                    ) : (
+                      <Button onClick={handleSaveBranchAdmin} className="w-full">{editingBaId ? "Update" : baContactMethod === "direct" ? "Create Account" : "Send Invite"} Branch Admin</Button>
+                    )}
                   </div>
                 </DialogContent>
               </Dialog>
