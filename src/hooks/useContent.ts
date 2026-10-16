@@ -65,29 +65,37 @@ export function useTeamMember(id: string | null) {
   return { member, loading, refetch: () => setLoading(true) };
 }
 
-export function useTeamFounders() {
+/**
+ * Founders shown on the About page.
+ *
+ * `fallback` keeps the public About page rendering the seeded leadership when
+ * the table is missing or empty. The admin editor passes `fallback: false` so
+ * it always sees the real rows (and the real empty state).
+ */
+export function useTeamFounders({ fallback = true }: { fallback?: boolean } = {}) {
   const [founders, setFounders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
     supabase
       .from("team_founders" as any)
       .select("*" as any)
       .eq("active", true)
       .order("sort_order" as any)
       .then(({ data }: { data?: any[] | null }) => {
-        if (data && data.length > 0) {
-          setFounders(data);
-        } else if (data && data.length === 0) {
-          setFounders(fallbackFounders);
-        } else {
-          setFounders(fallbackFounders);
-        }
+        if (cancelled) return;
+        setFounders(data && data.length > 0 ? data : fallback ? fallbackFounders : []);
         setLoading(false);
-      })
-  }, []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fallback, reloadKey]);
 
-  return { founders, loading, refetch: () => setLoading(true) };
+  return { founders, loading, refetch: () => setReloadKey((k) => k + 1) };
 }
 
 export function useFounders() {

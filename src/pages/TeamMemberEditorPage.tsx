@@ -34,14 +34,6 @@ function initials(name: string) {
     .toUpperCase();
 }
 
-const fallbackMember = {
-  id: "fallback",
-  name: "Team member",
-  role: "Team member",
-  bio: "",
-  avatar_url: null,
-};
-
 export default function TeamMemberEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -58,21 +50,21 @@ export default function TeamMemberEditorPage() {
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const [member, setMember] = useState<any>(null);
+  const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [bio, setBio] = useState("");
 
   useEffect(() => {
-    if (!id || id.startsWith("fallback-")) {
-      setMember(fallbackMember);
-      setName(fallbackMember.name);
-      setRole(fallbackMember.role);
-      setBio(fallbackMember.bio || "");
+    if (!id) {
+      setNotFound(true);
       setLoading(false);
       return;
     }
 
+    setLoading(true);
+    setNotFound(false);
     supabase
       .from("team_members")
       .select("*")
@@ -80,10 +72,7 @@ export default function TeamMemberEditorPage() {
       .single()
       .then(({ data, error }: { data: any; error?: any }) => {
         if (error || !data) {
-          setMember(fallbackMember);
-          setName(fallbackMember.name);
-          setRole(fallbackMember.role);
-          setBio(fallbackMember.bio || "");
+          setNotFound(true);
         } else {
           setMember(data);
           setName(data.name);
@@ -91,7 +80,7 @@ export default function TeamMemberEditorPage() {
           setBio(data.bio || "");
         }
         setLoading(false);
-      })
+      });
   }, [id]);
 
   if (authLoading || loading) {
@@ -122,16 +111,31 @@ export default function TeamMemberEditorPage() {
     );
   }
 
-  const isFallback = !id || id.startsWith("fallback-");
-  const avatarUrl = isFallback
-    ? null
-    : (member as any)?.avatar_url as string | null;
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-background pt-16 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-10 text-center">
+            <p className="text-lg font-semibold mb-2">Team member not found</p>
+            <p className="text-sm text-muted-foreground mb-6">
+              This team member may have been removed, or the link is out of date.
+            </p>
+            <Button asChild variant="outline">
+              <Link to="/admin">Back to Admin</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const avatarUrl = (member as any)?.avatar_url as string | null;
   const avatarPreview = avatarFile
     ? URL.createObjectURL(avatarFile)
     : avatarUrl;
 
   const handleRemoveAvatar = async () => {
-    if (!avatarUrl || isFallback) return;
+    if (!avatarUrl) return;
     const path = `team-members/${id}${extFromUrl(avatarUrl)}`;
     const { error: storageError } = await supabase
       .storage
@@ -154,7 +158,7 @@ export default function TeamMemberEditorPage() {
   };
 
   const handleApplyAvatar = async () => {
-    if (!avatarFile || !id || isFallback) return;
+    if (!avatarFile || !id) return;
     setSaving(true);
     try {
       const ext = extFromUrl(avatarFile.name) || ".png";
@@ -185,10 +189,6 @@ export default function TeamMemberEditorPage() {
   };
 
   const handleSave = async () => {
-    if (isFallback) {
-      toast({ title: "Unknown team member", variant: "destructive" });
-      return;
-    }
     setSaving(true);
     try {
       const { error } = await supabase
@@ -230,7 +230,7 @@ export default function TeamMemberEditorPage() {
                 {avatarPreview ? (
                   <img
                     src={avatarPreview}
-                    alt={isFallback ? "Team member" : member.name}
+                    alt={member?.name ?? "Team member"}
                     className="w-20 h-20 rounded-full object-cover"
                   />
                 ) : (
@@ -261,7 +261,7 @@ export default function TeamMemberEditorPage() {
                   size="sm"
                   type="button"
                   onClick={() => avatarInputRef.current?.click()}
-                  disabled={!isSuperAdmin || isFallback}
+                  disabled={!isSuperAdmin}
                   title="Only super admins can upload avatars"
                 >
                   <Upload className="mr-2 h-4 w-4" />
@@ -297,6 +297,38 @@ export default function TeamMemberEditorPage() {
                     disabled={saving}
                   >
                     Remove
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {avatarFile ? (
+              <div className="mt-4 rounded-md border bg-secondary/50 p-4 text-sm">
+                <p className="font-medium mb-3">Save this image as the avatar?</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      setAvatarFile(null);
+                      if (avatarInputRef.current) avatarInputRef.current.value = "";
+                    }}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    type="button"
+                    onClick={handleApplyAvatar}
+                    disabled={saving}
+                  >
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Avatar
                   </Button>
                 </div>
               </div>

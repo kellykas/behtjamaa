@@ -39,13 +39,22 @@ const AdminPage = () => {
   const [siteSettings, setSiteSettings] = useState<Record<string, string>>({});
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [services, setServicesList] = useState<any[]>([]);
-  const { founders } = useTeamFounders();
+  const { founders, refetch: refetchFounders } = useTeamFounders({ fallback: false });
   const [tmDialogOpen, setTmDialogOpen] = useState(false);
   const [editingTmId, setEditingTmId] = useState<string | null>(null);
   const [tmName, setTmName] = useState("");
   const [tmRole, setTmRole] = useState("");
   const [tmBio, setTmBio] = useState("");
   const [tmAvatar, setTmAvatar] = useState("");
+  // Founders keep their own state: they carry a subtitle plus a bio, which the
+  // team-member fields above cannot represent.
+  const [founderDialogOpen, setFounderDialogOpen] = useState(false);
+  const [editingFounderId, setEditingFounderId] = useState<string | null>(null);
+  const [founderName, setFounderName] = useState("");
+  const [founderRole, setFounderRole] = useState("");
+  const [founderSubtitle, setFounderSubtitle] = useState("");
+  const [founderBio, setFounderBio] = useState("");
+  const [founderAvatar, setFounderAvatar] = useState("");
   const [svDialogOpen, setSvDialogOpen] = useState(false);
   const [editingSvId, setEditingSvId] = useState<string | null>(null);
   const [svTitle, setSvTitle] = useState("");
@@ -195,49 +204,58 @@ const AdminPage = () => {
   const resetEvForm = () => { setEvTitle(""); setEvDesc(""); setEvStreamUrl(""); setEvScheduledAt(""); setEvIsLive(false); setEditingEvId(null); };
 
   const resetTmForm = () => { setTmName(""); setTmRole(""); setTmBio(""); setTmAvatar(""); setEditingTmId(null); };
+  const resetFounderForm = () => { setFounderName(""); setFounderRole(""); setFounderSubtitle(""); setFounderBio(""); setFounderAvatar(""); setEditingFounderId(null); };
 
   const handleSaveFounder = async () => {
-    if (!tmName.trim() || !tmRole.trim()) {
+    if (!founderName.trim() || !founderRole.trim()) {
       toast({ title: "Name and role are required", variant: "destructive" });
       return;
     }
     const payload: any = {
-      name: tmName.trim(),
-      role: tmRole.trim(),
-      subtitle: tmBio.trim() || null,
-      bio: tmAvatar.trim() || null,
-      avatar_url: tmAvatar.trim() || null,
+      name: founderName.trim(),
+      role: founderRole.trim(),
+      subtitle: founderSubtitle.trim() || null,
+      bio: founderBio.trim() || null,
+      avatar_url: founderAvatar.trim() || null,
     };
-    if (editingTmId) {
-      const existing: any = await supabase.from("team_founders" as any).select("id").eq("id", editingTmId).single();
-      if (!existing) {
-        toast({ title: "Founder not found", variant: "destructive" });
+    if (editingFounderId) {
+      const { error } = await supabase.from("team_founders" as any).update(payload).eq("id", editingFounderId);
+      if (error) {
+        toast({ title: "Could not update founder", description: error.message, variant: "destructive" });
         return;
       }
-      await supabase.from("team_founders" as any).update(payload).eq("id", editingTmId);
     } else {
-      const { data } = await supabase.from("team_founders" as any).select("sort_order").order("sort_order", { ascending: false }).limit(1) as any;
-      await supabase.from("team_founders" as any).insert({ ...payload, sort_order: (data?.[0]?.sort_order || 0) + 1 });
+      const { data }: any = await supabase.from("team_founders" as any).select("sort_order").order("sort_order", { ascending: false }).limit(1);
+      const { error } = await supabase.from("team_founders" as any).insert({ ...payload, sort_order: (data?.[0]?.sort_order || 0) + 1 });
+      if (error) {
+        toast({ title: "Could not add founder", description: error.message, variant: "destructive" });
+        return;
+      }
     }
-    setTmDialogOpen(false);
-    resetTmForm();
-    fetchAll();
-    toast({ title: editingTmId ? "Founder updated" : "Founder added" });
+    setFounderDialogOpen(false);
+    resetFounderForm();
+    refetchFounders();
+    toast({ title: editingFounderId ? "Founder updated" : "Founder added" });
   };
 
   const handleDeleteFounder = async (id: string) => {
-    await supabase.from("team_founders" as any).delete().eq("id", id);
-    fetchAll();
+    const { error } = await supabase.from("team_founders" as any).delete().eq("id", id);
+    if (error) {
+      toast({ title: "Could not remove founder", description: error.message, variant: "destructive" });
+      return;
+    }
+    refetchFounders();
     toast({ title: "Founder removed" });
   };
 
   const handleEditFounder = (f: any) => {
-    setEditingTmId(f.id);
-    setTmName(f.name);
-    setTmRole(f.role);
-    setTmBio(f.subtitle || "");
-    setTmAvatar(f.avatar_url || "");
-    setTmDialogOpen(true);
+    setEditingFounderId(f.id);
+    setFounderName(f.name);
+    setFounderRole(f.role);
+    setFounderSubtitle(f.subtitle || "");
+    setFounderBio(f.bio || "");
+    setFounderAvatar(f.avatar_url || "");
+    setFounderDialogOpen(true);
   };
   const resetSvForm = () => { setSvTitle(""); setSvDesc(""); setSvIcon(""); setSvVerse(""); setEditingSvId(null); };
   const resetBrForm = () => { setBrName(""); setBrSlug(""); setBrLocation(""); setBrDesc(""); setBrLeader(""); setBrEmail(""); setBrPhone(""); setBrLogo(""); setBrBanner(""); setBrActive(true); setBrLeaderUserId(""); setEditingBranchId(null); };
@@ -968,19 +986,19 @@ const AdminPage = () => {
           <TabsContent value="founders">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
               <h2 className="text-xl font-semibold">About Founders ({founders.length})</h2>
-              <Dialog open={tmDialogOpen} onOpenChange={(o) => { setTmDialogOpen(o); if (!o) resetTmForm(); }}>
+              <Dialog open={founderDialogOpen} onOpenChange={(o) => { setFounderDialogOpen(o); if (!o) resetFounderForm(); }}>
                 <DialogTrigger asChild>
                   <Button><Plus className="h-4 w-4 mr-2" /> Add Founder</Button>
                 </DialogTrigger>
                 <DialogContent className="max-h-[90vh] overflow-y-auto">
-                  <DialogHeader><DialogTitle>{editingTmId ? "Edit" : "Add"} Founder</DialogTitle></DialogHeader>
+                  <DialogHeader><DialogTitle>{editingFounderId ? "Edit" : "Add"} Founder</DialogTitle></DialogHeader>
                   <div className="space-y-4">
-                    <div className="space-y-2"><Label>Name</Label><Input value={tmName} onChange={(e) => setTmName(e.target.value)} required /></div>
-                    <div className="space-y-2"><Label>Role</Label><Input value={tmRole} onChange={(e) => setTmRole(e.target.value)} required /></div>
-                    <div className="space-y-2"><Label>Subtitle</Label><Input value={tmBio} onChange={(e) => setTmBio(e.target.value)} placeholder="e.g. aka Reagan Lescot" /></div>
-                    <div className="space-y-2"><Label>Bio</Label><Textarea value={tmAvatar} onChange={(e) => setTmAvatar(e.target.value)} rows={3} /></div>
-                    <div className="space-y-2"><Label>Avatar URL</Label><Input value={tmAvatar} onChange={(e) => setTmAvatar(e.target.value)} placeholder="https://..." /></div>
-                    <Button onClick={handleSaveFounder} className="w-full">{editingTmId ? "Update" : "Add"} Founder</Button>
+                    <div className="space-y-2"><Label>Name</Label><Input value={founderName} onChange={(e) => setFounderName(e.target.value)} required /></div>
+                    <div className="space-y-2"><Label>Role</Label><Input value={founderRole} onChange={(e) => setFounderRole(e.target.value)} placeholder="e.g. Co-Founder" required /></div>
+                    <div className="space-y-2"><Label>Subtitle</Label><Input value={founderSubtitle} onChange={(e) => setFounderSubtitle(e.target.value)} placeholder="e.g. aka Reagan Lescot" /></div>
+                    <div className="space-y-2"><Label>Bio</Label><Textarea value={founderBio} onChange={(e) => setFounderBio(e.target.value)} rows={3} placeholder="Optional bio shown on the About page." /></div>
+                    <div className="space-y-2"><Label>Avatar URL</Label><Input value={founderAvatar} onChange={(e) => setFounderAvatar(e.target.value)} placeholder="https://..." /></div>
+                    <Button onClick={handleSaveFounder} className="w-full">{editingFounderId ? "Update" : "Add"} Founder</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -994,14 +1012,17 @@ const AdminPage = () => {
                     <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="flex items-center gap-4">
                         <Link to={`/admin/founders/${f.id}`} className="shrink-0">
-                          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold hover:bg-purple-200 transition cursor-pointer">
-                            {f.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
-                          </div>
+                          {f.avatar_url ? (
+                            <img src={f.avatar_url} alt={f.name} className="w-12 h-12 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold hover:bg-purple-200 transition cursor-pointer">
+                              {f.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
                         </Link>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <h3 className="font-semibold truncate">{f.name}</h3>
-                            {f.avatar_url ? <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : null}
                           </div>
                           <p className="text-sm text-primary font-medium">{f.role}</p>
                           {f.subtitle && <p className="text-xs text-muted-foreground italic">{f.subtitle}</p>}

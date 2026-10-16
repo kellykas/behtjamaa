@@ -51,12 +51,16 @@ export default function FounderEditorPage() {
   const [bio, setBio] = useState("");
 
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id || id.startsWith("fallback-")) {
+    if (!id) {
+      setNotFound(true);
       setLoading(false);
       return;
     }
+    setNotFound(false);
     supabase
       .from("team_founders" as any)
       .select("*" as any)
@@ -64,6 +68,7 @@ export default function FounderEditorPage() {
       .single()
       .then(({ data, error }: { data: any; error?: any }) => {
         if (error || !data) {
+          setNotFound(true);
           setLoading(false);
           return;
         }
@@ -71,6 +76,7 @@ export default function FounderEditorPage() {
         setRole(data.role);
         setSubtitle(data.subtitle || "");
         setBio(data.bio || "");
+        setAvatarUrl(data.avatar_url || null);
         setLoading(false);
       });
   }, [id]);
@@ -103,13 +109,23 @@ export default function FounderEditorPage() {
     );
   }
 
-  const avatarUrl = typeof name === "string" && name.startsWith("fallback-")
-    ? null
-    : (supabase as any).from("team_founders")
-        .select("avatar_url")
-        .eq("id", id)
-        .single()
-        .data?.avatar_url as string | null;
+  if (notFound) {
+    return (
+      <div className="min-h-screen bg-background pt-16 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-10 text-center">
+            <p className="text-lg font-semibold mb-2">Founder not found</p>
+            <p className="text-sm text-muted-foreground mb-6">
+              This founder may have been removed, or the link is out of date.
+            </p>
+            <Button asChild variant="outline">
+              <Link to="/admin/founders">Back to Founders</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const avatarPreview = avatarFile
     ? URL.createObjectURL(avatarFile)
@@ -132,6 +148,7 @@ export default function FounderEditorPage() {
     }
     await supabase.from("team_founders" as any).update({ avatar_url: null }).eq("id", id);
     setAvatarFile(null);
+    setAvatarUrl(null);
     toast({ title: "Avatar removed" });
   };
 
@@ -145,6 +162,7 @@ export default function FounderEditorPage() {
       const { data } = await supabase.storage.from("profile-avatars" as any).getPublicUrl(fileName);
       await supabase.from("team_founders" as any).update({ avatar_url: data.publicUrl }).eq("id", id);
       setAvatarFile(null);
+      setAvatarUrl(data.publicUrl);
       toast({ title: "Avatar updated" });
     } catch (err: any) {
       toast({
@@ -158,7 +176,7 @@ export default function FounderEditorPage() {
   };
 
   const handleSave = async () => {
-    if (!id || id.startsWith("fallback-")) return;
+    if (!id) return;
     setSaving(true);
     try {
       const payload: any = { name, role, subtitle: subtitle || null, bio: bio || null };
@@ -252,6 +270,33 @@ export default function FounderEditorPage() {
                   </Button>
                   <Button variant="destructive" size="sm" onClick={handleRemoveAvatar} disabled={saving}>
                     Remove
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {avatarFile ? (
+              <div className="mt-4 rounded-md border bg-secondary/50 p-4 text-sm">
+                <p className="font-medium mb-3">Save this image as the avatar?</p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      setAvatarFile(null);
+                      if (avatarInputRef.current) avatarInputRef.current.value = "";
+                    }}
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button size="sm" type="button" onClick={handleApplyAvatar} disabled={saving}>
+                    {saving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Avatar
                   </Button>
                 </div>
               </div>
