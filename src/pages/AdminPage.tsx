@@ -22,6 +22,8 @@ import type { Tables } from "@/integrations/supabase/types";
 import { Link } from "react-router-dom";
 import { Briefcase } from "lucide-react";
 import { useTeamFounders } from "@/hooks/useContent";
+import BranchMembersPanel from "@/components/BranchMembersPanel";
+import { ImageUpload } from "@/components/ImageUpload";
 
 const AdminPage = () => {
   const { user, isAdmin, isSuperAdmin, isBranchAdmin, can, managesBranch, loading: authLoading } = useAuth();
@@ -88,8 +90,6 @@ const AdminPage = () => {
   const [brBanner, setBrBanner] = useState("");
   const [brActive, setBrActive] = useState(true);
   const [brLeaderUserId, setBrLeaderUserId] = useState<string>("");
-  const [uploadingBranchLogo, setUploadingBranchLogo] = useState(false);
-  const [uploadingBranchBanner, setUploadingBranchBanner] = useState(false);
 
   // Episode form
   const [epTitle, setEpTitle] = useState("");
@@ -102,7 +102,6 @@ const AdminPage = () => {
   const [epDialogOpen, setEpDialogOpen] = useState(false);
   const [editingEpId, setEditingEpId] = useState<string | null>(null);
   const [uploadingAudio, setUploadingAudio] = useState(false);
-  const [uploadingThumb, setUploadingThumb] = useState(false);
   const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
   const [audioProgress, setAudioProgress] = useState(0);
 
@@ -488,25 +487,6 @@ const AdminPage = () => {
     }
   };
 
-  const handleThumbUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Image must be under 5MB.", variant: "destructive" });
-      return;
-    }
-    setUploadingThumb(true);
-    try {
-      const url = await uploadFile(file, "episode-thumbnails");
-      setEpThumbnailUrl(url);
-      toast({ title: "Thumbnail uploaded" });
-    } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
-    } finally {
-      setUploadingThumb(false);
-    }
-  };
-
   const handleSaveEpisode = async () => {
     const payload = { title: epTitle, description: epDesc, audio_url: epAudioUrl || null, thumbnail_url: epThumbnailUrl || null, category: epCategory, published: epPublished, featured: epFeatured, published_at: epPublished ? new Date().toISOString() : null };
     if (editingEpId) {
@@ -714,22 +694,21 @@ const AdminPage = () => {
                       <Input value={epAudioUrl} onChange={(e) => setEpAudioUrl(e.target.value)} placeholder="...or paste URL" className="text-xs" />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>Thumbnail Image</Label>
-                      <Input type="file" accept="image/*" onChange={handleThumbUpload} disabled={uploadingThumb} />
-                      {uploadingThumb && <p className="text-xs text-muted-foreground">Uploading...</p>}
-                      {epThumbnailUrl && (
-                        <img src={epThumbnailUrl} alt="thumbnail preview" className="w-24 h-24 object-cover rounded-md border" />
-                      )}
-                      <Input value={epThumbnailUrl} onChange={(e) => setEpThumbnailUrl(e.target.value)} placeholder="...or paste URL" className="text-xs" />
-                    </div>
+                    <ImageUpload
+                      id="episode-thumbnail"
+                      label="Thumbnail Image"
+                      value={epThumbnailUrl}
+                      onChange={setEpThumbnailUrl}
+                      folder="episodes"
+                      preview="thumbnail"
+                    />
 
                     <div className="space-y-2"><Label>Category</Label><Input value={epCategory} onChange={(e) => setEpCategory(e.target.value)} /></div>
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2"><Switch checked={epPublished} onCheckedChange={setEpPublished} /><Label>Published</Label></div>
                       <div className="flex items-center gap-2"><Switch checked={epFeatured} onCheckedChange={setEpFeatured} /><Label>Featured</Label></div>
                     </div>
-                    <Button onClick={handleSaveEpisode} disabled={uploadingAudio || uploadingThumb} className="w-full">{editingEpId ? "Update" : "Create"} Episode</Button>
+                    <Button onClick={handleSaveEpisode} disabled={uploadingAudio} className="w-full">{editingEpId ? "Update" : "Create"} Episode</Button>
                   </div>
                 </DialogContent>
                 </Dialog>
@@ -847,9 +826,15 @@ const AdminPage = () => {
           </TabsContent>
 
           <TabsContent value="members">
-            <h2 className="text-xl font-semibold mb-4">Members ({profiles.length})</h2>
+            {/* Branch admins manage the members of the branches they were given,
+                and the join requests those branches received. */}
+            <BranchMembersPanel branchIds={visibleBranches.map((b) => b.id)} branches={visibleBranches} />
+
+            {isSuperAdmin && (
+            <div className="mt-12">
+            <h2 className="text-xl font-semibold mb-4">All Site Accounts ({profiles.length})</h2>
             {profiles.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">No members yet.</CardContent></Card>
+              <Card><CardContent className="py-8 text-center text-muted-foreground">No accounts yet.</CardContent></Card>
             ) : (
               <div className="grid gap-3">
                 {profiles.map((p) => (
@@ -884,6 +869,8 @@ const AdminPage = () => {
                   </Card>
                 ))}
               </div>
+            )}
+            </div>
             )}
           </TabsContent>
 
@@ -997,7 +984,14 @@ const AdminPage = () => {
                     <div className="space-y-2"><Label>Role</Label><Input value={founderRole} onChange={(e) => setFounderRole(e.target.value)} placeholder="e.g. Co-Founder" required /></div>
                     <div className="space-y-2"><Label>Subtitle</Label><Input value={founderSubtitle} onChange={(e) => setFounderSubtitle(e.target.value)} placeholder="e.g. aka Reagan Lescot" /></div>
                     <div className="space-y-2"><Label>Bio</Label><Textarea value={founderBio} onChange={(e) => setFounderBio(e.target.value)} rows={3} placeholder="Optional bio shown on the About page." /></div>
-                    <div className="space-y-2"><Label>Avatar URL</Label><Input value={founderAvatar} onChange={(e) => setFounderAvatar(e.target.value)} placeholder="https://..." /></div>
+                    <ImageUpload
+                      id="founder-avatar"
+                      label="Avatar"
+                      value={founderAvatar}
+                      onChange={setFounderAvatar}
+                      preview="avatar"
+                      folder="founders"
+                    />
                     <Button onClick={handleSaveFounder} className="w-full">{editingFounderId ? "Update" : "Add"} Founder</Button>
                   </div>
                 </DialogContent>
@@ -1055,7 +1049,14 @@ const AdminPage = () => {
                     <div className="space-y-2"><Label>Name</Label><Input value={tmName} onChange={(e) => setTmName(e.target.value)} required /></div>
                     <div className="space-y-2"><Label>Role</Label><Input value={tmRole} onChange={(e) => setTmRole(e.target.value)} placeholder="e.g. Co-Founder" required /></div>
                     <div className="space-y-2"><Label>Bio</Label><Textarea value={tmBio} onChange={(e) => setTmBio(e.target.value)} rows={3} /></div>
-                    <div className="space-y-2"><Label>Avatar URL</Label><Input value={tmAvatar} onChange={(e) => setTmAvatar(e.target.value)} placeholder="https://..." /></div>
+                    <ImageUpload
+                      id="team-member-avatar"
+                      label="Avatar"
+                      value={tmAvatar}
+                      onChange={setTmAvatar}
+                      preview="avatar"
+                      folder="team-members"
+                    />
                     <Button onClick={handleSaveTeamMember} className="w-full">{editingTmId ? "Update" : "Add"} Member</Button>
                   </div>
                 </DialogContent>
@@ -1170,34 +1171,22 @@ const AdminPage = () => {
                     </div>
                     <div className="space-y-2"><Label>Leader Email</Label><Input value={brEmail} onChange={(e) => setBrEmail(e.target.value)} type="email" /></div>
                     <div className="space-y-2"><Label>Phone</Label><Input value={brPhone} onChange={(e) => setBrPhone(e.target.value)} /></div>
-                    <div className="space-y-2">
-                      <Label>Logo</Label>
-                      {brLogo && (<img src={brLogo} alt="Logo preview" className="w-16 h-16 rounded-full object-cover border mb-2" />)}
-                      <Input type="file" accept="image/*" onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setUploadingBranchLogo(true);
-                        try { const url = await uploadFile(file, "episode-thumbnails"); setBrLogo(url); toast({ title: "Logo uploaded" }); }
-                        catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
-                        finally { setUploadingBranchLogo(false); }
-                      }} disabled={uploadingBranchLogo} />
-                      {uploadingBranchLogo && <p className="text-xs text-muted-foreground">Uploading...</p>}
-                      <Input value={brLogo} onChange={(e) => setBrLogo(e.target.value)} placeholder="...or paste URL" className="text-xs" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Banner</Label>
-                      {brBanner && (<img src={brBanner} alt="Banner preview" className="w-full h-24 object-cover rounded-md border mb-2" />)}
-                      <Input type="file" accept="image/*" onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setUploadingBranchBanner(true);
-                        try { const url = await uploadFile(file, "episode-thumbnails"); setBrBanner(url); toast({ title: "Banner uploaded" }); }
-                        catch (err: any) { toast({ title: "Upload failed", description: err.message, variant: "destructive" }); }
-                        finally { setUploadingBranchBanner(false); }
-                      }} disabled={uploadingBranchBanner} />
-                      {uploadingBranchBanner && <p className="text-xs text-muted-foreground">Uploading...</p>}
-                      <Input value={brBanner} onChange={(e) => setBrBanner(e.target.value)} placeholder="...or paste URL" className="text-xs" />
-                    </div>
+                    <ImageUpload
+                      id="branch-logo"
+                      label="Logo"
+                      value={brLogo}
+                      onChange={setBrLogo}
+                      preview="avatar"
+                      folder="branches"
+                    />
+                    <ImageUpload
+                      id="branch-banner"
+                      label="Banner"
+                      value={brBanner}
+                      onChange={setBrBanner}
+                      preview="banner"
+                      folder="branches"
+                    />
                     <div className="flex items-center gap-2"><Switch checked={brActive} onCheckedChange={setBrActive} /><Label>Active</Label></div>
                     <Button onClick={handleSaveBranch} className="w-full">{editingBranchId ? "Update" : "Create"} Branch</Button>
                   </div>

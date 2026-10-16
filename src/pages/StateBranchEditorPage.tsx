@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { ImageUpload } from "@/components/ImageUpload";
 import {
   ArrowLeft,
   Building2,
@@ -348,24 +349,22 @@ export default function StateBranchEditorPage() {
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="state-logo">Logo URL</Label>
-              <Input
-                id="state-logo"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                placeholder="https://..."
-              />
-            </div>
-            <div>
-              <Label htmlFor="state-banner">Banner URL</Label>
-              <Input
-                id="state-banner"
-                value={bannerUrl}
-                onChange={(e) => setBannerUrl(e.target.value)}
-                placeholder="https://..."
-              />
-            </div>
+            <ImageUpload
+              id="state-logo"
+              label="Logo"
+              value={logoUrl}
+              onChange={setLogoUrl}
+              preview="avatar"
+              folder="branches"
+            />
+            <ImageUpload
+              id="state-banner"
+              label="Banner"
+              value={bannerUrl}
+              onChange={setBannerUrl}
+              preview="banner"
+              folder="branches"
+            />
           </div>
 
           <div className="flex justify-end gap-3 p-4 pt-2 border-t">

@@ -53,13 +53,15 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import BranchMembersPanel from "@/components/BranchMembersPanel";
+import { ImageUpload } from "@/components/ImageUpload";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Branch = Tables<"branches">;
 
 const BranchPortalPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, can, managesBranch, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -77,7 +79,6 @@ const BranchPortalPage = () => {
   const [branchPrayers, setBranchPrayers] = useState<any[]>([]);
   const [storeItems, setStoreItems] = useState<any[]>([]);
   const [storeOrders, setStoreOrders] = useState<any[]>([]);
-  const [membershipRequests, setMembershipRequests] = useState<any[]>([]);
 
   // Dialogs
   const [eventDialog, setEventDialog] = useState(false);
@@ -104,8 +105,6 @@ const BranchPortalPage = () => {
 
   const [memberForm, setMemberForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [memberSubmitted, setMemberSubmitted] = useState(false);
-  const [approvingRequest, setApprovingRequest] = useState<string | null>(null);
-  const [tempPassword, setTempPassword] = useState("");
 
   useEffect(() => {
     if (slug) fetchBranch();
@@ -138,8 +137,11 @@ const BranchPortalPage = () => {
 
   const fetchBranchData = async () => {
     if (!branch) return;
-    const [mem, ev, sv, ep, don, pr, st, ords, mreq] = await Promise.all([
-      supabase.from("branch_members").select("*, profiles(display_name, avatar_url)").eq("branch_id", branch.id),
+    // NOTE: `branch_members` has no foreign key to `profiles` (it points at
+    // auth.users), so embedding profiles here fails with PGRST200. Member names
+    // are resolved by user_id in BranchMembersPanel instead.
+    const [mem, ev, sv, ep, don, pr, st, ords] = await Promise.all([
+      supabase.from("branch_members").select("*").eq("branch_id", branch.id),
       supabase.from("branch_events").select("*").eq("branch_id", branch.id).order("scheduled_at", { ascending: true }),
       supabase.from("branch_services").select("*").eq("branch_id", branch.id).order("sort_order"),
       supabase.from("branch_episodes").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
@@ -147,7 +149,6 @@ const BranchPortalPage = () => {
       supabase.from("branch_prayers").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
       supabase.from("store_items").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
       supabase.from("store_orders").select("*").eq("branch_id", branch.id).order("created_at", { ascending: false }),
-      supabase.from("membership_requests").select("*").eq("branch_id", branch.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     if (ev.error) console.error("Events fetch error:", ev.error.message);
     setBranchMembers(mem.data || []);
@@ -158,7 +159,6 @@ const BranchPortalPage = () => {
     setBranchPrayers(pr.data || []);
     setStoreItems(st.data || []);
     setStoreOrders(ords.data || []);
-    setMembershipRequests(mreq.data || []);
   };
 
   if (loading) {
@@ -188,6 +188,9 @@ const BranchPortalPage = () => {
   }
 
   const isBranchLeader = isAdmin || isLeader;
+  // A branch admin granted the "members" permission can run the members area of
+  // the branches assigned to them, exactly like the branch leader.
+  const canManageMembers = isBranchLeader || (can("members") && managesBranch(branch.id));
 
   const totalDonations = branchDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
 
@@ -453,7 +456,7 @@ const BranchPortalPage = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6 flex-wrap h-auto gap-1">
             <TabsTrigger value="overview"><Building2 className="h-4 w-4 mr-1" />Overview</TabsTrigger>
-            <TabsTrigger value="members"><Users className="h-4 w-4 mr-1" />{isBranchLeader ? "Members" : "Join Us"}</TabsTrigger>
+            <TabsTrigger value="members"><Users className="h-4 w-4 mr-1" />{canManageMembers ? "Members" : "Join Us"}</TabsTrigger>
             <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-1" />Events</TabsTrigger>
             <TabsTrigger value="services"><Globe className="h-4 w-4 mr-1" />Services</TabsTrigger>
             <TabsTrigger value="podcasts"><Music className="h-4 w-4 mr-1" />Podcasts</TabsTrigger>
@@ -523,144 +526,13 @@ const BranchPortalPage = () => {
 
           {/* ── Members ──────────────────────────────────── */}
           <TabsContent value="members">
-            {isBranchLeader ? (
-              /* Leader view: see all members and pending requests */
-              <>
-                {membershipRequests.length > 0 && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-4">Pending Membership Requests ({membershipRequests.length})</h2>
-                    <div className="grid gap-3 mb-6">
-                      {membershipRequests.map((req: any) => (
-                        <Card key={req.id} className="border-amber-200 bg-amber-50/50">
-                          <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
-                            <div className="min-w-0">
-                              <p className="font-semibold">{req.full_name}</p>
-                              <p className="text-sm text-muted-foreground">{req.email}</p>
-                              {req.phone && <p className="text-sm text-muted-foreground">{req.phone}</p>}
-                              {req.message && <p className="text-sm text-muted-foreground italic mt-1">"{req.message}"</p>}
-                              <p className="text-xs text-muted-foreground mt-1">Requested {format(new Date(req.created_at), "PP")}</p>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              {approvingRequest === req.id ? (
-                                <div className="flex flex-col gap-2 p-3 bg-white rounded-md border">
-                                  <Label className="text-sm">Set Login Password for {req.full_name}</Label>
-                                  <Input
-                                    type="password"
-                                    placeholder="Min 6 characters"
-                                    value={tempPassword}
-                                    onChange={(e) => setTempPassword(e.target.value)}
-                                    minLength={6}
-                                  />
-                                  <div className="flex gap-2">
-                                    <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={async () => {
-                                      if (tempPassword.length < 6) {
-                                        toast({ title: "Password too short", description: "Minimum 6 characters", variant: "destructive" });
-                                        return;
-                                      }
-                                      // Check for existing membership to prevent duplicates
-                                      const { data: existingMember } = await supabase
-                                        .from("branch_members")
-                                        .select("id")
-                                        .eq("branch_id", branch!.id)
-                                        .eq("role", "member")
-                                        .maybeSingle();
-                                      // Only insert if no existing member row (avoids duplicates)
-                                      if (!existingMember) {
-                                        const { error: memErr } = await supabase.from("branch_members").insert({
-                                          branch_id: branch!.id,
-                                          role: "member",
-                                          has_login: true,
-                                        });
-                                        if (memErr) {
-                                          toast({ title: "Error adding member", description: memErr.message, variant: "destructive" });
-                                          return;
-                                        }
-                                      }
-                                      // Create login credential
-                                      const { error: credErr } = await supabase.from("member_login_credentials").insert({
-                                        branch_id: branch!.id,
-                                        membership_request_id: req.id,
-                                        email: req.email,
-                                        full_name: req.full_name,
-                                        temp_password: tempPassword,
-                                      });
-                                      if (credErr) {
-                                        toast({ title: "Error creating login", description: credErr.message, variant: "destructive" });
-                                        return;
-                                      }
-                                      // Mark request as approved
-                                      const { error: reqErr } = await supabase.from("membership_requests").update({ status: "approved", temp_password: tempPassword }).eq("id", req.id);
-                                      if (reqErr) {
-                                        toast({ title: "Error approving request", description: reqErr.message, variant: "destructive" });
-                                        return;
-                                      }
-                                      setApprovingRequest(null);
-                                      setTempPassword("");
-                                      fetchBranchData();
-                                      toast({ title: "Member approved with login", description: `${req.full_name} can now log in with email: ${req.email}` });
-                                    }}>Create Login</Button>
-                                    <Button size="sm" variant="outline" onClick={() => { setApprovingRequest(null); setTempPassword(""); }}>Cancel</Button>
-                                  </div>
-                                  <p className="text-xs text-muted-foreground">Share this password with the member securely.</p>
-                                </div>
-                              ) : (
-                                <div className="flex gap-2">
-                                  <Button size="sm" variant="outline" className="text-green-600" onClick={() => { setApprovingRequest(req.id); setTempPassword(""); }}>
-                                    Approve & Create Login
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="text-destructive" onClick={async () => {
-                                    await supabase.from("membership_requests").update({ status: "rejected" }).eq("id", req.id);
-                                    fetchBranchData();
-                                    toast({ title: "Request rejected" });
-                                  }}>Reject</Button>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </>
-                )}
-                <h2 className="text-xl font-semibold mb-4">Branch Members ({branchMembers.length})</h2>
-                {branchMembers.length === 0 ? (
-                  <Card><CardContent className="py-8 text-center text-muted-foreground">No members in this branch yet.</CardContent></Card>
-                ) : (
-                  <div className="grid gap-3">
-                    {branchMembers.map((m: any) => (
-                      <Card key={m.id}>
-                        <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        {m.profiles?.avatar_url ? (
-                          <img src={m.profiles.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
-                            {m.profiles?.display_name ? m.profiles.display_name[0].toUpperCase() : "?"}
-                          </div>
-                        )}
-                            <div>
-                              <p className="font-medium">{m.profiles?.display_name || "Unnamed"}</p>
-                              <p className="text-xs text-muted-foreground">{m.role} - Joined {format(new Date(m.joined_at), "PP")}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {m.role === "pending_member" && (
-                              <Button size="sm" variant="outline" className="text-green-600" onClick={async () => {
-                                await supabase.from("branch_members").update({ role: "member" }).eq("id", m.id);
-                                fetchBranchData();
-                                toast({ title: "Member approved" });
-                              }}>Approve</Button>
-                            )}
-                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDelete("branch_members", m.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </>
+            {canManageMembers ? (
+              /* Branch leaders and assigned branch admins manage members here */
+              <BranchMembersPanel
+                branchIds={[branch.id]}
+                branches={[{ id: branch.id, name: branch.name }]}
+                onChange={fetchBranchData}
+              />
             ) : (
               /* Visitor view: request to join */
               <div className="max-w-lg mx-auto">
@@ -876,7 +748,14 @@ const BranchPortalPage = () => {
                       <div className="space-y-2"><Label>Title</Label><Input value={epForm.title} onChange={(e) => setEpForm({ ...epForm, title: e.target.value })} /></div>
                       <div className="space-y-2"><Label>Description</Label><Textarea value={epForm.description || ""} onChange={(e) => setEpForm({ ...epForm, description: e.target.value })} rows={3} /></div>
                       <div className="space-y-2"><Label>Audio URL</Label><Input value={epForm.audio_url || ""} onChange={(e) => setEpForm({ ...epForm, audio_url: e.target.value })} placeholder="https://..." /></div>
-                      <div className="space-y-2"><Label>Thumbnail URL</Label><Input value={epForm.thumbnail_url || ""} onChange={(e) => setEpForm({ ...epForm, thumbnail_url: e.target.value })} placeholder="https://..." /></div>
+                      <ImageUpload
+                        id="episode-thumbnail"
+                        label="Thumbnail"
+                        value={epForm.thumbnail_url || ""}
+                        onChange={(thumbnail_url) => setEpForm({ ...epForm, thumbnail_url })}
+                        folder="episodes"
+                        preview="thumbnail"
+                      />
                       <div className="space-y-2"><Label>Category</Label><Input value={epForm.category || "sermon"} onChange={(e) => setEpForm({ ...epForm, category: e.target.value })} /></div>
                       <div className="flex items-center gap-2"><Switch checked={epForm.published || false} onCheckedChange={(v) => setEpForm({ ...epForm, published: v })} /><Label>Published</Label></div>
                       <Button onClick={handleEpisodeSave} className="w-full">{editingId ? "Update" : "Create"}</Button>
@@ -1036,7 +915,14 @@ const BranchPortalPage = () => {
                       <div className="space-y-2"><Label>Name</Label><Input value={stForm.name} onChange={(e) => setStForm({ ...stForm, name: e.target.value })} /></div>
                       <div className="space-y-2"><Label>Description</Label><Textarea value={stForm.description || ""} onChange={(e) => setStForm({ ...stForm, description: e.target.value })} rows={3} /></div>
                       <div className="space-y-2"><Label>Price ($)</Label><Input type="number" value={stForm.price} onChange={(e) => setStForm({ ...stForm, price: parseFloat(e.target.value) || 0 })} /></div>
-                      <div className="space-y-2"><Label>Image URL</Label><Input value={stForm.image_url || ""} onChange={(e) => setStForm({ ...stForm, image_url: e.target.value })} placeholder="https://..." /></div>
+                      <ImageUpload
+                        id="store-item-image"
+                        label="Product Image"
+                        value={stForm.image_url || ""}
+                        onChange={(image_url) => setStForm({ ...stForm, image_url })}
+                        folder="store"
+                        preview="card"
+                      />
                       <div className="space-y-2"><Label>Category</Label><Input value={stForm.category || ""} onChange={(e) => setStForm({ ...stForm, category: e.target.value })} placeholder="e.g. Merch, Books" /></div>
                       <div className="space-y-2"><Label>Stock</Label><Input type="number" value={stForm.stock || 0} onChange={(e) => setStForm({ ...stForm, stock: parseInt(e.target.value) || 0 })} /></div>
                       <Button onClick={handleStoreSave} className="w-full">{editingId ? "Update" : "Create"}</Button>
