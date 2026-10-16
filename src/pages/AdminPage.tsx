@@ -39,6 +39,7 @@ const AdminPage = () => {
   const [prayers, setPrayers] = useState<Tables<"prayer_requests">[]>([]);
   const [events, setEvents] = useState<Tables<"live_events">[]>([]);
   const [profiles, setProfiles] = useState<Tables<"profiles">[]>([]);
+  const [resetByProfileId, setResetByProfileId] = useState<string | null>(null);
   const [roleMap, setRoleMap] = useState<Record<string, string>>({});
   const [epSearch, setEpSearch] = useState("");
 
@@ -725,6 +726,50 @@ const AdminPage = () => {
     toast({ title: `Role updated to ${role}` });
   };
 
+  const handleResetMemberPassword = async () => {
+    if (!resetByProfileId) return;
+    setResetByProfileId(resetByProfileId);
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .eq("id", resetByProfileId)
+        .single();
+
+      if (profileError || !profile) {
+        toast({ title: "Could not find account", description: "No profile was found for this member.", variant: "destructive" });
+        setResetByProfileId(null);
+        fetchAll();
+        return;
+      }
+
+      const { data: authUser, error: authError } = await supabase.auth.admin.updateUserById(
+        resetByProfileId,
+        { password: generatePassword() },
+      );
+
+      if (authError) {
+        toast({
+          title: "Could not reset password",
+          description: authError.message || "The Supabase admin API could not update this account.",
+          variant: "destructive",
+        });
+        setResetByProfileId(null);
+        fetchAll();
+        return;
+      }
+
+      const memberName = profile.display_name || "this account";
+      toast({
+        title: "Password reset",
+        description: `We set a new password for ${memberName}. Share it with them securely and ask them to change it after they sign in.`,
+      });
+    } finally {
+      setResetByProfileId(null);
+      fetchAll();
+    }
+  };
+
   return (
     <div className="min-h-screen gradient-subtle">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -968,6 +1013,18 @@ const AdminPage = () => {
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setResetByProfileId(p.user_id === user?.id ? null : p.user_id)}
+                          disabled={p.user_id === user?.id}
+                        >
+                          {p.user_id === user?.id
+                            ? "Own account"
+                            : resetByProfileId === p.user_id
+                              ? "Resetting…"
+                              : "Reset password"}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1460,8 +1517,9 @@ const AdminPage = () => {
                                 <h3 className="font-semibold">{ba.full_name}</h3>
                                 {!ba.is_active && <Badge variant="secondary">Inactive</Badge>}
                                 {ba.user_id
-                                  ? <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Signed up</Badge>
-                                  : <Badge variant="outline">Invite pending</Badge>}
+                                  ? <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Has account</Badge>
+                                  : <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100">No account yet</Badge>
+                                  }
                               </div>
                               <p className="text-sm text-muted-foreground">{ba.email}</p>
                             </div>
