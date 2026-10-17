@@ -1,9 +1,9 @@
 -- ============================================================================
 -- Group the USA branches: BEHT USA becomes the grouping branch, Louisville hangs under it
 -- ============================================================================
--- The branch grouping columns (parent_id / is_state_branch / state_code) already
--- exist; this migration is the data half, so the "Add USA State" grouping is
--- actually used by the existing branches instead of sitting empty.
+-- 0000_branch_grouping_columns added parent_id / is_state_branch / state_code but
+-- left every branch flat, so the grouping feature sat unused. This is the data
+-- half: BEHT USA becomes the grouping branch and Louisville hangs under it.
 --
 -- Safe to re-run: it only re-asserts the same two rows and does nothing when a
 -- branch is missing.
