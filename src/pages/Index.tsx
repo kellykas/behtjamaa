@@ -11,6 +11,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
 import { useSiteSettings, useTeamMembers, useTeamMember } from "@/hooks/useContent";
 import { toast } from "@/hooks/use-toast";
+import { firstImageUrl } from "@/lib/utils";
 
 function assetExt(url: string): string {
   const ext = url.split("/").pop()?.split("?")[0];
@@ -334,8 +335,8 @@ const EventsPreview = () => {
                     <div className="flex flex-col md:flex-row">
                       {/* Image */}
                       <div className="w-full md:w-[320px] h-[280px] md:h-auto shrink-0 relative overflow-hidden">
-                        {event.images && Array.isArray(event.images) && event.images.length > 0 ? (
-                          <img src={event.images[0]} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        {firstImageUrl(event.images) ? (
+                          <img src={firstImageUrl(event.images)} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                             <Calendar className="h-16 w-16 text-white/30" />

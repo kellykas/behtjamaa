@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { firstImageUrl } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,9 +122,10 @@ const EventDetailPage = () => {
 
   const allImages: string[] = [];
   if (event.image_url) allImages.push(event.image_url);
-  if (event.images && Array.isArray(event.images)) {
+  if (Array.isArray(event.images)) {
     event.images.forEach((img) => {
-      if (img && !allImages.includes(img)) allImages.push(img);
+      const url = typeof img === "string" ? img : "";
+      if (url && !allImages.includes(url)) allImages.push(url);
     });
   }
 
