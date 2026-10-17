@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import type { UserResponse, GenerateLinkResponse, AuthError } from "@supabase/auth-js";
-
-type AdminCreateData = UserResponse extends { data: infer D } ? D : never;
-type AdminInviteData = GenerateLinkResponse extends { data: infer D } ? D : never;
+import { callAdminUsersApi } from "@/lib/adminUsers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -337,40 +334,22 @@ const AdminPage = () => {
         return;
       }
 
-      let authAccountId: string | null = null;
-      let authError: AuthError | null = null;
+      const accountResult = baContactMethod === "direct"
+        ? await callAdminUsersApi({ action: "create", email: baEmail.trim().toLowerCase(), password: baPassword })
+        : await callAdminUsersApi({ action: "invite", email: baEmail.trim().toLowerCase() });
 
-      if (baContactMethod === "direct") {
-        const createResult = await supabase.auth.admin.createUser({
-          email: baEmail.trim().toLowerCase(),
-          password: baPassword,
-          email_confirm: true,
-        });
-        authError = createResult.error ?? null;
-        if (!authError && typeof (createResult as { data: AdminCreateData }).data?.user?.id === "string") {
-          authAccountId = (createResult as { data: AdminCreateData }).data.user.id;
-        }
-      } else {
-        const inviteResult = await supabase.auth.admin.generateLink({
-          type: "invite",
-          email: baEmail.trim().toLowerCase(),
-        });
-        authError = inviteResult.error ?? null;
-        if (!authError && typeof (inviteResult as { data: AdminInviteData }).data?.user?.id === "string") {
-          authAccountId = (inviteResult as { data: AdminInviteData }).data.user.id;
-        }
-      }
-
-      if (authError) {
+      if (accountResult.error) {
         toast({
           title: "Branch admin row saved",
           description: baContactMethod === "direct"
-            ? "The branch admin record is saved, but we could not create the BEHT JAMAA account right now."
-            : "The branch admin record is saved, but we could not send the invite link right now.",
+            ? `The branch admin record is saved, but we could not create the sign-in: ${accountResult.error}`
+            : `The branch admin record is saved, but we could not send the invite: ${accountResult.error}`,
           variant: "destructive",
         });
         return;
       }
+
+      const authAccountId = accountResult.userId ?? null;
 
       if (authAccountId) {
         const latestRow = await supabase
@@ -754,15 +733,17 @@ const AdminPage = () => {
         return;
       }
 
-      const { data: authUser, error: authError } = await supabase.auth.admin.updateUserById(
-        resetByProfileId,
-        { password: baPassword || generatePassword() },
-      );
+      const password = baPassword || generatePassword();
+      const resetResult = await callAdminUsersApi({
+        action: "reset",
+        userId: resetByProfileId,
+        password,
+      });
 
-      if (authError) {
+      if (resetResult.error) {
         toast({
           title: "Could not reset password",
-          description: authError.message || "The Supabase admin API could not update this account.",
+          description: resetResult.error,
           variant: "destructive",
         });
         setResetByProfileId(null);
@@ -773,7 +754,7 @@ const AdminPage = () => {
       const memberName = profile.display_name || "this account";
       toast({
         title: "Password reset",
-        description: `We set a new password for ${memberName}. Share it with them securely and ask them to change it after they sign in.`,
+        description: `New password for ${memberName}: ${password}. Share it securely and ask them to change it after signing in.`,
       });
     } finally {
       setResetByProfileId(null);
@@ -804,22 +785,18 @@ const AdminPage = () => {
     setBaCreatingAuthForId(targetId);
 
     try {
-      const createResult = await supabase.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true,
-      });
+      const createResult = await callAdminUsersApi({ action: "create", email, password });
 
       if (createResult.error) {
         toast({
           title: "Could not create account",
-          description: createResult.error.message || "The Supabase admin API could not create this account.",
+          description: createResult.error,
           variant: "destructive",
         });
         return;
       }
 
-      const newUserId = (createResult as { data: AdminCreateData | null }).data?.user?.id;
+      const newUserId = createResult.userId;
       if (typeof newUserId === "string") {
         const linkResult = await supabase
           .from("branch_admins")
