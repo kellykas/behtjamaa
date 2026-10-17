@@ -803,7 +803,11 @@ const AdminPage = () => {
       if (createResult.error) {
         toast({
           title: "Could not create account",
-          description: createResult.error,
+          description: (
+            createResult.error?.includes("User not allowed")
+              ? "The sign-in service cannot be reached. Refresh and try again."
+              : createResult.error
+          ),
           variant: "destructive",
         });
         return;
