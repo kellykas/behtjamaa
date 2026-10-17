@@ -7,12 +7,18 @@ export interface AdminUserResult {
   userId?: string | null;
 }
 
+interface AdminUsersResponse {
+  ok?: boolean;
+  error?: string;
+  userId?: string | null;
+}
+
 /**
- * Privileged Supabase auth work goes through /api/admin-users.
+ * Privileged Supabase auth work goes through the `admin-users` Edge Function.
  *
  * Calling `supabase.auth.admin.*` from the browser uses the publishable key and
- * Supabase rejects it with "User not allowed". The service-role key stays on the
- * server; this helper only forwards the signed-in super admin's access token.
+ * Supabase rejects it with "User not allowed". The function runs with the
+ * backend's service-role key and only allows signed-in super admins to call it.
  */
 export const callAdminUsersApi = async (payload: {
   action: AdminUserAction;
@@ -21,31 +27,20 @@ export const callAdminUsersApi = async (payload: {
   userId?: string;
 }): Promise<AdminUserResult> => {
   const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) return { error: "Your session expired. Sign in again." };
+  if (!sessionData.session) return { error: "Your session expired. Sign in again." };
 
-  try {
-    const response = await fetch("/api/admin-users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
+  const { data, error } = await supabase.functions.invoke<AdminUsersResponse>("admin-users", {
+    body: payload,
+  });
 
-    const data = (await response.json().catch(() => null)) as
-      | { error?: string; userId?: string | null }
-      | null;
-
-    if (response.status === 404) {
-      return { error: "The account service is not deployed yet. Redeploy the site and try again." };
+  if (error) {
+    const status = (error as { context?: { status?: number } }).context?.status;
+    if (status === 404) {
+      return { error: "The account service is not deployed yet. Deploy the admin-users function, then try again." };
     }
-    if (!response.ok) {
-      return { error: data?.error || "The account service could not complete this request." };
-    }
-    return { userId: data?.userId ?? null };
-  } catch {
-    return { error: "Could not reach the account service. Check your connection and try again." };
+    return { error: error.message || "The account service could not complete this request." };
   }
+
+  if (data?.error) return { error: data.error };
+  return { userId: data?.userId ?? null };
 };
