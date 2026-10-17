@@ -41,6 +41,9 @@ const AdminPage = () => {
   const [profiles, setProfiles] = useState<Tables<"profiles">[]>([]);
   const [resetByProfileId, setResetByProfileId] = useState<string | null>(null);
   const [baCreatingAuthForId, setBaCreatingAuthForId] = useState<string | null>(null);
+  // Branch admin whose "create sign-in account" dialog is open, plus its password field.
+  const [baAuthForId, setBaAuthForId] = useState<string | null>(null);
+  const [baAuthPassword, setBaAuthPassword] = useState("");
   const [roleMap, setRoleMap] = useState<Record<string, string>>({});
   const [epSearch, setEpSearch] = useState("");
 
@@ -779,50 +782,67 @@ const AdminPage = () => {
   };
 
   const handleCreateAuthAccountForBranchAdmin = async () => {
-    if (!baCreatingAuthForId) return;
-    setBaCreatingAuthForId(baCreatingAuthForId);
+    const targetId = baAuthForId;
+    if (!targetId) return;
+
+    const ba = branchAdmins.find((b) => b.id === targetId);
+    if (!ba) {
+      toast({ title: "Could not find branch admin", description: "This branch admin record no longer exists.", variant: "destructive" });
+      setBaAuthForId(null);
+      fetchAll();
+      return;
+    }
+
+    const manualPassword = baAuthPassword.trim();
+    if (manualPassword && manualPassword.length < 8) {
+      toast({ title: "Password too short", description: "Use at least 8 characters, or leave the field empty to generate one.", variant: "destructive" });
+      return;
+    }
+
+    const password = manualPassword || generatePassword();
+    const email = ba.email.trim().toLowerCase();
+    setBaCreatingAuthForId(targetId);
+
     try {
-      const ba = branchAdmins.find((b) => b.id === baCreatingAuthForId);
-      if (!ba) {
-        toast({ title: "Could not find branch admin", description: "This branch admin record no longer exists.", variant: "destructive" });
-        setBaCreatingAuthForId(null);
-        fetchAll();
-        return;
-      }
-
-      if (baContactMethod === "direct" && baPassword.trim().length < 8) {
-        toast({ title: "Password too short", description: "For a direct account, use at least 8 characters.", variant: "destructive" });
-        setBaCreatingAuthForId(null);
-        fetchAll();
-        return;
-      }
-
-      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-        email: ba.email.trim().toLowerCase(),
-        password: baPassword || generatePassword(),
+      const createResult = await supabase.auth.admin.createUser({
+        email,
+        password,
         email_confirm: true,
       });
 
-      if (authError) {
+      if (createResult.error) {
         toast({
           title: "Could not create account",
-          description: authError.message || "The Supabase admin API could not create this account.",
+          description: createResult.error.message || "The Supabase admin API could not create this account.",
           variant: "destructive",
         });
-        setBaCreatingAuthForId(null);
-        fetchAll();
         return;
       }
 
+      const newUserId = (createResult as { data: AdminCreateData | null }).data?.user?.id;
+      if (typeof newUserId === "string") {
+        const linkResult = await supabase
+          .from("branch_admins")
+          .update({ user_id: newUserId })
+          .eq("id", targetId);
+        if (linkResult.error) {
+          console.warn("Failed to link branch_admins row to auth account:", linkResult.error);
+        }
+      }
+
+      setBaAuthForId(null);
+      setBaAuthPassword("");
       toast({
         title: "Account created",
-        description: `We created a BEHT JAMAA account for ${ba.full_name || ba.email}. Share the password with them securely and ask them to change it after they sign in.`,
+        description: `Sign-in: ${email} — password: ${password}. Share it securely; they should change it after signing in.`,
       });
     } finally {
       setBaCreatingAuthForId(null);
       fetchAll();
     }
   };
+
+  const baAuthTarget = branchAdmins.find((b) => b.id === baAuthForId);
 
   return (
     <div className="min-h-screen gradient-subtle">
@@ -1579,8 +1599,12 @@ const AdminPage = () => {
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            {!ba.user_id && !baCreatingAuthForId ? (
-                              <Button size="sm" variant="outline" onClick={() => setBaCreatingAuthForId(ba.id)}>
+                            {!ba.user_id && baCreatingAuthForId !== ba.id ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setBaAuthPassword(""); setBaAuthForId(ba.id); }}
+                              >
                                 Create account
                               </Button>
                             ) : null}
@@ -1612,6 +1636,57 @@ const AdminPage = () => {
                 })}
               </div>
             )}
+
+            <Dialog
+              open={!!baAuthForId}
+              onOpenChange={(o) => {
+                if (!o && !baCreatingAuthForId) {
+                  setBaAuthForId(null);
+                  setBaAuthPassword("");
+                }
+              }}
+            >
+              <DialogContent>
+                <DialogHeader><DialogTitle>Create sign-in account</DialogTitle></DialogHeader>
+                {baAuthTarget ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      This creates a BEHT JAMAA sign-in for{" "}
+                      <span className="font-medium text-foreground">{baAuthTarget.email}</span>.
+                    </p>
+                    <div className="space-y-2">
+                      <Label>Password</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={baAuthPassword}
+                          onChange={(e) => setBaAuthPassword(e.target.value)}
+                          placeholder="Leave empty to generate one"
+                          type="text"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setBaAuthPassword(generatePassword())}
+                          title="Generate a password"
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        At least 8 characters. The password is shown once after the account is created.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleCreateAuthAccountForBranchAdmin}
+                      className="w-full"
+                      disabled={!!baCreatingAuthForId}
+                    >
+                      {baCreatingAuthForId ? "Creating account…" : "Create account"}
+                    </Button>
+                  </div>
+                ) : null}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
           )}
         </Tabs>
