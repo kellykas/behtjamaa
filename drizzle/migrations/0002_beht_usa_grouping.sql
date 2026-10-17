@@ -3,7 +3,8 @@
 -- ============================================================================
 -- 0000_branch_grouping_columns added parent_id / is_state_branch / state_code but
 -- left every branch flat, so the grouping feature sat unused. This is the data
--- half: BEHT USA becomes the grouping branch and Louisville hangs under it.
+-- half: BEHT USA becomes the grouping branch and Louisville hangs under it,
+-- with the Louisville chapter created when the branch does not exist yet.
 --
 -- Safe to re-run: it only re-asserts the same two rows and does nothing when a
 -- branch is missing.
@@ -41,7 +42,14 @@ BEGIN
   LIMIT 1;
 
   IF louisville_id IS NULL THEN
-    RAISE NOTICE 'No Louisville branch found; BEHT USA is grouped but has no chapters yet.';
+    -- Louisville is the chapter the grouping exists for, so create it rather
+    -- than leaving BEHT USA empty. Rename or delete the row from the admin
+    -- Branches tab if the chapter ends up with a different name or details.
+    INSERT INTO public.branches (name, slug, location, parent_id, is_state_branch, active)
+    VALUES ('Louisville', 'louisville', 'Louisville, USA', usa_id, false, true)
+    RETURNING id INTO louisville_id;
+
+    RAISE NOTICE 'Created the Louisville chapter (%) under BEHT USA.', louisville_id;
     RETURN;
   END IF;
 
