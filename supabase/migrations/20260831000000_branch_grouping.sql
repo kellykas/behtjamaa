@@ -59,7 +59,7 @@ CREATE POLICY "Branch admins manage child branches" ON public.branches FOR ALL
       WHERE b.id = branches.id
         AND (
           public.branch_admin_can(auth.uid(), 'branches')
-          AND public.branch_admin_manages(auth.uid(), b.branch_id) -- no-op guard if column missing
+          AND public.branch_admin_manages(auth.uid(), b.id)
           OR b.leader_user_id = auth.uid()
         )
     )
@@ -71,7 +71,7 @@ CREATE POLICY "Branch admins manage child branches" ON public.branches FOR ALL
       WHERE b.id = branches.id
         AND (
           public.branch_admin_can(auth.uid(), 'branches')
-          AND public.branch_admin_manages(auth.uid(), b.branch_id)
+          AND public.branch_admin_manages(auth.uid(), b.id)
           OR b.leader_user_id = auth.uid()
         )
     )
