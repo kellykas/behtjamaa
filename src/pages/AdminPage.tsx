@@ -98,6 +98,9 @@ const AdminPage = () => {
   const [brLogo, setBrLogo] = useState("");
   const [brBanner, setBrBanner] = useState("");
   const [brActive, setBrActive] = useState(true);
+  const [brIsGrouping, setBrIsGrouping] = useState(false);
+  const [brStateCode, setBrStateCode] = useState("");
+  const [brParentId, setBrParentId] = useState("");
   const [brLeaderUserId, setBrLeaderUserId] = useState<string>("");
 
   // Episode form
@@ -266,7 +269,7 @@ const AdminPage = () => {
     setFounderDialogOpen(true);
   };
   const resetSvForm = () => { setSvTitle(""); setSvDesc(""); setSvIcon(""); setSvVerse(""); setEditingSvId(null); };
-  const resetBrForm = () => { setBrName(""); setBrSlug(""); setBrLocation(""); setBrDesc(""); setBrLeader(""); setBrEmail(""); setBrPhone(""); setBrLogo(""); setBrBanner(""); setBrActive(true); setBrLeaderUserId(""); setEditingBranchId(null); };
+  const resetBrForm = () => { setBrName(""); setBrSlug(""); setBrLocation(""); setBrDesc(""); setBrLeader(""); setBrEmail(""); setBrPhone(""); setBrLogo(""); setBrBanner(""); setBrActive(true); setBrLeaderUserId(""); setBrIsGrouping(false); setBrStateCode(""); setBrParentId(""); setEditingBranchId(null); };
 
   // ── Scoped access (branch admins see only their branches + granted areas) ──
   const visibleBranches = isAdmin ? branchesList : branchesList.filter((b) => managesBranch(b.id));
@@ -631,7 +634,22 @@ const AdminPage = () => {
       return;
     }
     const slug = brSlug || brName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const payload = { name: brName.trim(), slug, location: brLocation || null, description: brDesc || null, leader_name: brLeader || null, leader_user_id: brLeaderUserId || null, leader_email: brEmail || null, phone: brPhone || null, logo_url: brLogo || null, banner_url: brBanner || null, active: brActive };
+    const payload = {
+      name: brName.trim(),
+      slug,
+      location: brLocation || null,
+      description: brDesc || null,
+      leader_name: brLeader || null,
+      leader_user_id: brLeaderUserId || null,
+      leader_email: brEmail || null,
+      phone: brPhone || null,
+      logo_url: brLogo || null,
+      banner_url: brBanner || null,
+      active: brActive,
+      is_state_branch: brIsGrouping,
+      state_code: brIsGrouping ? (brStateCode.trim().toUpperCase() || null) : null,
+      parent_id: brIsGrouping || !brParentId ? null : brParentId,
+    };
     if (editingBranchId) {
       await supabase.from("branches").update(payload).eq("id", editingBranchId);
     } else {
@@ -662,6 +680,9 @@ const AdminPage = () => {
     setBrLogo(br.logo_url || "");
     setBrBanner(br.banner_url || "");
     setBrActive(br.active !== false);
+    setBrIsGrouping(Boolean((br as any).is_state_branch));
+    setBrStateCode(((br as any).state_code as string) || "");
+    setBrParentId(((br as any).parent_id as string) || "");
     setBranchDialogOpen(true);
   };
 
@@ -1399,6 +1420,36 @@ const AdminPage = () => {
                       preview="banner"
                       folder="branches"
                     />
+                    <div className="space-y-3 rounded-md border p-3">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={brIsGrouping} onCheckedChange={setBrIsGrouping} />
+                        <Label>This is a grouping branch</Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Grouping branches own local chapters, e.g. BEHT USA groups Louisville.
+                      </p>
+                      {brIsGrouping ? (
+                        <div className="space-y-2">
+                          <Label>Grouping code</Label>
+                          <Input value={brStateCode} onChange={(e) => setBrStateCode(e.target.value)} placeholder="e.g. US" maxLength={10} />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <Label>Belongs under</Label>
+                          <Select value={brParentId || "none"} onValueChange={(v) => setBrParentId(v === "none" ? "" : v)}>
+                            <SelectTrigger><SelectValue placeholder="No grouping" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No grouping</SelectItem>
+                              {branchesList
+                                .filter((b) => Boolean((b as any).is_state_branch) && b.id !== editingBranchId)
+                                .map((b) => (
+                                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-2"><Switch checked={brActive} onCheckedChange={setBrActive} /><Label>Active</Label></div>
                     <Button onClick={handleSaveBranch} className="w-full">{editingBranchId ? "Update" : "Create"} Branch</Button>
                   </div>
@@ -1417,9 +1468,15 @@ const AdminPage = () => {
                           <Building2 className="h-6 w-6 text-green-600" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-semibold">{br.name}</h3>
                             {!br.active && <Badge variant="secondary">Inactive</Badge>}
+                            {Boolean((br as any).is_state_branch) && <Badge variant="secondary">Grouping branch</Badge>}
+                            {!(br as any).is_state_branch && (br as any).parent_id && (
+                              <Badge variant="secondary">
+                                Under {branchesList.find((b) => b.id === (br as any).parent_id)?.name ?? "a grouping branch"}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">{br.location || "No location"} - {br.leader_name || "No leader"}</p>
                         </div>
