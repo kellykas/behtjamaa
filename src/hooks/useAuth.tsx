@@ -75,7 +75,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshBranchAdmin = useCallback(async () => {
     try {
-      const { data, error } = await supabase.rpc("my_branch_admin", {});
+      const { data, error } = await supabase.rpc("my_branch_admin");
       if (error || !data || data.length === 0) {
         setBranchAdmin(null);
         return;
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     (async () => {
       // Attach this auth user to a pending Branch Admin invite matching their email.
       try {
-        await supabase.rpc("link_branch_admin", {});
+        await supabase.rpc("link_branch_admin");
       } catch {
         // Migration not applied yet — ignore.
       }

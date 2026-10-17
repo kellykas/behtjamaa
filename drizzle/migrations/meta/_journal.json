@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1792230596329,
+      "tag": "0000_branch_grouping_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792230725840,
+      "tag": "0001_fix_branches_policy_recursion",
+      "breakpoints": true
+    }
+  ]
+}
