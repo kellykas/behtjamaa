@@ -354,14 +354,17 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          is_state_branch: boolean
           leader_email: string | null
           leader_name: string | null
           leader_user_id: string | null
           location: string | null
           logo_url: string | null
           name: string
+          parent_id: string | null
           phone: string | null
           slug: string
+          state_code: string | null
           updated_at: string | null
         }
         Insert: {
@@ -370,14 +373,17 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_state_branch?: boolean
           leader_email?: string | null
           leader_name?: string | null
           leader_user_id?: string | null
           location?: string | null
           logo_url?: string | null
           name: string
+          parent_id?: string | null
           phone?: string | null
           slug: string
+          state_code?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -386,17 +392,28 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          is_state_branch?: boolean
           leader_email?: string | null
           leader_name?: string | null
           leader_user_id?: string | null
           location?: string | null
           logo_url?: string | null
           name?: string
+          parent_id?: string | null
           phone?: string | null
           slug?: string
+          state_code?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "branches_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       episodes: {
         Row: {
@@ -903,6 +920,7 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
+      derive_state_code_from_name: { Args: { name: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -927,6 +945,7 @@ export type Database = {
           permissions: string[]
         }[]
       }
+      normalize_state_code: { Args: { raw: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
