@@ -634,27 +634,42 @@ const AdminPage = () => {
       return;
     }
     const slug = brSlug || brName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    const payload = {
+    // Portal access and the grouping columns are super-admin only: a branch
+    // admin's save must not send them, or the database guard rejects the update.
+    const payload: any = {
       name: brName.trim(),
       slug,
       location: brLocation || null,
       description: brDesc || null,
       leader_name: brLeader || null,
-      leader_user_id: brLeaderUserId || null,
       leader_email: brEmail || null,
       phone: brPhone || null,
       logo_url: brLogo || null,
       banner_url: brBanner || null,
       active: brActive,
-      is_state_branch: brIsGrouping,
-      state_code: brIsGrouping ? (brStateCode.trim().toUpperCase() || null) : null,
-      parent_id: brIsGrouping || !brParentId ? null : brParentId,
     };
-    if (editingBranchId) {
-      await supabase.from("branches").update(payload).eq("id", editingBranchId);
-    } else {
-      await supabase.from("branches").insert(payload);
+    if (isSuperAdmin) {
+      Object.assign(payload, {
+        leader_user_id: brLeaderUserId || null,
+        is_state_branch: brIsGrouping,
+        state_code: brIsGrouping ? (brStateCode.trim().toUpperCase() || null) : null,
+        parent_id: brIsGrouping || !brParentId ? null : brParentId,
+      });
     }
+
+    const { error } = editingBranchId
+      ? await supabase.from("branches").update(payload).eq("id", editingBranchId)
+      : await supabase.from("branches").insert(payload);
+
+    if (error) {
+      toast({
+        title: "Could not save branch",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setBranchDialogOpen(false);
     resetBrForm();
     fetchAll();
@@ -1389,6 +1404,7 @@ const AdminPage = () => {
                     <div className="space-y-2"><Label>Location</Label><Input value={brLocation} onChange={(e) => setBrLocation(e.target.value)} /></div>
                     <div className="space-y-2"><Label>Description</Label><Textarea value={brDesc} onChange={(e) => setBrDesc(e.target.value)} rows={3} /></div>
                     <div className="space-y-2"><Label>Leader Name</Label><Input value={brLeader} onChange={(e) => setBrLeader(e.target.value)} /></div>
+                    {isSuperAdmin && (
                     <div className="space-y-2">
                       <Label>Leader User (Portal Access)</Label>
                       <Select value={brLeaderUserId || "none"} onValueChange={(v) => setBrLeaderUserId(v === "none" ? "" : v)}>
@@ -1402,6 +1418,7 @@ const AdminPage = () => {
                       </Select>
                       <p className="text-xs text-muted-foreground">Assigns this user branch portal editing access.</p>
                     </div>
+                    )}
                     <div className="space-y-2"><Label>Leader Email</Label><Input value={brEmail} onChange={(e) => setBrEmail(e.target.value)} type="email" /></div>
                     <div className="space-y-2"><Label>Phone</Label><Input value={brPhone} onChange={(e) => setBrPhone(e.target.value)} /></div>
                     <ImageUpload
@@ -1420,6 +1437,7 @@ const AdminPage = () => {
                       preview="banner"
                       folder="branches"
                     />
+                    {isSuperAdmin && (
                     <div className="space-y-3 rounded-md border p-3">
                       <div className="flex items-center gap-2">
                         <Switch checked={brIsGrouping} onCheckedChange={setBrIsGrouping} />
@@ -1450,6 +1468,7 @@ const AdminPage = () => {
                         </div>
                       )}
                     </div>
+                    )}
                     <div className="flex items-center gap-2"><Switch checked={brActive} onCheckedChange={setBrActive} /><Label>Active</Label></div>
                     <Button onClick={handleSaveBranch} className="w-full">{editingBranchId ? "Update" : "Create"} Branch</Button>
                   </div>
