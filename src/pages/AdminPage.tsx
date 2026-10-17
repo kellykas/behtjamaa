@@ -12,7 +12,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save, Building2, KeyRound, UserCog } from "lucide-react";
-import { SegmentedControl } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PERMISSIONS, permissionLabel } from "@/lib/permissions";
 import { useNavigate } from "react-router-dom";
@@ -80,8 +79,6 @@ const AdminPage = () => {
   const [baBranchIds, setBaBranchIds] = useState<string[]>([]);
   const [baPermissions, setBaPermissions] = useState<string[]>([]);
   const [baActive, setBaActive] = useState(true);
-  const [baInviteSent, setBaInviteSent] = useState(false);
-  const [baContactMethod, setBaContactMethod] = useState<"invite" | "direct">("invite");
   const [baPassword, setBaPassword] = useState("");
 
   // Branch management
@@ -296,7 +293,7 @@ const AdminPage = () => {
 
   // ── Branch admin sign-ons (super admin only) ──
   const resetBaForm = () => {
-    setBaName(""); setBaEmail(""); setBaBranchIds([]); setBaPermissions([]); setBaActive(true); setEditingBaId(null); setBaInviteSent(false); setBaContactMethod("invite"); setBaPassword("");
+    setBaName(""); setBaEmail(""); setBaBranchIds([]); setBaPermissions([]); setBaActive(true); setEditingBaId(null); setBaPassword("");
   };
 
   const generatePassword = () => {
@@ -315,90 +312,71 @@ const AdminPage = () => {
     }
 
     if (!editingBaId) {
-      if (baContactMethod === "direct" && baPassword.trim().length < 8) {
-        toast({ title: "Password too short", description: "For a direct account, use at least 8 characters.", variant: "destructive" });
+      // Sign-ons are created immediately: the super admin sets the password now,
+      // so there is no invite email to wait for.
+      const email = baEmail.trim().toLowerCase();
+      const typedPassword = baPassword.trim();
+      if (typedPassword && typedPassword.length < 8) {
+        toast({ title: "Password too short", description: "Use at least 8 characters, or leave it empty to generate one.", variant: "destructive" });
         return;
       }
+      const password = typedPassword || generatePassword();
 
-      const invitePayload: any = {
+      const payload: any = {
         full_name: baName.trim(),
-        email: baEmail.trim().toLowerCase(),
+        email,
         branch_ids: baBranchIds,
         permissions: baPermissions,
         is_active: baActive,
         created_by: user?.id ?? null,
       };
 
-      const { error: insertError } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from("branch_admins")
-        .insert({ ...invitePayload, temp_password: null });
-      if (insertError) {
-        toast({ title: "Could not create the branch admin", description: insertError.message, variant: "destructive" });
+        .insert({ ...payload, temp_password: null })
+        .select("id")
+        .single();
+      if (insertError || !inserted) {
+        toast({ title: "Could not create the branch admin", description: insertError?.message, variant: "destructive" });
         return;
       }
 
-      const accountResult = baContactMethod === "direct"
-        ? await callAdminUsersApi({ action: "create", email: baEmail.trim().toLowerCase(), password: baPassword })
-        : await callAdminUsersApi({ action: "invite", email: baEmail.trim().toLowerCase() });
+      const accountResult = await callAdminUsersApi({ action: "create", email, password });
 
       if (accountResult.error) {
         toast({
-          title: "Branch admin row saved",
-          description: baContactMethod === "direct"
-            ? `The branch admin record is saved, but we could not create the sign-in: ${accountResult.error}`
-            : `The branch admin record is saved, but we could not send the invite: ${accountResult.error}`,
+          title: "Branch admin saved, sign-in missing",
+          description: `The branch admin record exists, but the sign-in was not created: ${accountResult.error} Fix the cause, then press "Create account" on their card.`,
           variant: "destructive",
         });
+        setBaDialogOpen(false);
+        resetBaForm();
+        fetchAll();
         return;
       }
 
-      const authAccountId = accountResult.userId ?? null;
-
-      if (authAccountId) {
-        const latestRow = await supabase
+      if (accountResult.userId) {
+        const { error: linkError } = await supabase
           .from("branch_admins")
-          .select("id")
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (!latestRow.error && typeof latestRow.data?.id === "string") {
-          const linkResult = await supabase
-            .from("branch_admins")
-            .update({ user_id: authAccountId })
-            .eq("id", latestRow.data.id)
-            .select("id")
-            .single();
-
-          if (linkResult.error) {
-            console.warn("Failed to link branch_admins row to auth account:", linkResult.error);
-          }
-        } else if (latestRow.error) {
-          console.warn("Failed to find newly created branch admin row:", latestRow.error);
+          .update({ user_id: accountResult.userId })
+          .eq("id", inserted.id);
+        if (linkError) {
+          console.warn("Failed to link branch_admins row to auth account:", linkError);
         }
       }
 
       setBaDialogOpen(false);
       resetBaForm();
       fetchAll();
-
-      if (baContactMethod === "direct") {
-        toast({
-          title: "Account created",
-          description: `We created a BEHT JAMAA account for ${baEmail.trim()} and set the password you entered. They can sign in right away and change it later.`,
-        });
-      } else {
-        toast({
-          title: "Invite sent",
-          description: `We sent ${baEmail.trim()} an email with a link to choose their BEHT JAMAA password. Once they accept it, they can sign in as a branch admin.`,
-        });
-      }
+      toast({
+        title: "Account created",
+        description: `${email} can sign in now with the password: ${password}. Share it securely and ask them to change it after signing in.`,
+      });
       return;
     }
 
-    // Editing an existing entry: the person already has an account, so updates
-    // here are about scope, permissions and active state. A reset of the password
-    // is done through the normal email reset flow, not by storing a temp password.
+    // Editing an existing entry: scope, permissions and active state only. The
+    // sign-in itself is created here or from the card's "Create account" button.
     const payload: any = {
       full_name: baName.trim(),
       email: baEmail.trim().toLowerCase(),
@@ -434,7 +412,6 @@ const AdminPage = () => {
     setBaBranchIds(ba.branch_ids || []);
     setBaPermissions(ba.permissions || []);
     setBaActive(ba.is_active !== false);
-    setBaContactMethod(ba.user_id ? "invite" : "invite");
     setBaPassword("");
     setBaDialogOpen(true);
   };
@@ -762,8 +739,8 @@ const AdminPage = () => {
         return;
       }
 
-      if (baContactMethod === "direct" && baPassword.trim().length < 8) {
-        toast({ title: "Password too short", description: "For a direct account, use at least 8 characters.", variant: "destructive" });
+      if (baPassword.trim() && baPassword.trim().length < 8) {
+        toast({ title: "Password too short", description: "Use at least 8 characters, or leave it empty to generate one.", variant: "destructive" });
         setResetByProfileId(null);
         fetchAll();
         return;
@@ -1532,33 +1509,19 @@ const AdminPage = () => {
                       <Input type="email" value={baEmail} onChange={(e) => setBaEmail(e.target.value)} placeholder="person@example.com" />
                       <p className="text-xs text-muted-foreground">
                         {editingBaId
-                          ? "This person already has a BEHT JAMAA account. Use the fields below to manage their name, branches, permissions or active status. Password resets go through the email reset link."
-                          : "Choose how this person should get access. With an invite, they accept a link and set their own password. With a direct account, you set the password now and they can sign in immediately."}
+                          ? "This person already has a BEHT JAMAA account. Use the fields below to manage their name, branches, permissions or active status."
+                          : "A BEHT JAMAA sign-in is created straight away with the password below — no invite email is sent."}
                       </p>
                     </div>
 
                     {!editingBaId && (
-                      <div className="space-y-2">
-                        <Label>How should they get access?</Label>
-                        <SegmentedControl
-                          value={baContactMethod}
-                          onValueChange={(v) => setBaContactMethod(v as "invite" | "direct")}
-                          options={[
-                            { value: "invite", label: "Invite them" },
-                            { value: "direct", label: "Create account" },
-                          ]}
-                        />
-                      </div>
-                    )}
-
-                    {baContactMethod === "direct" && !editingBaId && (
                       <div className="space-y-2">
                         <Label>Password</Label>
                         <div className="flex gap-2">
                           <Input
                             value={baPassword}
                             onChange={(e) => setBaPassword(e.target.value)}
-                            placeholder="Minimum 8 characters"
+                            placeholder="Minimum 8 characters, or press the key to generate"
                             type="text"
                           />
                           <Button
@@ -1571,7 +1534,7 @@ const AdminPage = () => {
                           </Button>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          This is the password they will use to sign in until they change it.
+                          Their sign-in password. You will see it once, right after the account is created — share it securely.
                         </p>
                       </div>
                     )}
@@ -1615,11 +1578,7 @@ const AdminPage = () => {
                     </div>
 
                     <div className="flex items-center gap-2"><Switch checked={baActive} onCheckedChange={setBaActive} /><Label>Active</Label></div>
-                    {baInviteSent ? (
-                      <Button variant="outline" className="w-full" onClick={() => { setBaInviteSent(false); resetBaForm(); setBaDialogOpen(false); }}>Done — close</Button>
-                    ) : (
-                      <Button onClick={handleSaveBranchAdmin} className="w-full">{editingBaId ? "Update" : baContactMethod === "direct" ? "Create Account" : "Send Invite"} Branch Admin</Button>
-                    )}
+                    <Button onClick={handleSaveBranchAdmin} className="w-full">{editingBaId ? "Update Branch Admin" : "Create Branch Admin Account"}</Button>
                   </div>
                 </DialogContent>
               </Dialog>
