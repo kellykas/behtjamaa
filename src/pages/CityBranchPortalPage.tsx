@@ -283,7 +283,7 @@ export default function CityBranchPortalPage() {
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Button asChild>
-            <Link to={`/branches/${stateBranch.slug}/events`}>
+            <Link to={`/branches/${childBranch.slug}?tab=events`}>
               View Chapter Events <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>

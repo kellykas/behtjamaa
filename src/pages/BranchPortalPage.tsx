@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -59,15 +59,23 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Branch = Tables<"branches">;
 
+/** Tabs the portal knows about; `?tab=` may only name one of these. */
+const PORTAL_TABS = ["overview", "members", "events", "services", "podcasts", "donations", "store", "prayers"];
+
 const BranchPortalPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
   const { user, isAdmin, can, managesBranch, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const [branch, setBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  // Deep links like /branches/louisville?tab=events open straight on that tab.
+  const [activeTab, setActiveTab] = useState(() => {
+    const requested = searchParams.get("tab");
+    return requested && PORTAL_TABS.includes(requested) ? requested : "overview";
+  });
   const [isLeader, setIsLeader] = useState(false);
 
   // Branch data
