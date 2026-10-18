@@ -8,10 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save, Building2, KeyRound, UserCog } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Edit, Music, Heart, Calendar, Users, Shield, Search, Sparkles, Save, Building2, KeyRound, UserCog, UserPlus, Link2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PERMISSIONS, permissionLabel } from "@/lib/permissions";
 import { useNavigate } from "react-router-dom";
@@ -722,34 +730,30 @@ const AdminPage = () => {
     toast({ title: `Role updated to ${role}` });
   };
 
-  const handleResetMemberPassword = async () => {
-    if (!resetByProfileId) return;
-    setResetByProfileId(resetByProfileId);
+  /**
+   * Generate a fresh password for a member's sign-in and show it once.
+   * `profiles.id` is not the auth user id (it has its own uuid), so the auth
+   * user is resolved through `user_id` before handing it to the account
+   * service — otherwise the reset targets a user that does not exist.
+   */
+  const handleResetMemberPassword = async (profileId: string) => {
+    setResetByProfileId(profileId);
     try {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, display_name")
-        .eq("id", resetByProfileId)
+        .select("display_name, user_id")
+        .eq("id", profileId)
         .single();
 
-      if (profileError || !profile) {
-        toast({ title: "Could not find account", description: "No profile was found for this member.", variant: "destructive" });
-        setResetByProfileId(null);
-        fetchAll();
+      if (profileError || !profile?.user_id) {
+        toast({ title: "Could not find account", description: "No sign-in account is attached to this profile.", variant: "destructive" });
         return;
       }
 
-      if (baPassword.trim() && baPassword.trim().length < 8) {
-        toast({ title: "Password too short", description: "Use at least 8 characters, or leave it empty to generate one.", variant: "destructive" });
-        setResetByProfileId(null);
-        fetchAll();
-        return;
-      }
-
-      const password = baPassword || generatePassword();
+      const password = generatePassword();
       const resetResult = await callAdminUsersApi({
         action: "reset",
-        userId: resetByProfileId,
+        userId: profile.user_id,
         password,
       });
 
@@ -759,8 +763,6 @@ const AdminPage = () => {
           description: resetResult.error,
           variant: "destructive",
         });
-        setResetByProfileId(null);
-        fetchAll();
         return;
       }
 
@@ -837,6 +839,53 @@ const AdminPage = () => {
   };
 
   const baAuthTarget = branchAdmins.find((b) => b.id === baAuthForId);
+
+  /**
+   * Only admins may delete an account, and nobody may delete their own —
+   * `roleMap` is keyed by auth user id, and so is the session user.
+   */
+  const canDeleteAccount = (profileId: string) => {
+    if (!user) return false;
+    const target = profiles.find((p) => p.id === profileId);
+    const isSelf = target ? target.user_id === user.id : profileId === user.id;
+    if (isSelf) return false;
+    return isSuperAdmin || roleMap[user.id] === "admin";
+  };
+
+  /**
+   * Delete a site account outright. The auth user is removed through the
+   * `admin-users` Edge Function (the browser only holds the publishable key,
+   * which Supabase rejects for auth.admin calls). Every app row keyed on that
+   * user — profile, roles, branch memberships, branch-admin grants — is
+   * removed by ON DELETE CASCADE.
+   */
+  const handleDeleteAccount = async (profileId: string) => {
+    if (!user) return;
+    if (!canDeleteAccount(profileId)) {
+      toast({
+        title: "Not allowed",
+        description: "Only admins can delete accounts, and nobody can delete their own account.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const target = profiles.find((p) => p.id === profileId);
+    if (!target?.user_id) {
+      toast({ title: "Could not find account", description: "This profile has no sign-in attached to it.", variant: "destructive" });
+      return;
+    }
+    const label = target.display_name || "this account";
+    if (!window.confirm(`Delete ${label}? They will no longer be able to sign in. This cannot be undone.`)) {
+      return;
+    }
+    const result = await callAdminUsersApi({ action: "delete", userId: target.user_id });
+    if (result.error) {
+      toast({ title: "Could not delete account", description: result.error, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Account deleted", description: `${label} can no longer sign in.` });
+    fetchAll();
+  };
 
   return (
     <div className="min-h-screen gradient-subtle">
@@ -1062,45 +1111,70 @@ const AdminPage = () => {
                           {p.display_name ? p.display_name[0].toUpperCase() : "?"}
                         </div>
                         <div>
-                          <p className="font-semibold">{p.display_name || "Unnamed"}</p>
-                          <p className="text-xs text-muted-foreground">Joined {format(new Date(p.created_at), "PP")}</p>
+                          <p className="font-semibold">{p.display_name || "Unnamed"}</p>      <p className="text-xs text-muted-foreground">Joined {format(new Date(p.created_at), "PP")}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {roleMap[p.user_id] === "admin" && <Badge className="bg-purple-100 text-purple-800 border-transparent">Admin</Badge>}
-                        {roleMap[p.user_id] === "moderator" && <Badge className="bg-blue-100 text-blue-800 border-transparent">Mod</Badge>}
-                        <Select
-                          value={roleMap[p.user_id] || "user"}
-                          onValueChange={(v) => handleSetRole(p.user_id, v)}
-                          disabled={p.user_id === user?.id}
-                        >
-                          <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">User</SelectItem>
-                            <SelectItem value="moderator">Moderator</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setResetByProfileId(p.user_id === user?.id ? null : p.user_id)}
-                          disabled={p.user_id === user?.id}
-                        >
-                          {p.user_id === user?.id
-                            ? "Own account"
-                            : resetByProfileId === p.user_id
-                              ? "Resetting…"
-                              : "Reset password"}
-                        </Button>
-                      </div>
+                      {(isSuperAdmin || isAdmin) && (
+                        <div className="flex items-center gap-2">
+                          <Select value={roleMap?.[p.user_id] ?? "user"} onValueChange={(v) => handleSetRole(p.user_id, v)} disabled={p.user_id === user?.id}>
+                            <SelectTrigger className="w-28 h-9"><SelectValue placeholder="Role" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="moderator">Moderator</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Button size="sm" variant="outline" disabled={resetByProfileId === p.id} onClick={() => handleResetMemberPassword(p.id)}>
+                            {resetByProfileId === p.id ? "Resetting…" : "Reset password"}
+                          </Button>
+                          <Button size="sm" variant="destructive" disabled={!canDeleteAccount(p.id)} onClick={() => handleDeleteAccount(p.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
               </div>
             )}
-            </div>
-            )}
+          </div>
+        )}
+
+      {/* Account cleanup: super admins, and admins promoted to admin role, can delete accounts. */}
+      {(isSuperAdmin || roleMap[user?.id] === "admin") && (
+        <div className="mt-12">
+          <h2 className="text-xl font-semibold mb-4">Account Cleanup</h2>
+          <Card>
+            <CardContent className="pt-6">
+              {profiles.length === 0 ? (
+                <p className="text-muted-foreground">No accounts to clean up.</p>
+              ) : (
+                <div className="grid gap-3">
+                  {profiles.map((p) => (
+                    <Card key={p.id}>
+                      <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold shrink-0">
+                            {p.display_name ? p.display_name[0].toUpperCase() : "?"}
+                          </div>
+                          <div>
+                            <p className="font-semibold">{p.display_name || "Unnamed"}</p>
+                            <p className="text-xs text-muted-foreground">Joined {format(new Date(p.created_at), "PP")}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" variant="destructive" disabled={!canDeleteAccount(p.id)} onClick={() => handleDeleteAccount(p.id)}>
+                            <Trash2 className="h-4 w-4" /> Delete account
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
           </TabsContent>
 
           <TabsContent value="content">
@@ -1629,8 +1703,24 @@ const AdminPage = () => {
                                 Creating account…
                               </Button>
                             ) : null}
-                            <Button size="sm" variant="outline" onClick={() => handleEditBranchAdmin(ba)}><Edit className="h-4 w-4" /></Button>
-                            <Button size="sm" variant="outline" className="text-destructive" onClick={() => handleDeleteBranchAdmin(ba.id)}><Trash2 className="h-4 w-4" /></Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="outline">Actions</Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => { setBaAuthPassword(""); setBaAuthForId(ba.id); }}>
+                                  <UserPlus className="mr-2 h-4 w-4" /> Create account
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setBaAuthPassword(""); setBaAuthForId(ba.id); }}>
+                                  <Link2 className="mr-2 h-4 w-4" /> Attach existing auth user
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteBranchAdmin(ba.id)}>
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete branch admin
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </div>
                         <div className="text-sm">

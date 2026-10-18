@@ -13,8 +13,10 @@ import {
   User,
   LogOut,
   Shield,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 
 interface NavItem {
   to: string;
@@ -43,6 +45,7 @@ const Navbar = () => {
 
   const [shrunk, setShrunk] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   useEffect(() => {
     let lastScroll = 0;
@@ -178,6 +181,47 @@ const Navbar = () => {
   const AuthButton = () => {
     if (user) {
       return (
+        <>
+          {/* Change password — signed-in users, including branch admins */}
+          <button
+            onClick={() => setPasswordDialogOpen(true)}
+            aria-label="Change password"
+            className="nav-item group relative flex flex-col items-center rounded-full text-gray-500"
+            style={{
+              padding: compact ? "6px 10px" : "8px 16px",
+              minWidth: compact ? 40 : 64,
+              gap: compact ? 0 : 2,
+              transition: `padding 400ms ${EASE_SPRING}, min-width 400ms ${EASE_SPRING}`,
+            }}
+          >
+            <div
+              className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out"
+              style={{ background: "rgba(243,244,246,0.6)" }}
+            />
+            <KeyRound
+              className="relative z-10"
+              style={{
+                width: compact ? 16 : 20,
+                height: compact ? 16 : 20,
+                transition: `width 400ms ${EASE_SPRING}, height 400ms ${EASE_SPRING}`,
+              }}
+            />
+            <span
+              className="relative z-10 text-[10px] font-semibold leading-none whitespace-nowrap overflow-hidden"
+              style={{
+                maxHeight: compact ? 0 : 14,
+                opacity: compact ? 0 : 1,
+                maxWidth: compact ? 0 : 80,
+                transition: `max-height 250ms ${EASE_SMOOTH}, opacity 200ms ease, max-width 400ms ${EASE_SPRING}`,
+              }}
+            >
+              Password
+            </span>
+          </button>
+          <ChangePasswordDialog
+            open={passwordDialogOpen}
+            onOpenChange={setPasswordDialogOpen}
+          />
         <button
           onClick={signOut}
           className="nav-item group relative flex flex-col items-center rounded-full text-gray-500"
@@ -212,6 +256,7 @@ const Navbar = () => {
             Sign Out
           </span>
         </button>
+        </>
       );
     }
     const active = isActive("/auth");

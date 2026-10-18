@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 
-export type AdminUserAction = "create" | "invite" | "reset";
+export type AdminUserAction = "create" | "invite" | "reset" | "delete";
 
 export interface AdminUserResult {
   error?: string;

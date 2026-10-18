@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /**
- * Privileged Supabase auth work (create account, invite, password reset).
+ * Privileged Supabase auth work (create account, invite, password reset,
+ * delete account).
  *
  * The browser only holds the publishable key, so `supabase.auth.admin.*` there
  * fails with "User not allowed". Edge Functions run with Lovable Cloud's
@@ -99,6 +100,16 @@ export const handleRequest = async (req: Request): Promise<Response> => {
     if (password.length < 8) return fail("Use a password of at least 8 characters.");
 
     const { error } = await admin.auth.admin.updateUserById(userId, { password });
+    if (error) return fail(error.message);
+    return reply({ ok: true, userId });
+  }
+
+  // Removing the auth user also removes their app rows: profiles, roles,
+  // branch memberships and branch-admin grants all cascade on auth.users.
+  if (body.action === "delete") {
+    if (!userId) return fail("An account is required.");
+
+    const { error } = await admin.auth.admin.deleteUser(userId);
     if (error) return fail(error.message);
     return reply({ ok: true, userId });
   }
