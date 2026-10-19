@@ -113,18 +113,34 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
   const createSignIn = async (
     email: string,
     name: string,
+    branchId?: string,
   ): Promise<"created" | "exists" | "denied" | "failed"> => {
     if (!isSuperAdmin) return "denied";
     const password = generatePassword();
-    const result = await callAdminUsersApi({ action: "create", email, password });
+    const result = await callAdminUsersApi({ action: "create", email, password, resetIfExists: true });
     if (result.error) {
-      if (/already|exists|registered/i.test(result.error)) return "exists";
       toast({ title: "Could not create the sign-in", description: result.error, variant: "destructive" });
       return "failed";
+    }
+    // Link the account to the branch now, so the member shows as signed up.
+    if (branchId && result.userId) {
+      const { data: existing } = await supabase
+        .from("branch_members")
+        .select("id")
+        .eq("branch_id", branchId)
+        .eq("user_id", result.userId)
+        .maybeSingle();
+      if (!existing) {
+        const { error: linkError } = await supabase
+          .from("branch_members")
+          .insert({ branch_id: branchId, user_id: result.userId, role: "member", has_login: true });
+        if (linkError) console.warn("Could not link member to branch:", linkError.message);
+      }
     }
     toast({
       title: "Sign-in created",
       description: `${name} can sign in with ${email} — password: ${password}. Share it securely and ask them to change it after signing in.`,
+      duration: 60000,
     });
     return "created";
   };

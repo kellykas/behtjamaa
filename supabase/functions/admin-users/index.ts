@@ -32,6 +32,7 @@ interface Body {
   email?: string;
   password?: string;
   userId?: string;
+  resetIfExists?: boolean;
 }
 
 export const handleRequest = async (req: Request): Promise<Response> => {
@@ -83,8 +84,26 @@ export const handleRequest = async (req: Request): Promise<Response> => {
     if (password.length < 8) return fail("Use a password of at least 8 characters.");
 
     const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
-    if (error) return fail(error.message);
-    return reply({ ok: true, userId: data.user?.id ?? null });
+    if (!error) return reply({ ok: true, userId: data.user?.id ?? null });
+    if (!body.resetIfExists || !/already|exists|registered/i.test(error.message)) return fail(error.message);
+
+    // The account already exists (e.g. an earlier attempt half-finished):
+    // find it and give it the new password so the admin can share it.
+    for (let page = 1; page <= 50; page++) {
+      const { data: list, error: listError } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+      if (listError) return fail(listError.message);
+      const found = list.users.find((u) => (u.email ?? "").toLowerCase() === email);
+      if (found) {
+        const { error: updError } = await admin.auth.admin.updateUserById(found.id, {
+          password,
+          email_confirm: true,
+        });
+        if (updError) return fail(updError.message);
+        return reply({ ok: true, userId: found.id, existed: true });
+      }
+      if (list.users.length < 200) break;
+    }
+    return fail(error.message);
   }
 
   if (body.action === "invite") {
