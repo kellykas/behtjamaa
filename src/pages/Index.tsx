@@ -94,7 +94,7 @@ const HeroSection = () => {
 
             {/* Search input row */}
             <div className="flex items-center gap-2">
-              <div className="flex-1 flex items-center gap-2 sm:gap-3 bg-white rounded-xl px-3 sm:px-4 py-2.5 sm:py-3">
+              <div className="flex-1 min-w-0 flex items-center gap-2 sm:gap-3 bg-white rounded-xl px-3 sm:px-4 py-2.5 sm:py-3">
                 <Search className="h-5 w-5 text-slate-400 shrink-0" />
                 <input
                   type="text"
@@ -105,7 +105,7 @@ const HeroSection = () => {
                       ? "Search branches by location..."
                       : "Search podcasts, sermons, testimonies..."
                   }
-                  className="flex-1 bg-transparent text-slate-900 text-sm placeholder:text-slate-400 outline-none"
+                  className="flex-1 min-w-0 w-full bg-transparent text-slate-900 text-sm placeholder:text-slate-400 outline-none"
                 />
               </div>
               <Link
@@ -116,10 +116,10 @@ const HeroSection = () => {
                     ? "/branches"
                     : "/"
                 }
-                className="h-10 sm:h-12 px-4 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center gap-2 transition-all shadow-lg shrink-0"
+                className="h-10 sm:h-12 px-3 sm:px-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm flex items-center gap-2 transition-all shadow-lg shrink-0"
               >
                 <Search className="h-4 w-4" />
-                Search
+                <span className="hidden sm:inline">Search</span>
               </Link>
             </div>
           </div>
