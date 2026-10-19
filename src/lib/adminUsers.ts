@@ -38,6 +38,8 @@ export const callAdminUsersApi = async (payload: {
   email?: string;
   password?: string;
   userId?: string;
+  /** For "create": if the email already has an account, set this password on it instead. */
+  resetIfExists?: boolean;
 }): Promise<AdminUserResult> => {
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData.session) return { error: "Your session expired. Sign in again." };

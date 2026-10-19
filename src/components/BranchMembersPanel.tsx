@@ -113,18 +113,34 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
   const createSignIn = async (
     email: string,
     name: string,
+    branchId?: string,
   ): Promise<"created" | "exists" | "denied" | "failed"> => {
     if (!isSuperAdmin) return "denied";
     const password = generatePassword();
-    const result = await callAdminUsersApi({ action: "create", email, password });
+    const result = await callAdminUsersApi({ action: "create", email, password, resetIfExists: true });
     if (result.error) {
-      if (/already|exists|registered/i.test(result.error)) return "exists";
       toast({ title: "Could not create the sign-in", description: result.error, variant: "destructive" });
       return "failed";
+    }
+    // Link the account to the branch now, so the member shows as signed up.
+    if (branchId && result.userId) {
+      const { data: existing } = await supabase
+        .from("branch_members")
+        .select("id")
+        .eq("branch_id", branchId)
+        .eq("user_id", result.userId)
+        .maybeSingle();
+      if (!existing) {
+        const { error: linkError } = await supabase
+          .from("branch_members")
+          .insert({ branch_id: branchId, user_id: result.userId, role: "member", has_login: true });
+        if (linkError) console.warn("Could not link member to branch:", linkError.message);
+      }
     }
     toast({
       title: "Sign-in created",
       description: `${name} can sign in with ${email} — password: ${password}. Share it securely and ask them to change it after signing in.`,
+      duration: 60000,
     });
     return "created";
   };
@@ -145,7 +161,7 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
     }
     toast({ title: "Member approved" });
     if (request?.email) {
-      const outcome = await createSignIn(request.email, memberDisplayName(request));
+      const outcome = await createSignIn(request.email, memberDisplayName(request), request.branch_id);
       if (outcome === "denied") {
         toast({
           title: "Sign-in still needed",
@@ -192,7 +208,7 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
     setForm(emptyForm(defaultBranchId));
     reload();
     toast({ title: "Member added", description: `${addedName} is now a member of this branch.` });
-    const outcome = await createSignIn(addedEmail, addedName);
+    const outcome = await createSignIn(addedEmail, addedName, branchId);
     if (outcome === "denied") {
       toast({ description: "A super admin can create their sign-in from the roster." });
     } else if (outcome === "exists") {
@@ -410,7 +426,7 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
                         disabled={busyId === member.id}
                         onClick={async () => {
                           setBusyId(member.id);
-                          await createSignIn(member.email, member.name);
+                          await createSignIn(member.email, member.name, member.branchId);
                           setBusyId(null);
                           reload();
                         }}
