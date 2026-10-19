@@ -304,7 +304,7 @@ export default function StateBranchEditorPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="state-leader">State leader name</Label>
                 <Input
@@ -326,7 +326,7 @@ export default function StateBranchEditorPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="state-phone">Phone</Label>
                 <Input

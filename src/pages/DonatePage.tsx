@@ -117,7 +117,7 @@ const DonatePage = () => {
               {/* Amounts */}
               <div className="space-y-2">
                 <Label>Donation Amount (USD)</Label>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {amounts.map((amt) => (
                     <Button
                       key={amt}
