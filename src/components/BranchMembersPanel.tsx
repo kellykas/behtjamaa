@@ -208,7 +208,7 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
     setForm(emptyForm(defaultBranchId));
     reload();
     toast({ title: "Member added", description: `${addedName} is now a member of this branch.` });
-    const outcome = await createSignIn(addedEmail, addedName);
+    const outcome = await createSignIn(addedEmail, addedName, branchId);
     if (outcome === "denied") {
       toast({ description: "A super admin can create their sign-in from the roster." });
     } else if (outcome === "exists") {
