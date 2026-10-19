@@ -14,6 +14,19 @@ interface AdminUsersResponse {
 }
 
 /**
+ * One-time password for a new or reset sign-in. It is shown once so the admin
+ * can share it securely; the person changes it after signing in.
+ */
+export const generatePassword = (): string => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint32Array(12);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) out += chars[bytes[i] % chars.length];
+  return out;
+};
+
+/**
  * Privileged Supabase auth work goes through the `admin-users` Edge Function.
  *
  * Calling `supabase.auth.admin.*` from the browser uses the publishable key and

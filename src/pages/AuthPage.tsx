@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useSiteSettings } from "@/hooks/useContent";
-import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Church, Cross, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowLeft, Eye, EyeOff, Church, ArrowRight, CheckCircle2, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ── Glass input ────── */
@@ -35,11 +36,20 @@ const GlassInput = ({
 const AuthPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  // Sign-in is the only way in. People who are not members yet send a join
+  // request for the branch they choose instead of creating an account.
+  const [authMode, setAuthMode] = useState<"signin" | "join">("signin");
+  const [branches, setBranches] = useState<{ id: string; name: string; location: string | null }[]>([]);
+  const [joinName, setJoinName] = useState("");
+  const [joinEmail, setJoinEmail] = useState("");
+  const [joinPhone, setJoinPhone] = useState("");
+  const [joinBranchId, setJoinBranchId] = useState("");
+  const [joinMessage, setJoinMessage] = useState("");
+  const [joinSubmitted, setJoinSubmitted] = useState(false);
+  const [joinedBranchName, setJoinedBranchName] = useState("");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/";
@@ -91,39 +101,38 @@ const AuthPage = () => {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  /**
+   * Join requests replace self sign-up: RLS lets anyone submit one, and it
+   * lands with the chosen branch's leader and the super admin, who review it
+   * in Admin → Members (or the branch portal's Members tab). Approved members
+   * get a sign-in created for them by a super admin.
+   */
+  const handleJoinRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!joinBranchId) {
+      toast({ title: "Choose a branch", description: "Pick the branch you'd love to join.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { full_name: displayName },
-      },
+    const { error } = await supabase.from("membership_requests").insert({
+      branch_id: joinBranchId,
+      full_name: joinName.trim(),
+      email: joinEmail.trim().toLowerCase(),
+      phone: joinPhone.trim() || null,
+      message: joinMessage.trim() || null,
+      status: "pending",
     });
     setLoading(false);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } else {
-      if (data.user) {
-        const { data: requests } = await supabase
-          .from("membership_requests")
-          .select("branch_id, id")
-          .eq("email", email)
-          .eq("status", "approved");
-        if (requests && requests.length > 0) {
-          toast({
-            title: "Check your email",
-            description: "We sent you a confirmation link. Once confirmed, your account will be linked to your branch membership.",
-          });
-        } else {
-          toast({ title: "Check your email", description: "We sent you a confirmation link." });
-        }
-      } else {
-        toast({ title: "Check your email", description: "We sent you a confirmation link." });
-      }
+      toast({ title: "Could not send your request", description: error.message, variant: "destructive" });
+      return;
     }
+    setJoinedBranchName(branches.find((b) => b.id === joinBranchId)?.name || "your chosen branch");
+    setJoinSubmitted(true);
+    toast({
+      title: "Request sent",
+      description: "Your join request has been sent to the branch leader and the ministry's super admin.",
+    });
   };
 
   useEffect(() => {
@@ -134,6 +143,16 @@ const AuthPage = () => {
       }
     };
     checkAndLink();
+  }, []);
+
+  // Branches are publicly readable, so the join form can offer every active one.
+  useEffect(() => {
+    supabase
+      .from("branches")
+      .select("id, name, location")
+      .eq("active", true)
+      .order("name")
+      .then(({ data }) => setBranches(data || []));
   }, []);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -257,10 +276,12 @@ const AuthPage = () => {
           {/* Brand header */}
           <div className="text-center mb-6">
             <h1 className="text-xl font-bold text-slate-900 mb-1">
-              {authMode === "signin" ? "Welcome back" : "Create account"}
+              {authMode === "signin" ? "Welcome back" : "Join the ministry"}
             </h1>
             <p className="text-slate-500 text-sm">
-              {authMode === "signin" ? "Sign in to your BEHT JAMAA account" : "Join the BEHT JAMAA community"}
+              {authMode === "signin"
+                ? "Sign in to your BEHT JAMAA account"
+                : "Send a request to join a BEHT JAMAA branch"}
             </p>
           </div>
 
@@ -282,13 +303,13 @@ const AuthPage = () => {
               type="button"
               className={cn(
                 "flex-1 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
-                authMode === "signup"
+                authMode === "join"
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-400 hover:text-slate-600"
               )}
-              onClick={() => setAuthMode("signup")}
+              onClick={() => setAuthMode("join")}
             >
-              Sign Up
+              Join Ministry
             </button>
           </div>
 
@@ -343,16 +364,37 @@ const AuthPage = () => {
                 {loading ? "Signing in..." : "Continue"} {!loading && <ArrowRight className="h-4 w-4 ml-1.5" />}
               </Button>
             </form>
+          ) : joinSubmitted ? (
+            <div className="text-center py-6 space-y-3">
+              <CheckCircle2 className="h-14 w-14 mx-auto text-green-500" />
+              <h2 className="text-lg font-bold text-slate-900">Request sent!</h2>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Your request to join <span className="font-semibold text-slate-700">{joinedBranchName}</span> has
+                been sent to the branch leader and the ministry's super admin for review. Once approved, your
+                leader will share your sign-in details.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => {
+                  setJoinSubmitted(false);
+                  setAuthMode("signin");
+                }}
+              >
+                <ArrowLeft className="h-4 w-4 mr-1.5" /> Back to Sign In
+              </Button>
+            </div>
           ) : (
-            <form onSubmit={handleSignUp} className="space-y-3.5">
+            <form onSubmit={handleJoinRequest} className="space-y-3.5">
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Display Name</Label>
+                <Label className="text-slate-600 text-xs font-medium">Full Name</Label>
                 <GlassInput
                   icon={User}
                   type="text"
                   placeholder="Your full name"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  value={joinName}
+                  onChange={(e) => setJoinName(e.target.value)}
                   required
                 />
               </div>
@@ -362,39 +404,58 @@ const AuthPage = () => {
                   icon={Mail}
                   type="email"
                   placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={joinEmail}
+                  onChange={(e) => setJoinEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Password</Label>
-                <div className="relative">
-                  <GlassInput
-                    icon={Lock}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+                <Label className="text-slate-600 text-xs font-medium">Phone (optional)</Label>
+                <GlassInput
+                  icon={Phone}
+                  type="tel"
+                  placeholder="+1 (555) 000-0000"
+                  value={joinPhone}
+                  onChange={(e) => setJoinPhone(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-600 text-xs font-medium">Branch you'd love to join</Label>
+                <Select value={joinBranchId} onValueChange={setJoinBranchId}>
+                  <SelectTrigger className="h-12 bg-slate-50 border-slate-200 rounded-xl text-sm focus:border-blue-400 focus:ring-blue-100">
+                    <SelectValue placeholder={branches.length ? "Choose a branch" : "No branches available yet"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.name}
+                        {b.location ? ` — ${b.location}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-slate-600 text-xs font-medium">Why would you like to join? (optional)</Label>
+                <Textarea
+                  placeholder="Tell us a little about yourself..."
+                  value={joinMessage}
+                  onChange={(e) => setJoinMessage(e.target.value)}
+                  rows={3}
+                  className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-400 focus:ring-blue-100 focus:ring-1 transition-all duration-300 rounded-xl text-sm"
+                />
               </div>
               <Button
                 type="submit"
                 className="w-full h-12 bg-[#111827] hover:bg-[#1f2937] text-white rounded-xl font-semibold text-sm transition-all duration-300"
                 disabled={loading}
               >
-                {loading ? "Creating account..." : "Continue"} {!loading && <ArrowRight className="h-4 w-4 ml-1.5" />}
+                {loading ? "Sending..." : "Send Join Request"} {!loading && <ArrowRight className="h-4 w-4 ml-1.5" />}
               </Button>
+              <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                Your request goes to the branch leader and our super admin. There is no self sign-up — approved
+                members receive their sign-in details from their leader.
+              </p>
             </form>
           )}
 

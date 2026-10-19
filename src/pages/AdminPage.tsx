@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { callAdminUsersApi } from "@/lib/adminUsers";
+import { callAdminUsersApi, generatePassword } from "@/lib/adminUsers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -302,15 +302,6 @@ const AdminPage = () => {
   // ── Branch admin sign-ons (super admin only) ──
   const resetBaForm = () => {
     setBaName(""); setBaEmail(""); setBaBranchIds([]); setBaPermissions([]); setBaActive(true); setEditingBaId(null); setBaPassword("");
-  };
-
-  const generatePassword = () => {
-    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-    const bytes = new Uint32Array(12);
-    crypto.getRandomValues(bytes);
-    let out = "";
-    for (let i = 0; i < bytes.length; i++) out += chars[bytes[i] % chars.length];
-    return out;
   };
 
   const handleSaveBranchAdmin = async () => {

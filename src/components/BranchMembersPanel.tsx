@@ -20,9 +20,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { CheckCircle2, Mail, Phone, Plus, Trash2, UserPlus, Users } from "lucide-react";
+import { CheckCircle2, KeyRound, Mail, Phone, Plus, Trash2, UserPlus, Users } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { callAdminUsersApi, generatePassword } from "@/lib/adminUsers";
 import {
   branchNameFor,
   buildMemberRoster,
@@ -57,6 +59,7 @@ const emptyForm = (branchId: string) => ({
 
 const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPanelProps) => {
   const { toast } = useToast();
+  const { isSuperAdmin } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
@@ -101,7 +104,33 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
     onChange?.();
   };
 
+  /**
+   * Create the sign-in for someone who is a member but has no account yet.
+   * There is no self sign-up, so this is how an approved member gets in. Only
+   * super admins may — the account service checks the role server-side — and
+   * the generated password is shown once so it can be shared securely.
+   */
+  const createSignIn = async (
+    email: string,
+    name: string,
+  ): Promise<"created" | "exists" | "denied" | "failed"> => {
+    if (!isSuperAdmin) return "denied";
+    const password = generatePassword();
+    const result = await callAdminUsersApi({ action: "create", email, password });
+    if (result.error) {
+      if (/already|exists|registered/i.test(result.error)) return "exists";
+      toast({ title: "Could not create the sign-in", description: result.error, variant: "destructive" });
+      return "failed";
+    }
+    toast({
+      title: "Sign-in created",
+      description: `${name} can sign in with ${email} — password: ${password}. Share it securely and ask them to change it after signing in.`,
+    });
+    return "created";
+  };
+
   const setRequestStatus = async (id: string, status: "approved" | "rejected") => {
+    const request = requests.find((r) => r.id === id);
     setBusyId(id);
     const { error } = await supabase.from("membership_requests").update({ status }).eq("id", id);
     setBusyId(null);
@@ -110,13 +139,26 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
       return;
     }
     reload();
-    toast({
-      title: status === "approved" ? "Member approved" : "Request rejected",
-      description:
-        status === "approved"
-          ? "They can now sign up with this email and will be linked to the branch automatically."
-          : undefined,
-    });
+    if (status === "rejected") {
+      toast({ title: "Request rejected" });
+      return;
+    }
+    toast({ title: "Member approved" });
+    if (request?.email) {
+      const outcome = await createSignIn(request.email, memberDisplayName(request));
+      if (outcome === "denied") {
+        toast({
+          title: "Sign-in still needed",
+          description: "A super admin creates the sign-in from Admin \u2192 Members.",
+        });
+      } else if (outcome === "exists") {
+        toast({
+          title: "Already has a sign-in",
+          description: `${request.email} can sign in with their existing password; the branch membership is linked automatically.`,
+        });
+      }
+    }
+    reload();
   };
 
   /** A member added by an admin is an already-approved join request. */
@@ -145,12 +187,20 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
       return;
     }
     setAddOpen(false);
+    const addedName = form.name.trim();
+    const addedEmail = form.email.trim().toLowerCase();
     setForm(emptyForm(defaultBranchId));
     reload();
-    toast({
-      title: "Member added",
-      description: `${form.name.trim()} is now a member. They are linked to the branch when they sign up with ${form.email.trim()}.`,
-    });
+    toast({ title: "Member added", description: `${addedName} is now a member of this branch.` });
+    const outcome = await createSignIn(addedEmail, addedName);
+    if (outcome === "denied") {
+      toast({ description: "A super admin can create their sign-in from the roster." });
+    } else if (outcome === "exists") {
+      toast({
+        title: "Already has a sign-in",
+        description: `${addedEmail} can sign in with their existing password; the branch membership is linked automatically.`,
+      });
+    }
   };
 
   const handleRoleChange = async (member: RosterMember, role: string) => {
@@ -284,7 +334,7 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
                   <Textarea id="new-member-note" rows={2} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Anything the branch should know about this member" />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  The member is added immediately. When they sign up with this email, their account is linked to the branch automatically.
+                  The member is added immediately. If they have no account yet, a super admin can create their sign-in from the roster — the password is shown once to share securely.
                 </p>
                 <Button onClick={handleAddMember} className="w-full" disabled={saving}>
                   <Plus className="h-4 w-4 mr-2" /> {saving ? "Adding..." : "Add Member"}
@@ -352,6 +402,21 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
                       </Select>
                     ) : (
                       <Badge className="bg-green-100 text-green-800 border-transparent">Approved</Badge>
+                    )}
+                    {member.source === "request" && member.awaitingSignUp && member.email && isSuperAdmin && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busyId === member.id}
+                        onClick={async () => {
+                          setBusyId(member.id);
+                          await createSignIn(member.email, member.name);
+                          setBusyId(null);
+                          reload();
+                        }}
+                      >
+                        <KeyRound className="h-4 w-4 mr-1" /> Create sign-in
+                      </Button>
                     )}
                     <Button
                       size="sm"
