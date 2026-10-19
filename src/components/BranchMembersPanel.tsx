@@ -161,7 +161,7 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
     }
     toast({ title: "Member approved" });
     if (request?.email) {
-      const outcome = await createSignIn(request.email, memberDisplayName(request));
+      const outcome = await createSignIn(request.email, memberDisplayName(request), request.branch_id);
       if (outcome === "denied") {
         toast({
           title: "Sign-in still needed",
@@ -426,7 +426,7 @@ const BranchMembersPanel = ({ branchIds, branches, onChange }: BranchMembersPane
                         disabled={busyId === member.id}
                         onClick={async () => {
                           setBusyId(member.id);
-                          await createSignIn(member.email, member.name);
+                          await createSignIn(member.email, member.name, member.branchId);
                           setBusyId(null);
                           reload();
                         }}
