@@ -71,11 +71,11 @@ const ContactPage = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <Phone className="h-5 w-5 text-green-600" /> Phone
+                  <Phone className="h-5 w-5 text-green-700" /> Phone
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <a href="tel:+15029364279" className="text-green-600 hover:underline">
+                <a href="tel:+15029364279" className="text-green-700 hover:underline">
                   +1 (502) 936-4279
                 </a>
               </CardContent>
@@ -138,6 +138,7 @@ const ContactPage = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Your name"
+                      autoComplete="name"
                       required
                     />
                   </div>
@@ -149,6 +150,7 @@ const ContactPage = () => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
+                      autoComplete="email"
                       required
                     />
                   </div>
@@ -160,12 +162,14 @@ const ContactPage = () => {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+1 (555) 000-0000"
+                      autoComplete="tel"
+                      inputMode="tel"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Purpose of Contact *</Label>
-                    <Select value={purpose} onValueChange={setPurpose} required>
-                      <SelectTrigger>
+                    <Label htmlFor="contact-purpose">Purpose of Contact *</Label>
+                    <Select value={purpose} onValueChange={setPurpose}>
+                      <SelectTrigger id="contact-purpose" aria-required="true">
                         <SelectValue placeholder="Select a purpose" />
                       </SelectTrigger>
                       <SelectContent>
@@ -192,6 +196,11 @@ const ContactPage = () => {
                   <Button type="submit" size="lg" className="w-full" disabled={submitting || !purpose}>
                     {submitting ? "Sending..." : "Send Message"}
                   </Button>
+                  {!purpose && (
+                    <p className="text-center text-xs text-muted-foreground" aria-live="polite">
+                      Choose a purpose of contact to enable sending.
+                    </p>
+                  )}
                 </form>
               </CardContent>
             </Card>

@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ErrorState } from "@/components/PageStates";
 import {
   ArrowLeft,
   MapPin,
@@ -108,6 +109,7 @@ const BranchesPage = () => {
   const [branches, setBranches] = useState<BranchWithStats[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     fetchBranches();
@@ -115,11 +117,18 @@ const BranchesPage = () => {
 
   const fetchBranches = async () => {
     setLoading(true);
-    const { data: branchData } = await supabase
+    setLoadError(false);
+    const { data: branchData, error: branchError } = await supabase
       .from("branches")
       .select("*")
       .eq("active", true)
       .order("name");
+
+    if (branchError) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
 
     if (branchData) {
       const branchesWithStats = await Promise.all(
@@ -181,12 +190,20 @@ const BranchesPage = () => {
         </div>
 
         <div className="relative max-w-md mx-auto mb-10">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+            aria-hidden="true"
+          />
+          <label htmlFor="branch-search" className="sr-only">
+            Search branches by name or location
+          </label>
           <Input
+            id="branch-search"
+            type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search branches by name or location..."
-            className="pl-11 py-6 rounded-full bg-white border-slate-200 shadow-sm focus:shadow-md transition-shadow"
+            className="pl-11 py-6 rounded-full bg-white border-slate-200 shadow-sm focus:shadow-md transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
           />
         </div>
 
@@ -195,10 +212,16 @@ const BranchesPage = () => {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4" />
             <p className="text-slate-500">Loading branches...</p>
           </div>
+        ) : loadError ? (
+          <ErrorState
+            title="Couldn't load branches"
+            description="We couldn't reach our branch directory. Check your connection and try again."
+            onRetry={fetchBranches}
+          />
         ) : filtered.length === 0 ? (
           <Card className="rounded-3xl border-0 shadow-lg">
             <CardContent className="py-16 text-center">
-              <Building2 className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+              <Building2 className="h-16 w-16 mx-auto mb-4 text-slate-300" aria-hidden="true" />
               <h2 className="text-2xl font-bold text-slate-900 mb-2">
                 {branches.length === 0 ? "No Branches Yet" : "No Branches Found"}
               </h2>

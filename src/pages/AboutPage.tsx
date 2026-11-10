@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/PageStates";
 import { ArrowLeft, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound, HeartHandshake, Trophy, Music, Mic, Star, Sparkles } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTeamFounders } from "@/hooks/useContent";
@@ -194,6 +196,30 @@ const AboutPage = () => {
         <section className="mb-20">
           <Badge className="mb-3">Leadership</Badge>
           <h2 className="text-3xl font-bold mb-8">Our Founders & Team</h2>
+          {foundersLoading ? (
+            <div
+              role="status"
+              aria-live="polite"
+              aria-label="Loading leadership profiles"
+              className="grid sm:grid-cols-2 md:grid-cols-3 gap-6"
+            >
+              {[1, 2, 3].map((i) => (
+                <Card key={i}>
+                  <CardContent className="pt-6 text-center space-y-3">
+                    <Skeleton className="w-16 h-16 rounded-full mx-auto" />
+                    <Skeleton className="h-4 w-3/4 mx-auto" />
+                    <Skeleton className="h-3 w-1/2 mx-auto" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : founders.length === 0 ? (
+            <EmptyState
+              icon={UsersRound}
+              title="Leadership profiles coming soon"
+              description="We're preparing the profiles of the founders and team members."
+            />
+          ) : (
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
             {founders.map((m) => (
               <Card key={m.id} className="group relative hover:shadow-md transition-shadow">
@@ -220,6 +246,7 @@ const AboutPage = () => {
               </Card>
             ))}
           </div>
+          )}
         </section>
 
         {/* CTA */}

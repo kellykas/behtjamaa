@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ErrorState, LoadingState } from "@/components/PageStates";
 import { Calendar, Radio, ArrowLeft, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -36,19 +37,29 @@ const Countdown = ({ target }: { target: string }) => {
 const LivePage = () => {
   const [events, setEvents] = useState<Tables<"live_events">[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
+    let cancelled = false;
     const fetchEvents = async () => {
-      const { data } = await supabase
+      setLoading(true);
+      setLoadError(false);
+      const { data, error } = await supabase
         .from("live_events")
         .select("*")
         .order("scheduled_at", { ascending: true });
+      if (cancelled) return;
       setEvents(data || []);
+      setLoadError(Boolean(error));
       setLoading(false);
     };
     fetchEvents();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   const liveNow = events.find((e) => e.is_live);
   const now = Date.now();
@@ -97,7 +108,13 @@ const LivePage = () => {
         </h2>
 
         {loading ? (
-          <p className="text-muted-foreground">Loading events...</p>
+          <LoadingState label="Loading events…" />
+        ) : loadError ? (
+          <ErrorState
+            title="Couldn't load events"
+            description="We couldn't reach the live schedule. Check your connection and try again."
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
         ) : upcomingEvents.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">

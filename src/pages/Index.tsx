@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState, ErrorState } from "@/components/PageStates";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -37,8 +38,8 @@ const HeroSection = () => {
         <div className="absolute inset-0 bg-[#1a2744]" />
       )}
 
-      {/* Solid overlay for text readability */}
-      <div className="absolute inset-0 bg-black/55" />
+      {/* Overlay: darker toward the bottom so the copy stays legible over busy photos */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/60 to-black/35" />
 
       {/* Content — bottom-aligned with clearance for navbar + bottom nav */}
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 pt-14 sm:pt-20 md:pt-44 pb-28 md:pb-20 flex flex-col justify-end">
@@ -67,7 +68,7 @@ const HeroSection = () => {
           <h2 className="text-xl sm:text-xl md:text-3xl font-bold text-amber-400 mb-5 sm:mb-5 md:mb-6 md:tracking-wide uppercase leading-snug">
             Boyz Evangelists of the Holy Trinity
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-white/70 mb-6 sm:mb-8 max-w-lg leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-white/90 mb-6 sm:mb-8 max-w-lg leading-relaxed">
             Winning souls for the Glory of our Lord Jesus Christ through Arts, empowering youths for a life of discipleship, ministry and service.
           </p>
         </div>
@@ -81,10 +82,10 @@ const HeroSection = () => {
                 <button
                   key={tab}
                   onClick={() => setSearchTab(tab)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-semibold capitalize transition-all ${
+                  className={`min-h-9 px-4 py-2 rounded-full text-xs font-semibold capitalize transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
                     searchTab === tab
                       ? "bg-white text-slate-900 shadow-sm"
-                      : "text-white/60 hover:text-white hover:bg-white/10"
+                      : "text-white/80 hover:text-white hover:bg-white/10"
                   }`}
                 >
                   {tab}
@@ -98,6 +99,7 @@ const HeroSection = () => {
                 <Search className="h-5 w-5 text-slate-400 shrink-0" />
                 <input
                   type="text"
+                  aria-label={`Search ${searchTab}`}
                   placeholder={
                     searchTab === "events"
                       ? "Search events, workshops, gatherings..."
@@ -126,14 +128,14 @@ const HeroSection = () => {
 
           {/* Quick links */}
           <div className="flex flex-wrap gap-2 mt-4 pb-2 sm:pb-0">
-            <Link to="/branches" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
-              <Building2 className="h-3 w-3" /> Find a Branch
+            <Link to="/branches" className="inline-flex items-center gap-1.5 min-h-9 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/90 hover:text-white text-xs font-medium px-4 py-2 rounded-full border border-white/20 transition-all">
+              <Building2 className="h-3.5 w-3.5" /> Find a Branch
             </Link>
-            <a href="#featured" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
-              <Play className="h-3 w-3" /> Listen Now
+            <a href="#featured" className="inline-flex items-center gap-1.5 min-h-9 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/90 hover:text-white text-xs font-medium px-4 py-2 rounded-full border border-white/20 transition-all">
+              <Play className="h-3.5 w-3.5" /> Listen Now
             </a>
-            <Link to="/auth" className="inline-flex items-center gap-1.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/80 hover:text-white text-xs font-medium px-3 py-1.5 rounded-full border border-white/10 transition-all">
-              <Users className="h-3 w-3" /> Join Us
+            <Link to="/auth" className="inline-flex items-center gap-1.5 min-h-9 bg-white/10 hover:bg-white/20 backdrop-blur-sm text-white/90 hover:text-white text-xs font-medium px-4 py-2 rounded-full border border-white/20 transition-all">
+              <Users className="h-3.5 w-3.5" /> Join Us
             </Link>
           </div>
         </div>
@@ -243,18 +245,29 @@ const EventsPreview = () => {
   const [touchDelta, setTouchDelta] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     supabase
       .from("branch_events")
       .select("*, branches!inner(name, slug)")
       .in("event_status", ["upcoming", "live"])
       .order("scheduled_at", { ascending: true })
       .limit(8)
-      .then(({ data }) => {
+      .then(({ data, error: fetchError }) => {
+        if (cancelled) return;
         setEvents((data as any) || []);
+        setLoadError(Boolean(fetchError));
         setLoading(false);
       });
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   const goNext = () => {
     if (activeIdx < events.length - 1) setActiveIdx((i) => i + 1);
@@ -310,6 +323,18 @@ const EventsPreview = () => {
               </div>
             ))}
           </div>
+        ) : loadError ? (
+          <ErrorState
+            title="Couldn't load upcoming events"
+            description="Check your connection and try again."
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
+        ) : events.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="No upcoming events yet"
+            description="New gatherings are added regularly. Follow us on WhatsApp for announcements."
+          />
         ) : (
           <div
             className="relative"
@@ -390,7 +415,7 @@ const EventsPreview = () => {
                               <Play className="h-4 w-4" /> Watch Live
                             </a>
                           )}
-                          <Link to={`/branches/${(event as any).branches?.slug || ""}/events/${event.id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:gap-3 transition-all">
+                          <Link to={`/branches/${(event as any).branches?.slug || ""}/events/${event.id}`} className="inline-flex min-h-9 items-center gap-2 -my-2 py-2 text-sm font-semibold text-blue-700 hover:gap-3 transition-all">
                             View Event <ArrowRight className="h-4 w-4" />
                           </Link>
                         </div>
@@ -403,12 +428,12 @@ const EventsPreview = () => {
 
             {/* Arrows */}
             {activeIdx > 0 && (
-              <button onClick={goPrev} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100">
+              <button type="button" onClick={goPrev} aria-label="Previous" className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
                 <ChevronLeft className="h-5 w-5 text-slate-700" />
               </button>
             )}
             {activeIdx < events.length - 1 && (
-              <button onClick={goNext} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100">
+              <button type="button" onClick={goNext} aria-label="Next" className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
                 <ChevronRight className="h-5 w-5 text-slate-700" />
               </button>
             )}
@@ -419,15 +444,22 @@ const EventsPreview = () => {
                 {events.map((_, i) => (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => setActiveIdx(i)}
-                    className="rounded-full transition-all"
-                    style={{
-                      width: i === activeIdx ? 32 : 8,
-                      height: 8,
-                      background: i === activeIdx ? "#0f172a" : "#e2e8f0",
-                      transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-                    }}
-                  />
+                    aria-label={`Go to slide ${i + 1}`}
+                    aria-current={i === activeIdx ? "true" : undefined}
+                    className="flex h-6 w-6 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                  >
+                    <span
+                      className="rounded-full transition-all"
+                      style={{
+                        width: i === activeIdx ? 32 : 8,
+                        height: 8,
+                        background: i === activeIdx ? "#0f172a" : "#cbd5e1",
+                        transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+                      }}
+                    />
+                  </button>
                 ))}
               </div>
             )}
@@ -437,7 +469,7 @@ const EventsPreview = () => {
         {!loading && events.length > 0 && (
           <div className="text-center mt-10">
             <Link to="/branches">
-              <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-full px-8 py-6 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
+              <Button className="gap-2 min-h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-full px-8 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
                 Explore All Events <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -457,18 +489,29 @@ const BranchesPreview = () => {
   const [touchDelta, setTouchDelta] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
+  const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     supabase
       .from("branches")
       .select("*")
       .eq("active", true)
       .order("name")
       .limit(8)
-      .then(({ data }) => {
+      .then(({ data, error: fetchError }) => {
+        if (cancelled) return;
         setBranches(data || []);
+        setLoadError(Boolean(fetchError));
         setLoading(false);
       });
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   const goNext = () => {
     if (activeIdx < branches.length - 1) setActiveIdx((i) => i + 1);
@@ -522,6 +565,18 @@ const BranchesPreview = () => {
               </div>
             ))}
           </div>
+        ) : loadError ? (
+          <ErrorState
+            title="Couldn't load our branches"
+            description="Check your connection and try again."
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
+        ) : branches.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title="No branches published yet"
+            description="Our branch network is growing. Check back soon to find a community near you."
+          />
         ) : (
           <div
             className="relative"
@@ -599,12 +654,12 @@ const BranchesPreview = () => {
 
             {/* Arrows */}
             {activeIdx > 0 && (
-              <button onClick={goPrev} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100">
+              <button type="button" onClick={goPrev} aria-label="Previous" className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
                 <ChevronLeft className="h-5 w-5 text-slate-700" />
               </button>
             )}
             {activeIdx < branches.length - 1 && (
-              <button onClick={goNext} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100">
+              <button type="button" onClick={goNext} aria-label="Next" className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 rounded-full bg-white shadow-xl flex items-center justify-center hover:scale-110 transition-all border border-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
                 <ChevronRight className="h-5 w-5 text-slate-700" />
               </button>
             )}
@@ -615,15 +670,22 @@ const BranchesPreview = () => {
                 {branches.map((_, i) => (
                   <button
                     key={i}
+                    type="button"
                     onClick={() => setActiveIdx(i)}
-                    className="rounded-full transition-all"
-                    style={{
-                      width: i === activeIdx ? 32 : 8,
-                      height: 8,
-                      background: i === activeIdx ? "#0f172a" : "#e2e8f0",
-                      transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-                    }}
-                  />
+                    aria-label={`Go to slide ${i + 1}`}
+                    aria-current={i === activeIdx ? "true" : undefined}
+                    className="flex h-6 w-6 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900"
+                  >
+                    <span
+                      className="rounded-full transition-all"
+                      style={{
+                        width: i === activeIdx ? 32 : 8,
+                        height: 8,
+                        background: i === activeIdx ? "#0f172a" : "#cbd5e1",
+                        transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+                      }}
+                    />
+                  </button>
                 ))}
               </div>
             )}
@@ -633,7 +695,7 @@ const BranchesPreview = () => {
         {!loading && branches.length > 0 && (
           <div className="text-center mt-10">
             <Link to="/branches">
-              <Button className="gap-2 bg-slate-900 hover:bg-slate-800 text-white rounded-full px-8 py-6 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
+              <Button className="gap-2 min-h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-full px-8 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
                 View All Branches <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -741,21 +803,34 @@ const PodcastPlayerBar = ({
         <p className="text-white/50 text-xs truncate">{episode.category}</p>
       </div>
       <div className="flex items-center gap-1">
-        <button onClick={onPrev} className="w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all">
-          <ChevronLeft className="h-4 w-4" />
+        <button
+          type="button"
+          onClick={onPrev}
+          aria-label="Previous episode"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
         </button>
         <button
+          type="button"
           onClick={onToggle}
-          className="w-11 h-11 rounded-full flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
+          aria-label={playing ? "Pause episode" : "Play episode"}
+          aria-pressed={playing}
+          className="w-11 h-11 rounded-full flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
           style={{
             background: playing ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.15)",
             border: "1px solid rgba(255,255,255,0.15)",
           }}
         >
-          {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 fill-white" />}
+          {playing ? <Pause className="h-5 w-5" aria-hidden="true" /> : <Play className="h-5 w-5 fill-white" aria-hidden="true" />}
         </button>
-        <button onClick={onNext} className="w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all">
-          <ChevronRight className="h-4 w-4" />
+        <button
+          type="button"
+          onClick={onNext}
+          aria-label="Next episode"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-white/50 hover:text-white hover:bg-white/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -950,15 +1025,23 @@ const FeaturedEpisodes = () => {
             {episodes.map((_, i) => (
               <button
                 key={i}
+                type="button"
                 onClick={() => goTo(i)}
-                className="rounded-full transition-all duration-400"
-                style={{
-                  width: i === activeIdx ? 28 : 8,
-                  height: 8,
-                  background: i === activeIdx ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
-                  transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
-                }}
-              />
+                aria-label={`Show episode ${i + 1}`}
+                aria-current={i === activeIdx ? "true" : undefined}
+                className="inline-flex h-6 w-7 items-center justify-center rounded-full transition-colors duration-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+              >
+                <span
+                  aria-hidden="true"
+                  className="rounded-full"
+                  style={{
+                    width: i === activeIdx ? 28 : 8,
+                    height: 8,
+                    background: i === activeIdx ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.25)",
+                    transition: "all 400ms cubic-bezier(0.34, 1.56, 0.64, 1)",
+                  }}
+                />
+              </button>
             ))}
           </div>
         </div>
@@ -1100,23 +1183,30 @@ const Footer = () => (
 
         <div>
           <h4 className="font-semibold text-lg mb-4">Quick Links</h4>
-          <ul className="space-y-2 text-sm text-primary-foreground/70">
-            <li><Link to="/about" className="hover:text-primary-foreground transition-colors">About Us</Link></li>
-            <li><Link to="/services" className="hover:text-primary-foreground transition-colors">Our Services</Link></li>
-            <li><Link to="/contact" className="hover:text-primary-foreground transition-colors">Contact</Link></li>
-            <li><Link to="/donate" className="hover:text-primary-foreground transition-colors">Donate</Link></li>
-            <li><Link to="/live" className="hover:text-primary-foreground transition-colors">Live Broadcast</Link></li>
-            <li><Link to="/prayer" className="hover:text-primary-foreground transition-colors">Prayer Requests</Link></li>
-            <li><Link to="/members" className="hover:text-primary-foreground transition-colors">Member Portal</Link></li>
-            <li><Link to="/auth" className="hover:text-primary-foreground transition-colors">Sign In</Link></li>
+          <ul className="space-y-1 text-sm text-primary-foreground/70">
+            <li><Link to="/about" className="inline-block py-1.5 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:underline">About Us</Link></li>
+            <li><Link to="/services" className="inline-block py-1.5 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:underline">Our Services</Link></li>
+            <li><Link to="/contact" className="inline-block py-1.5 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:underline">Contact</Link></li>
+            <li><Link to="/donate" className="inline-block py-1.5 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:underline">Donate</Link></li>
+            <li><Link to="/live" className="inline-block py-1.5 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:underline">Live Broadcast</Link></li>
+            <li><Link to="/prayer" className="inline-block py-1.5 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:underline">Prayer Requests</Link></li>
+            <li><Link to="/members" className="inline-block py-1.5 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:underline">Member Portal</Link></li>
+            <li><Link to="/auth" className="inline-block py-1.5 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:underline">Sign In</Link></li>
           </ul>
         </div>
 
         <div>
           <h4 className="font-semibold text-lg mb-4">Connect With Us</h4>
           <ul className="space-y-2 text-sm text-primary-foreground/70 mb-5">
-            <li>\u2709\ufe0f contact@behtjamaa.com</li>
-            <li>\ud83d\udccd Lubumbashi, DR Congo</li>
+            <li className="flex items-center gap-2">
+              <Mail className="h-4 w-4 shrink-0" />
+              <a href="mailto:contact@behtjamaa.com" className="hover:text-primary-foreground hover:underline transition-colors truncate">
+                contact@behtjamaa.com
+              </a>
+            </li>
+            <li className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0" /> Lubumbashi, DR Congo
+            </li>
           </ul>
           <div className="flex gap-3">
             {[
@@ -1133,7 +1223,7 @@ const Footer = () => (
         </div>
       </div>
 
-      <div className="border-t border-primary-foreground/10 mt-10 pt-6 text-center text-sm text-primary-foreground/50">
+      <div className="border-t border-primary-foreground/15 mt-10 pt-6 text-center text-sm text-primary-foreground/70">
         © {new Date().getFullYear()} Boys Evangelists of the Holy Trinity (BEHT JAMAA). All rights reserved.
       </div>
     </div>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { ErrorState, LoadingState } from "@/components/PageStates";
 import { Switch } from "@/components/ui/switch";
 import { Heart, ArrowLeft, Send } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -22,15 +23,24 @@ const PrayerPage = () => {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [prayedThisSession, setPrayedThisSession] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const fetchRequests = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("prayer_requests")
       .select("*")
       .order("created_at", { ascending: false });
+    if (error) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
     setRequests(data || []);
+    setLoadError(false);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -130,10 +140,21 @@ const PrayerPage = () => {
         </Card>
 
         <h2 className="text-2xl font-semibold mb-4">Community Prayers</h2>
-        {requests.length === 0 ? (
+        {loading ? (
+          <LoadingState label="Loading prayer requests…" />
+        ) : loadError ? (
+          <ErrorState
+            title="Couldn't load prayer requests"
+            description="We couldn't reach the prayer wall. Check your connection and try again."
+            onRetry={() => {
+              setLoading(true);
+              fetchRequests();
+            }}
+          />
+        ) : requests.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground" aria-hidden="true" />
               <p className="text-muted-foreground text-lg">No prayer requests yet.</p>
               <p className="text-muted-foreground">Be the first to share.</p>
             </CardContent>

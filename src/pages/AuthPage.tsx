@@ -215,15 +215,17 @@ const AuthPage = () => {
 
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Email</Label>
-                <GlassInput
-                  icon={Mail}
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                  <Label htmlFor="forgot-email" className="text-slate-600 text-xs font-medium">Email</Label>
+                  <GlassInput
+                    id="forgot-email"
+                    icon={Mail}
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
               </div>
               <Button
                 type="submit"
@@ -317,22 +319,24 @@ const AuthPage = () => {
           {authMode === "signin" ? (
             <form onSubmit={handleSignIn} className="space-y-3.5">
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Email</Label>
-                <GlassInput
-                  icon={Mail}
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                  <Label htmlFor="signin-email" className="text-slate-600 text-xs font-medium">Email</Label>
+                  <GlassInput
+                    id="signin-email"
+                    icon={Mail}
+                    type="email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-slate-600 text-xs font-medium">Password</Label>
+                  <Label htmlFor="signin-password" className="text-slate-600 text-xs font-medium">Password</Label>
                   <button
                     type="button"
-                    className="text-[11px] text-blue-500 hover:text-blue-600 font-medium"
+                    className="text-[11px] text-blue-500 hover:text-blue-600 font-medium rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                     onClick={() => setShowForgotPassword(true)}
                   >
                     Forgot password?
@@ -340,8 +344,10 @@ const AuthPage = () => {
                 </div>
                 <div className="relative">
                   <GlassInput
+                    id="signin-password"
                     icon={Lock}
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -349,10 +355,12 @@ const AuthPage = () => {
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                   </button>
                 </div>
               </div>
@@ -388,10 +396,12 @@ const AuthPage = () => {
           ) : (
             <form onSubmit={handleJoinRequest} className="space-y-3.5">
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Full Name</Label>
+                <Label htmlFor="join-name" className="text-slate-600 text-xs font-medium">Full Name</Label>
                 <GlassInput
+                  id="join-name"
                   icon={User}
                   type="text"
+                  autoComplete="name"
                   placeholder="Your full name"
                   value={joinName}
                   onChange={(e) => setJoinName(e.target.value)}
@@ -399,10 +409,12 @@ const AuthPage = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Email</Label>
+                <Label htmlFor="join-email" className="text-slate-600 text-xs font-medium">Email</Label>
                 <GlassInput
+                  id="join-email"
                   icon={Mail}
                   type="email"
+                  autoComplete="email"
                   placeholder="you@example.com"
                   value={joinEmail}
                   onChange={(e) => setJoinEmail(e.target.value)}
@@ -410,19 +422,22 @@ const AuthPage = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Phone (optional)</Label>
+                <Label htmlFor="join-phone" className="text-slate-600 text-xs font-medium">Phone (optional)</Label>
                 <GlassInput
+                  id="join-phone"
                   icon={Phone}
                   type="tel"
+                  autoComplete="tel"
+                  inputMode="tel"
                   placeholder="+1 (555) 000-0000"
                   value={joinPhone}
                   onChange={(e) => setJoinPhone(e.target.value)}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Branch you'd love to join</Label>
+                <Label htmlFor="join-branch" className="text-slate-600 text-xs font-medium">Branch you'd love to join</Label>
                 <Select value={joinBranchId} onValueChange={setJoinBranchId}>
-                  <SelectTrigger className="h-12 bg-slate-50 border-slate-200 rounded-xl text-sm focus:border-blue-400 focus:ring-blue-100">
+                  <SelectTrigger id="join-branch" className="h-12 bg-slate-50 border-slate-200 rounded-xl text-sm focus:border-blue-400 focus:ring-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">
                     <SelectValue placeholder={branches.length ? "Choose a branch" : "No branches available yet"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -436,8 +451,9 @@ const AuthPage = () => {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-slate-600 text-xs font-medium">Why would you like to join? (optional)</Label>
+                <Label htmlFor="join-message" className="text-slate-600 text-xs font-medium">Why would you like to join? (optional)</Label>
                 <Textarea
+                  id="join-message"
                   placeholder="Tell us a little about yourself..."
                   value={joinMessage}
                   onChange={(e) => setJoinMessage(e.target.value)}

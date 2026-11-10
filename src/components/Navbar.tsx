@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useSiteSettings } from "@/hooks/useContent";
@@ -35,6 +35,81 @@ const NAV_ITEMS: NavItem[] = [
 
 const EASE_SPRING = "cubic-bezier(0.34, 1.56, 0.64, 1)";
 const EASE_SMOOTH = "cubic-bezier(0.4, 0, 0.2, 1)";
+
+interface DockItemProps {
+  to: string;
+  label: string;
+  icon: React.ElementType;
+  active: boolean;
+  compact: boolean;
+}
+
+/* Module-level so it is not remounted on every Navbar render */
+const DockItem = memo(({ to, label, icon: Icon, active, compact }: DockItemProps) => (
+  <Link
+    to={to}
+    aria-current={active ? "page" : undefined}
+    className="nav-item group relative flex flex-col items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+    style={{
+      padding: compact ? "6px 10px" : "8px 16px",
+      minWidth: compact ? 40 : 64,
+      gap: compact ? 0 : 2,
+      transition: `padding 400ms ${EASE_SPRING}, min-width 400ms ${EASE_SPRING}, gap 300ms ${EASE_SMOOTH}`,
+    }}
+  >
+    <div
+      className="absolute inset-0 rounded-full transition-all duration-300 ease-out"
+      style={{
+        background: active ? "rgba(239,246,255,1)" : undefined,
+        transform: "scale(1)",
+        transition: `background 250ms ${EASE_SMOOTH}, transform 250ms ${EASE_SPRING}`,
+      }}
+    />
+    <div
+      className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out"
+      style={{
+        background: active ? "rgba(219,234,254,0.5)" : "rgba(243,244,246,0.6)",
+      }}
+    />
+    <div className="relative z-10 flex flex-col items-center" style={{ gap: compact ? 0 : 2 }}>
+      <Icon
+        className="transition-all"
+        style={{
+          width: compact ? 16 : 20,
+          height: compact ? 16 : 20,
+          color: active ? "#2563eb" : "#6b7280",
+          transition: `width 400ms ${EASE_SPRING}, height 400ms ${EASE_SPRING}, color 200ms ease`,
+          transform: "scale(1)",
+        }}
+      />
+      <span
+        className="text-[10px] font-semibold leading-none whitespace-nowrap overflow-hidden"
+        style={{
+          maxHeight: compact ? 0 : 14,
+          opacity: compact ? 0 : 1,
+          maxWidth: compact ? 0 : 80,
+          marginBottom: compact ? 0 : 1,
+          transition: `max-height 250ms ${EASE_SMOOTH}, opacity 200ms ease, max-width 400ms ${EASE_SPRING}, margin 300ms ${EASE_SMOOTH}`,
+          color: active ? "#2563eb" : "#6b7280",
+        }}
+      >
+        {label}
+      </span>
+    </div>
+    <div
+      className="relative z-10 bg-blue-600 rounded-full"
+      style={{
+        width: active ? (compact ? 8 : 16) : 0,
+        height: 2,
+        marginTop: 2,
+        opacity: active ? 1 : 0,
+        transform: active ? "scaleX(1)" : "scaleX(0)",
+        transition: `width 400ms ${EASE_SPRING}, opacity 250ms ease, transform 350ms ${EASE_SPRING}`,
+      }}
+    />
+  </Link>
+));
+DockItem.displayName = "DockItem";
 
 const Navbar = () => {
   const { user, signOut, hasAdminAccess } = useAuth();
@@ -100,82 +175,6 @@ const Navbar = () => {
   } as const;
 
   const compact = !isExpanded;
-
-  /* ── Individual nav item ──────────────────────────────────────── */
-  const NavItemLink = ({ item }: { item: NavItem }) => {
-    const active = isActive(item.to);
-    return (
-      <Link
-        to={item.to}
-        className="nav-item group relative flex flex-col items-center rounded-full"
-        style={{
-          padding: compact ? "6px 10px" : "8px 16px",
-          minWidth: compact ? 40 : 64,
-          gap: compact ? 0 : 2,
-          transition: `padding 400ms ${EASE_SPRING}, min-width 400ms ${EASE_SPRING}, gap 300ms ${EASE_SMOOTH}`,
-        }}
-      >
-        {/* Hover / active background pill — uses group-hover for smooth trigger */}
-        <div
-          className="absolute inset-0 rounded-full transition-all duration-300 ease-out"
-          style={{
-            background: active
-              ? "rgba(239,246,255,1)"
-              : undefined,
-            transform: "scale(1)",
-            transition: `background 250ms ${EASE_SMOOTH}, transform 250ms ${EASE_SPRING}`,
-          }}
-        />
-        {/* Hover overlay — separate element so it doesn't fight with active bg */}
-        <div
-          className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out"
-          style={{
-            background: active ? "rgba(219,234,254,0.5)" : "rgba(243,244,246,0.6)",
-          }}
-        />
-
-        <div className="relative z-10 flex flex-col items-center" style={{ gap: compact ? 0 : 2 }}>
-          <item.icon
-            className="transition-all"
-            style={{
-              width: compact ? 16 : 20,
-              height: compact ? 16 : 20,
-              color: active ? "#2563eb" : "#6b7280",
-              transition: `width 400ms ${EASE_SPRING}, height 400ms ${EASE_SPRING}, color 200ms ease`,
-              transform: "scale(1)",
-            }}
-          />
-
-          <span
-            className="text-[10px] font-semibold leading-none whitespace-nowrap overflow-hidden"
-            style={{
-              maxHeight: compact ? 0 : 14,
-              opacity: compact ? 0 : 1,
-              maxWidth: compact ? 0 : 80,
-              marginBottom: compact ? 0 : 1,
-              transition: `max-height 250ms ${EASE_SMOOTH}, opacity 200ms ease, max-width 400ms ${EASE_SPRING}, margin 300ms ${EASE_SMOOTH}`,
-              color: active ? "#2563eb" : "#6b7280",
-            }}
-          >
-            {item.label}
-          </span>
-        </div>
-
-        {/* Active indicator */}
-        <div
-          className="relative z-10 bg-blue-600 rounded-full"
-          style={{
-            width: active ? (compact ? 8 : 16) : 0,
-            height: 2,
-            marginTop: 2,
-            opacity: active ? 1 : 0,
-            transform: active ? "scaleX(1)" : "scaleX(0)",
-            transition: `width 400ms ${EASE_SPRING}, opacity 250ms ease, transform 350ms ${EASE_SPRING}`,
-          }}
-        />
-      </Link>
-    );
-  };
 
   /* ── Auth button ──────────────────────────────────────────────── */
   const AuthButton = () => {
@@ -494,7 +493,14 @@ const Navbar = () => {
             style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)" }}
           />
           {NAV_ITEMS.map((item) => (
-            <NavItemLink key={item.to} item={item} />
+            <DockItem
+              key={item.to}
+              to={item.to}
+              label={item.label}
+              icon={item.icon}
+              active={isActive(item.to)}
+              compact={compact}
+            />
           ))}
 
           <div
@@ -529,7 +535,8 @@ const Navbar = () => {
               <Link
                 key={item.to}
                 to={item.to}
-                className="group relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full overflow-hidden"
+                aria-current={active ? "page" : undefined}
+                className="group relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                 style={{
                   color: active ? "#2563eb" : "#6b7280",
                   transition: "color 200ms ease",
@@ -563,8 +570,9 @@ const Navbar = () => {
 
           {user ? (
             <button
+              type="button"
               onClick={signOut}
-              className="group relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full text-gray-500 overflow-hidden"
+              className="group relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full text-gray-500 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             >
               <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-150" style={{ background: "rgba(243,244,246,0.6)" }} />
               <LogOut className="relative z-10 h-5 w-5" />
@@ -573,7 +581,7 @@ const Navbar = () => {
           ) : (
             <Link
               to="/auth"
-              className="group relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full overflow-hidden"
+              className="group relative flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-full overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
               style={{
                 color: isActive("/auth") ? "#2563eb" : "#6b7280",
                 transition: "color 200ms ease",
