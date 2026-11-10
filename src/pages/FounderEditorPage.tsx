@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +39,7 @@ export default function FounderEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isAdmin, isSuperAdmin, loading: authLoading } = useAuth();
-  const { toast } = useToast() as unknown as { toast: (props: any) => void; dismiss: (id?: string) => void; toasts: any[] };
+  const { toast } = useToast();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
@@ -62,11 +63,11 @@ export default function FounderEditorPage() {
     }
     setNotFound(false);
     supabase
-      .from("team_founders" as any)
-      .select("*" as any)
+      .from("team_founders")
+      .select("*")
       .eq("id", id)
       .single()
-      .then(({ data, error }: { data: any; error?: any }) => {
+      .then(({ data, error }: { data: Tables<"team_founders"> | null; error: unknown }) => {
         if (error || !data) {
           setNotFound(true);
           setLoading(false);
@@ -136,17 +137,17 @@ export default function FounderEditorPage() {
     const path = `team-founders/${id}${extFromUrl(avatarUrl)}`;
     const { error: storageError } = await supabase
       .storage
-      .from("profile-avatars" as any)
+      .from("profile-avatars")
       .remove([path]);
-    if (storageError && !("No you are leaving this site".includes((storageError as any).message ?? "")) && !(storageError as any).message.includes("No files found")) {
+    if (storageError && !storageError.message.includes("No files found")) {
       toast({
         title: "Could not remove avatar",
-        description: (storageError as any).message,
+        description: storageError.message,
         variant: "destructive",
       });
       return;
     }
-    await supabase.from("team_founders" as any).update({ avatar_url: null }).eq("id", id);
+    await supabase.from("team_founders").update({ avatar_url: null }).eq("id", id);
     setAvatarFile(null);
     setAvatarUrl(null);
     toast({ title: "Avatar removed" });
@@ -158,16 +159,16 @@ export default function FounderEditorPage() {
     try {
       const ext = extFromUrl(avatarFile.name) || ".png";
       const fileName = `team-founders/${id}${ext}`;
-      await supabase.storage.from("profile-avatars" as any).upload(fileName, avatarFile, { upsert: true });
-      const { data } = await supabase.storage.from("profile-avatars" as any).getPublicUrl(fileName);
-      await supabase.from("team_founders" as any).update({ avatar_url: data.publicUrl }).eq("id", id);
+      await supabase.storage.from("profile-avatars").upload(fileName, avatarFile, { upsert: true });
+      const { data } = supabase.storage.from("profile-avatars").getPublicUrl(fileName);
+      await supabase.from("team_founders").update({ avatar_url: data.publicUrl }).eq("id", id);
       setAvatarFile(null);
       setAvatarUrl(data.publicUrl);
       toast({ title: "Avatar updated" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: "Could not upload avatar",
-        description: err?.message ?? "Upload failed",
+        description: err instanceof Error ? err.message : "Upload failed",
         variant: "destructive",
       });
     } finally {
@@ -179,14 +180,14 @@ export default function FounderEditorPage() {
     if (!id) return;
     setSaving(true);
     try {
-      const payload: any = { name, role, subtitle: subtitle || null, bio: bio || null };
-      await supabase.from("team_founders" as any).update(payload).eq("id", id);
+      const payload: TablesUpdate<"team_founders"> = { name, role, subtitle: subtitle || null, bio: bio || null };
+      await supabase.from("team_founders").update(payload).eq("id", id);
       toast({ title: "Saved" });
       navigate("/admin/founders");
-    } catch (err: any) {
+    } catch (err: unknown) {
       toast({
         title: "Could not save",
-        description: err?.message ?? "Save failed",
+        description: err instanceof Error ? err.message : "Save failed",
         variant: "destructive",
       });
     } finally {

@@ -53,8 +53,8 @@ const AdminPage = () => {
 
   // CMS content
   const [siteSettings, setSiteSettings] = useState<Record<string, string>>({});
-  const [teamMembers, setTeamMembers] = useState<any[]>([]);
-  const [services, setServicesList] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Tables<"team_members">[]>([]);
+  const [services, setServicesList] = useState<Tables<"services">[]>([]);
   const { founders, refetch: refetchFounders } = useTeamFounders({ fallback: false });
   const [tmDialogOpen, setTmDialogOpen] = useState(false);
   const [editingTmId, setEditingTmId] = useState<string | null>(null);
@@ -79,7 +79,7 @@ const AdminPage = () => {
   const [svVerse, setSvVerse] = useState("");
 
   // Branch admins (super-admin managed scoped sign-ons)
-  const [branchAdmins, setBranchAdmins] = useState<any[]>([]);
+  const [branchAdmins, setBranchAdmins] = useState<Tables<"branch_admins">[]>([]);
   const [baDialogOpen, setBaDialogOpen] = useState(false);
   const [editingBaId, setEditingBaId] = useState<string | null>(null);
   const [baName, setBaName] = useState("");
@@ -227,7 +227,7 @@ const AdminPage = () => {
       toast({ title: "Name and role are required", variant: "destructive" });
       return;
     }
-    const payload: any = {
+    const payload = {
       name: founderName.trim(),
       role: founderRole.trim(),
       subtitle: founderSubtitle.trim() || null,
@@ -235,14 +235,14 @@ const AdminPage = () => {
       avatar_url: founderAvatar.trim() || null,
     };
     if (editingFounderId) {
-      const { error } = await supabase.from("team_founders" as any).update(payload).eq("id", editingFounderId);
+      const { error } = await supabase.from("team_founders").update(payload).eq("id", editingFounderId);
       if (error) {
         toast({ title: "Could not update founder", description: error.message, variant: "destructive" });
         return;
       }
     } else {
-      const { data }: any = await supabase.from("team_founders" as any).select("sort_order").order("sort_order", { ascending: false }).limit(1);
-      const { error } = await supabase.from("team_founders" as any).insert({ ...payload, sort_order: (data?.[0]?.sort_order || 0) + 1 });
+      const { data } = await supabase.from("team_founders").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+      const { error } = await supabase.from("team_founders").insert({ ...payload, sort_order: (data?.[0]?.sort_order || 0) + 1 });
       if (error) {
         toast({ title: "Could not add founder", description: error.message, variant: "destructive" });
         return;
@@ -255,7 +255,7 @@ const AdminPage = () => {
   };
 
   const handleDeleteFounder = async (id: string) => {
-    const { error } = await supabase.from("team_founders" as any).delete().eq("id", id);
+    const { error } = await supabase.from("team_founders").delete().eq("id", id);
     if (error) {
       toast({ title: "Could not remove founder", description: error.message, variant: "destructive" });
       return;
@@ -264,7 +264,7 @@ const AdminPage = () => {
     toast({ title: "Founder removed" });
   };
 
-  const handleEditFounder = (f: any) => {
+  const handleEditFounder = (f: Tables<"team_founders">) => {
     setEditingFounderId(f.id);
     setFounderName(f.name);
     setFounderRole(f.role);
@@ -321,7 +321,7 @@ const AdminPage = () => {
       }
       const password = typedPassword || generatePassword();
 
-      const payload: any = {
+      const payload = {
         full_name: baName.trim(),
         email,
         branch_ids: baBranchIds,
@@ -376,7 +376,7 @@ const AdminPage = () => {
 
     // Editing an existing entry: scope, permissions and active state only. The
     // sign-in itself is created here or from the card's "Create account" button.
-    const payload: any = {
+    const payload = {
       full_name: baName.trim(),
       email: baEmail.trim().toLowerCase(),
       branch_ids: baBranchIds,
@@ -404,7 +404,7 @@ const AdminPage = () => {
     toast({ title: "Branch admin removed" });
   };
 
-  const handleEditBranchAdmin = (ba: any) => {
+  const handleEditBranchAdmin = (ba: Tables<"branch_admins">) => {
     setEditingBaId(ba.id);
     setBaName(ba.full_name || "");
     setBaEmail(ba.email || "");
@@ -447,7 +447,7 @@ const AdminPage = () => {
     toast({ title: "Team member removed" });
   };
 
-  const handleEditTeamMember = (tm: any) => {
+  const handleEditTeamMember = (tm: Tables<"team_members">) => {
     setEditingTmId(tm.id);
     setTmName(tm.name);
     setTmRole(tm.role);
@@ -476,7 +476,7 @@ const AdminPage = () => {
     toast({ title: "Service removed" });
   };
 
-  const handleEditService = (sv: any) => {
+  const handleEditService = (sv: Tables<"services">) => {
     setEditingSvId(sv.id);
     setSvTitle(sv.title);
     setSvDesc(sv.description || "");
@@ -509,8 +509,8 @@ const AdminPage = () => {
       setAudioProgress(100);
       setEpAudioUrl(url);
       toast({ title: "Audio uploaded" });
-    } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Upload failed", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     } finally {
       clearInterval(progressInterval);
       setUploadingAudio(false);
@@ -547,8 +547,8 @@ const AdminPage = () => {
       }
       setSiteSettings((prev) => ({ ...prev, hero_image_url: urlData.publicUrl }));
       toast({ title: "Hero image uploaded successfully" });
-    } catch (err: any) {
-      toast({ title: "Upload failed", description: err.message || "Unknown error", variant: "destructive" });
+    } catch (err: unknown) {
+      toast({ title: "Upload failed", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
     } finally {
       setUploadingHeroImage(false);
     }
@@ -612,7 +612,7 @@ const AdminPage = () => {
     const slug = brSlug || brName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     // Portal access and the grouping columns are super-admin only: a branch
     // admin's save must not send them, or the database guard rejects the update.
-    const payload: any = {
+    const payload: Partial<Tables<"branches">> & { name: string; slug: string } = {
       name: brName.trim(),
       slug,
       location: brLocation || null,
@@ -671,9 +671,9 @@ const AdminPage = () => {
     setBrLogo(br.logo_url || "");
     setBrBanner(br.banner_url || "");
     setBrActive(br.active !== false);
-    setBrIsGrouping(Boolean((br as any).is_state_branch));
-    setBrStateCode(((br as any).state_code as string) || "");
-    setBrParentId(((br as any).parent_id as string) || "");
+    setBrIsGrouping(Boolean(br.is_state_branch));
+    setBrStateCode(br.state_code || "");
+    setBrParentId(br.parent_id || "");
     setBranchDialogOpen(true);
   };
 
@@ -1505,7 +1505,7 @@ const AdminPage = () => {
                             <SelectContent>
                               <SelectItem value="none">No grouping</SelectItem>
                               {branchesList
-                                .filter((b) => Boolean((b as any).is_state_branch) && b.id !== editingBranchId)
+                                .filter((b) => Boolean(b.is_state_branch) && b.id !== editingBranchId)
                                 .map((b) => (
                                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                                 ))}
@@ -1536,10 +1536,10 @@ const AdminPage = () => {
                           <div className="flex flex-wrap items-center gap-2">
                             <h3 className="font-semibold">{br.name}</h3>
                             {!br.active && <Badge variant="secondary">Inactive</Badge>}
-                            {Boolean((br as any).is_state_branch) && <Badge variant="secondary">Grouping branch</Badge>}
-                            {!(br as any).is_state_branch && (br as any).parent_id && (
+                            {Boolean(br.is_state_branch) && <Badge variant="secondary">Grouping branch</Badge>}
+                            {!br.is_state_branch && br.parent_id && (
                               <Badge variant="secondary">
-                                Under {branchesList.find((b) => b.id === (br as any).parent_id)?.name ?? "a grouping branch"}
+                                Under {branchesList.find((b) => b.id === br.parent_id)?.name ?? "a grouping branch"}
                               </Badge>
                             )}
                           </div>

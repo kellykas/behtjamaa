@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
-const fallbackFounders = [
-  { id: "fallback-1", name: "Christophe Sadiki Mubira", role: "Founder & President", subtitle: "", bio: "", avatar_url: null, sort_order: 1 },
-  { id: "fallback-2", name: "Dieudonne Sangano", role: "Co-Founder", subtitle: "", bio: "", avatar_url: null, sort_order: 2 },
-  { id: "fallback-3", name: "Danny Mani", role: "Co-Founder", subtitle: "", bio: "", avatar_url: null, sort_order: 3 },
-  { id: "fallback-4", name: "Fabrice Muhindo", role: "Co-Founder", subtitle: "", bio: "", avatar_url: null, sort_order: 4 },
-  { id: "fallback-5", name: "Lwenga Rajabu", role: "Co-Founder & Secretary", subtitle: "aka Reagan Lescot", bio: "", avatar_url: null, sort_order: 5 },
+type TeamMember = Tables<"team_members">;
+type TeamFounder = Tables<"team_founders">;
+type Service = Tables<"services">;
+type Branch = Tables<"branches">;
+
+const fallbackFounders: TeamFounder[] = [
+  { id: "fallback-1", name: "Christophe Sadiki Mubira", role: "Founder & President", subtitle: "", bio: "", avatar_url: null, sort_order: 1, active: true, created_at: "", updated_at: "" },
+  { id: "fallback-2", name: "Dieudonne Sangano", role: "Co-Founder", subtitle: "", bio: "", avatar_url: null, sort_order: 2, active: true, created_at: "", updated_at: "" },
+  { id: "fallback-3", name: "Danny Mani", role: "Co-Founder", subtitle: "", bio: "", avatar_url: null, sort_order: 3, active: true, created_at: "", updated_at: "" },
+  { id: "fallback-4", name: "Fabrice Muhindo", role: "Co-Founder", subtitle: "", bio: "", avatar_url: null, sort_order: 4, active: true, created_at: "", updated_at: "" },
+  { id: "fallback-5", name: "Lwenga Rajabu", role: "Co-Founder & Secretary", subtitle: "aka Reagan Lescot", bio: "", avatar_url: null, sort_order: 5, active: true, created_at: "", updated_at: "" },
 ];
 
 export function useSiteSettings(section?: string) {
@@ -30,7 +36,7 @@ export function useSiteSettings(section?: string) {
 }
 
 export function useTeamMembers() {
-  const [members, setMembers] = useState<any[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,7 +48,7 @@ export function useTeamMembers() {
 }
 
 export function useTeamMember(id: string | null) {
-  const [member, setMember] = useState<any | null>(null);
+  const [member, setMember] = useState<TeamMember | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -73,7 +79,7 @@ export function useTeamMember(id: string | null) {
  * it always sees the real rows (and the real empty state).
  */
 export function useTeamFounders({ fallback = true }: { fallback?: boolean } = {}) {
-  const [founders, setFounders] = useState<any[]>([]);
+  const [founders, setFounders] = useState<TeamFounder[]>([]);
   const [loading, setLoading] = useState(true);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -81,11 +87,11 @@ export function useTeamFounders({ fallback = true }: { fallback?: boolean } = {}
     let cancelled = false;
     setLoading(true);
     supabase
-      .from("team_founders" as any)
-      .select("*" as any)
+      .from("team_founders")
+      .select("*")
       .eq("active", true)
-      .order("sort_order" as any)
-      .then(({ data }: { data?: any[] | null }) => {
+      .order("sort_order")
+      .then(({ data }) => {
         if (cancelled) return;
         setFounders(data && data.length > 0 ? data : fallback ? fallbackFounders : []);
         setLoading(false);
@@ -103,7 +109,7 @@ export function useFounders() {
 }
 
 export function useServices() {
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -117,7 +123,7 @@ export function useServices() {
 // USA branch grouping
 
 export function useStateBranches() {
-  const [stateBranches, setStateBranches] = useState<any[]>([]);
+  const [stateBranches, setStateBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -136,7 +142,7 @@ export function useStateBranches() {
 }
 
 export function useSubBranches(parentId: string | null) {
-  const [subBranches, setSubBranches] = useState<any[]>([]);
+  const [subBranches, setSubBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
