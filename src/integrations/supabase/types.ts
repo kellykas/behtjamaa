@@ -24,7 +24,6 @@ export type Database = {
           id: string
           is_active: boolean
           permissions: string[]
-          temp_password: string | null
           updated_at: string
           user_id: string | null
         }
@@ -37,7 +36,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           permissions?: string[]
-          temp_password?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -50,7 +48,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           permissions?: string[]
-          temp_password?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -493,57 +490,6 @@ export type Database = {
         }
         Relationships: []
       }
-      member_login_credentials: {
-        Row: {
-          branch_id: string
-          created_at: string | null
-          email: string
-          full_name: string
-          id: string
-          is_active: boolean | null
-          membership_request_id: string | null
-          temp_password: string
-          updated_at: string | null
-        }
-        Insert: {
-          branch_id: string
-          created_at?: string | null
-          email: string
-          full_name: string
-          id?: string
-          is_active?: boolean | null
-          membership_request_id?: string | null
-          temp_password: string
-          updated_at?: string | null
-        }
-        Update: {
-          branch_id?: string
-          created_at?: string | null
-          email?: string
-          full_name?: string
-          id?: string
-          is_active?: boolean | null
-          membership_request_id?: string | null
-          temp_password?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "member_login_credentials_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "member_login_credentials_membership_request_id_fkey"
-            columns: ["membership_request_id"]
-            isOneToOne: false
-            referencedRelation: "membership_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       membership_requests: {
         Row: {
           branch_id: string
@@ -554,7 +500,6 @@ export type Database = {
           message: string | null
           phone: string | null
           status: string | null
-          temp_password: string | null
         }
         Insert: {
           branch_id: string
@@ -565,7 +510,6 @@ export type Database = {
           message?: string | null
           phone?: string | null
           status?: string | null
-          temp_password?: string | null
         }
         Update: {
           branch_id?: string
@@ -576,7 +520,6 @@ export type Database = {
           message?: string | null
           phone?: string | null
           status?: string | null
-          temp_password?: string | null
         }
         Relationships: [
           {

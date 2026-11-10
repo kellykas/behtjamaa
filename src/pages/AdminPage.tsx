@@ -332,7 +332,7 @@ const AdminPage = () => {
 
       const { data: inserted, error: insertError } = await supabase
         .from("branch_admins")
-        .insert({ ...payload, temp_password: null })
+        .insert(payload)
         .select("id")
         .single();
       if (insertError || !inserted) {
