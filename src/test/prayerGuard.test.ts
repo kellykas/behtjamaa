@@ -1,19 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { parsePrayedIds } from "@/lib/utils";
 
-// Replicate the localStorage guard logic used in PrayerPage
 const STORAGE_KEY = "prayed_request_ids";
 
-const getPrayedIds = (): string[] => {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
+const getPrayedIds = (): string[] => parsePrayedIds(localStorage.getItem(STORAGE_KEY));
 
 const addPrayedId = (id: string): string[] => {
-  const current = getPrayedIds();
-  const updated = [...current, id];
+  const updated = [...getPrayedIds(), id];
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   return updated;
 };
@@ -39,8 +32,7 @@ describe("Prayer localStorage guard", () => {
   });
 
   it("addPrayedId returns updated list", () => {
-    const result = addPrayedId("prayer-1");
-    expect(result).toEqual(["prayer-1"]);
+    expect(addPrayedId("prayer-1")).toEqual(["prayer-1"]);
   });
 
   it("accumulates multiple prayed ids", () => {
@@ -60,6 +52,11 @@ describe("Prayer localStorage guard", () => {
 
   it("handles corrupt localStorage gracefully", () => {
     localStorage.setItem(STORAGE_KEY, "not-json");
+    expect(getPrayedIds()).toEqual([]);
+  });
+
+  it("ignores non-array stored values", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ a: 1 }));
     expect(getPrayedIds()).toEqual([]);
   });
 

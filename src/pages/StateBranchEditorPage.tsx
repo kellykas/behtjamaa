@@ -94,6 +94,9 @@ export default function StateBranchEditorPage() {
       });
   }, [id, navigate, toast]);
 
+  const targetId = editing ? id : null;
+  const { subBranches, loading: subLoading } = useSubBranches(targetId);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background pt-16">
@@ -121,9 +124,6 @@ export default function StateBranchEditorPage() {
       </div>
     );
   }
-
-  const targetId = editing ? id : null;
-  const { subBranches, loading: subLoading } = useSubBranches(targetId);
 
   const existingSlugs = new Set(
     stateBranches.map((s) => (s as any).slug)

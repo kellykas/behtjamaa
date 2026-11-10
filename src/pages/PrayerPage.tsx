@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { parsePrayedIds } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,7 +51,7 @@ const PrayerPage = () => {
     };
   }, []);
 
-  const prayedIds: string[] = JSON.parse(localStorage.getItem("prayed_request_ids") || "[]");
+  const prayedIds: string[] = parsePrayedIds(localStorage.getItem("prayed_request_ids"));
 
   const handlePray = async (id: string, currentCount: number) => {
     if (prayedIds.includes(id)) return;

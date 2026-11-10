@@ -1,10 +1,11 @@
-const CACHE_NAME = "behtjamaa-v3";
+const CACHE_NAME = "behtjamaa-v4";
 const PRECACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.json",
   "/favicon.ico",
-  "/hero.jpg",
+  "/icon-192.png",
+  "/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
