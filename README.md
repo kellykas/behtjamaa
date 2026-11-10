@@ -25,6 +25,10 @@ Environment variables (see `.env`, which is git-ignored):
 - `VITE_SUPABASE_PUBLISHABLE_KEY`
 - `VITE_SUPABASE_PROJECT_ID`
 
+Optional, dev only:
+
+- `DEV_ALLOWED_HOSTS`: comma-separated hostnames allowed to reach the dev server when you serve it through a tunnel or preview URL, e.g. `DEV_ALLOWED_HOSTS=abc123.preview.example bun run dev`. Leave it unset for local development.
+
 ## Scripts
 
 - `bun run dev`: start the dev server
