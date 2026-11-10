@@ -4,9 +4,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, HeartHandshake, DollarSign, Building2, MailCheck, BookOpen, BadgeCheck, Landmark, Copy, Check } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  HeartHandshake,
+  DollarSign,
+  Building2,
+  MailCheck,
+  BookOpen,
+  BadgeCheck,
+  Landmark,
+  Copy,
+  Check,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const amounts = [25, 50, 100, 250];
 
@@ -29,8 +45,48 @@ const DonatePage = () => {
   const [customAmount, setCustomAmount] = useState("");
   const [frequency, setFrequency] = useState<"once" | "monthly">("once");
   const [copied, setCopied] = useState(false);
+  const [startingCheckout, setStartingCheckout] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Stripe sends the visitor back here with ?status=..., so the page has to
+  // acknowledge what happened instead of silently reloading the form.
+  const checkoutStatus = searchParams.get("status");
 
   const activeAmount = customAmount ? parseInt(customAmount) || 0 : selectedAmount;
+
+  const handleCheckout = async () => {
+    if (activeAmount <= 0 || startingCheckout) return;
+    setCheckoutError(null);
+    setStartingCheckout(true);
+    try {
+      const { data, error } = await supabase.functions.invoke<{ ok: boolean; url?: string; error?: string }>(
+        "create-donation-checkout",
+        { body: { amount: activeAmount, frequency } },
+      );
+
+      if (error) {
+        // Transport failure (offline, or the function is not deployed yet).
+        console.error("create-donation-checkout failed", error);
+        throw new Error(
+          "We couldn't reach the donation service. Please try again in a moment, or use the bank transfer details below.",
+        );
+      }
+      if (!data?.ok || !data.url) {
+        throw new Error(data?.error || "We couldn't start the checkout. Please try again.");
+      }
+
+      // Leave the button in its busy state: the tab is navigating away.
+      window.location.assign(data.url);
+    } catch (e) {
+      setCheckoutError(
+        e instanceof Error && e.message
+          ? e.message
+          : "We couldn't start the checkout. Please try again.",
+      );
+      setStartingCheckout(false);
+    }
+  };
 
   const handleCopyRouting = () => {
     navigator.clipboard.writeText("123456789");
@@ -53,6 +109,37 @@ const DonatePage = () => {
             Your generous donations help us spread the Gospel, create meaningful content, and serve our community. Every contribution makes a difference.
           </p>
         </div>
+
+        {checkoutStatus === "success" && (
+          <div
+            role="status"
+            className="mb-10 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-left"
+          >
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+            <div>
+              <p className="font-semibold text-emerald-900">Thank you for your gift</p>
+              <p className="text-sm text-emerald-800">
+                Stripe is processing your donation and will email your receipt. Thank you for helping us keep the ministry
+                running.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {checkoutStatus === "cancelled" && (
+          <div
+            role="status"
+            className="mb-10 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-left"
+          >
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
+            <div>
+              <p className="font-semibold text-amber-900">Your donation wasn't completed</p>
+              <p className="text-sm text-amber-800">
+                Nothing was charged. Pick an amount whenever you're ready and we'll take you back to the secure checkout.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Impact Areas */}
         <section className="mb-14">
@@ -95,17 +182,21 @@ const DonatePage = () => {
             <CardContent className="space-y-6">
               {/* Frequency */}
               <div className="space-y-2">
-                <Label>Donation Frequency</Label>
-                <div className="flex gap-2">
+                <Label id="donation-frequency">Donation Frequency</Label>
+                <div role="group" aria-labelledby="donation-frequency" className="flex gap-2">
                   <Button
+                    type="button"
                     variant={frequency === "once" ? "default" : "outline"}
+                    aria-pressed={frequency === "once"}
                     onClick={() => setFrequency("once")}
                     className="flex-1"
                   >
                     One-Time
                   </Button>
                   <Button
+                    type="button"
                     variant={frequency === "monthly" ? "default" : "outline"}
+                    aria-pressed={frequency === "monthly"}
                     onClick={() => setFrequency("monthly")}
                     className="flex-1"
                   >
@@ -116,12 +207,18 @@ const DonatePage = () => {
 
               {/* Amounts */}
               <div className="space-y-2">
-                <Label>Donation Amount (USD)</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <Label id="donation-amount">Donation Amount (USD)</Label>
+                <div
+                  role="group"
+                  aria-labelledby="donation-amount"
+                  className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+                >
                   {amounts.map((amt) => (
                     <Button
                       key={amt}
+                      type="button"
                       variant={selectedAmount === amt && !customAmount ? "default" : "outline"}
+                      aria-pressed={selectedAmount === amt && !customAmount}
                       onClick={() => { setSelectedAmount(amt); setCustomAmount(""); }}
                       className="text-lg"
                     >
@@ -130,9 +227,11 @@ const DonatePage = () => {
                   ))}
                 </div>
                 <div className="relative mt-3">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
                   <Input
                     type="number"
+                    inputMode="decimal"
+                    aria-label="Custom donation amount in US dollars"
                     placeholder="Custom amount"
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
@@ -156,8 +255,34 @@ const DonatePage = () => {
                 </div>
               )}
 
-              <Button size="lg" className="w-full" disabled={activeAmount <= 0}>
-                Continue to Payment
+              {checkoutError && (
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+                >
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <p>{checkoutError}</p>
+                </div>
+              )}
+
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={handleCheckout}
+                disabled={activeAmount <= 0 || startingCheckout}
+                aria-busy={startingCheckout}
+              >
+                {startingCheckout ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                    Opening secure checkout…
+                  </>
+                ) : (
+                  <>
+                    Continue to Payment
+                    <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                  </>
+                )}
               </Button>
 
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
