@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { firstImageUrl } from "@/lib/utils";
+import { firstImageUrl, optimizedImageUrl } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,8 +140,10 @@ const EventDetailPage = () => {
         <div className="relative">
           <div className="h-64 md:h-96 overflow-hidden">
             <img
-              src={allImages[currentImageIndex]}
+              src={optimizedImageUrl(allImages[currentImageIndex], 1280)}
               alt={event.title}
+              fetchPriority="high"
+              decoding="async"
               className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-700"
               onClick={() => setLightboxOpen(true)}
             />
@@ -222,7 +224,13 @@ const EventDetailPage = () => {
               </button>
             </>
           )}
-          <img src={allImages[currentImageIndex]} alt="" className="max-h-[85vh] max-w-[90vw] object-contain rounded-2xl" onClick={(e) => e.stopPropagation()} />
+          <img
+            src={optimizedImageUrl(allImages[currentImageIndex], 1600)}
+            alt=""
+            decoding="async"
+            className="max-h-[85vh] max-w-[90vw] object-contain rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 
@@ -295,7 +303,13 @@ const EventDetailPage = () => {
                         onClick={() => { setCurrentImageIndex(i); setLightboxOpen(true); }}
                         className="rounded-xl overflow-hidden aspect-square border-2 border-slate-100 hover:border-blue-500 hover:shadow-lg transition-all"
                       >
-                        <img src={img} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={optimizedImageUrl(img, 240)}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover"
+                        />
                       </button>
                     ))}
                   </div>

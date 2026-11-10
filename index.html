@@ -7,6 +7,11 @@
     <meta name="description" content="BEHT JAMAA - Youth Evangelistic Ministry. Reach And Preach.">
     <meta name="author" content="BEHT JAMAA" />
 
+    <!-- The hero image and every page's first data request go to Supabase, so
+         open the connection while the bundle is still downloading. -->
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+    <link rel="dns-prefetch" href="%VITE_SUPABASE_URL%" />
+
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#111827" />

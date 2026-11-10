@@ -7,6 +7,7 @@ import { ArrowLeft, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound
 import { useNavigate, Link } from "react-router-dom";
 import { useTeamFounders } from "@/hooks/useContent";
 import { useState, useEffect } from "react";
+import { optimizedImageUrl } from "@/lib/utils";
 
 const stats = [
   { value: "2011", label: "Year Established", icon: Star },
@@ -227,7 +228,13 @@ const AboutPage = () => {
                   <div className="relative inline-flex items-center justify-center mb-3">
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto">
                       {m.avatar_url ? (
-                        <img src={m.avatar_url} alt={m.name} className="w-full h-full rounded-full object-cover" />
+                        <img
+                          src={optimizedImageUrl(m.avatar_url, 240)}
+                          alt={m.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full rounded-full object-cover"
+                        />
                       ) : (
                         <span className="text-lg font-bold text-primary-foreground">{initialsFor(m.name)}</span>
                       )}

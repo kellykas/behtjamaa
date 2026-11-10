@@ -12,7 +12,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
 import { useSiteSettings, useTeamMembers, useTeamMember } from "@/hooks/useContent";
 import { toast } from "@/hooks/use-toast";
-import { firstImageUrl } from "@/lib/utils";
+import { firstImageUrl, optimizedImageUrl } from "@/lib/utils";
 
 function assetExt(url: string): string {
   const ext = url.split("/").pop()?.split("?")[0];
@@ -21,6 +21,15 @@ function assetExt(url: string): string {
 }
 
 /* ─── Hero ────────────────────────────────────────────────────── */
+/* Hero art is a full-bleed background, so ask for roughly one screen's width
+ * (capped at twice the CSS pixels on high-density phones) instead of the
+ * multi-megabyte camera upload. */
+function heroImageWidth(): number {
+  const viewport = typeof window === "undefined" ? 1280 : window.innerWidth;
+  const density = typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+  return Math.min(1600, Math.round(Math.max(viewport, 640) * density));
+}
+
 const HeroSection = () => {
   const { settings } = useSiteSettings();
   const heroImage = settings.hero_image_url || "";
@@ -32,7 +41,7 @@ const HeroSection = () => {
       {heroImage ? (
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url('${heroImage}')` }}
+          style={{ backgroundImage: `url('${optimizedImageUrl(heroImage, heroImageWidth())}')` }}
         />
       ) : (
         <div className="absolute inset-0 bg-[#1a2744]" />
@@ -361,7 +370,13 @@ const EventsPreview = () => {
                       {/* Image */}
                       <div className="w-full md:w-[320px] h-[280px] md:h-auto shrink-0 relative overflow-hidden">
                         {firstImageUrl(event.images) ? (
-                          <img src={firstImageUrl(event.images)} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                          <img
+                            src={optimizedImageUrl(firstImageUrl(event.images), 800)}
+                            alt={event.title}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                          />
                         ) : (
                           <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                             <Calendar className="h-16 w-16 text-white/30" />
@@ -603,7 +618,13 @@ const BranchesPreview = () => {
                     {/* Banner */}
                     <div className="h-[280px] relative overflow-hidden">
                       {branch.banner_url ? (
-                        <img src={branch.banner_url} alt={branch.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                        <img
+                          src={optimizedImageUrl(branch.banner_url, 800)}
+                          alt={branch.name}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center">
                           <Building2 className="h-16 w-16 text-white/25" />
@@ -614,7 +635,13 @@ const BranchesPreview = () => {
                       <div className="absolute bottom-0 left-0 right-0 p-6">
                         <div className="flex items-center gap-3">
                           {branch.logo_url ? (
-                            <img src={branch.logo_url} alt="" className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xl" />
+                            <img
+                              src={optimizedImageUrl(branch.logo_url, 160)}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xl"
+                            />
                           ) : (
                             <div className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
                               <Building2 className="h-7 w-7 text-white" />
@@ -792,7 +819,13 @@ const PodcastPlayerBar = ({
       }}
     >
       {episode.thumbnail_url ? (
-        <img src={episode.thumbnail_url} alt="" className="w-12 h-12 rounded-xl object-cover" />
+        <img
+          src={optimizedImageUrl(episode.thumbnail_url, 160)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="w-12 h-12 rounded-xl object-cover"
+        />
       ) : (
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
           <Music className="h-5 w-5 text-white/50" />
@@ -981,7 +1014,15 @@ const FeaturedEpisodes = () => {
                   <div className="relative w-full h-full rounded-2xl overflow-hidden">
                     {/* Thumbnail */}
                     {ep.thumbnail_url ? (
-                      <img src={ep.thumbnail_url} alt={ep.title} className="absolute inset-0 w-full h-full object-cover" style={{ transform: isCenter ? "scale(1.05)" : "scale(1)", transition: "transform 700ms ease-out" }} draggable={false} />
+                      <img
+                        src={optimizedImageUrl(ep.thumbnail_url, 640)}
+                        alt={ep.title}
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        style={{ transform: isCenter ? "scale(1.05)" : "scale(1)", transition: "transform 700ms ease-out" }}
+                        draggable={false}
+                      />
                     ) : (
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
                         <Music className="h-20 w-20 text-white/20" />
@@ -1089,8 +1130,10 @@ const TeamSection = () => {
               <div className="relative inline-flex items-center justify-center mb-4">
                 {member.avatar_url ? (
                   <img
-                    src={member.avatar_url}
+                    src={optimizedImageUrl(member.avatar_url, 240)}
                     alt={member.name}
+                    loading="lazy"
+                    decoding="async"
                     className="w-20 h-20 rounded-full object-cover mx-auto"
                   />
                 ) : (

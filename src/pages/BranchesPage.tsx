@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ErrorState } from "@/components/PageStates";
+import { optimizedImageUrl } from "@/lib/utils";
 import {
   ArrowLeft,
   MapPin,
@@ -36,8 +37,10 @@ const BranchCard = ({ branch, to }: { branch: BranchWithStats; to: string }) => 
     <div className="h-[280px] relative overflow-hidden">
       {branch.banner_url ? (
         <img
-          src={branch.banner_url}
+          src={optimizedImageUrl(branch.banner_url, 800)}
           alt={branch.name}
+          loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
       ) : (
@@ -51,8 +54,10 @@ const BranchCard = ({ branch, to }: { branch: BranchWithStats; to: string }) => 
         <div className="flex items-center gap-3">
           {branch.logo_url ? (
             <img
-              src={branch.logo_url}
+              src={optimizedImageUrl(branch.logo_url, 160)}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-xl"
             />
           ) : (

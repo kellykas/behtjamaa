@@ -1,4 +1,4 @@
-const CACHE_NAME = "behtjamaa-v4";
+const CACHE_NAME = "behtjamaa-v5";
 const PRECACHE_URLS = [
   "/",
   "/index.html",
@@ -27,28 +27,52 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
+  const { request } = event;
+  if (request.method !== "GET") return;
 
-  // Network-first for API calls
-  if (event.request.url.includes("supabase")) {
+  const url = new URL(request.url);
+
+  // Anything not served by this origin (Supabase images, data and auth in
+  // particular) is left alone: the browser's own HTTP cache is better at it,
+  // and touching those requests only added a cache lookup and a duplicate
+  // download to every page view.
+  if (url.origin !== self.location.origin) return;
+
+  // Range requests come from audio/video seeking; they cannot be cached.
+  if (request.headers.has("range")) return;
+
+  // Pages: go to the network so a fresh deploy is picked up immediately, and
+  // fall back to the cached shell when offline.
+  if (request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", clone));
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match("/index.html").then((cached) => cached || Response.error())
+        )
     );
     return;
   }
 
-  // Cache-first for static assets, network-first for pages
+  // Static files are content-hashed by the build, so a cache hit is always the
+  // right answer and revalidating in the background only wasted bandwidth.
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetched = fetch(event.request).then((response) => {
-        if (response && response.status === 200) {
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+
+      return fetch(request).then((response) => {
+        if (response.status === 200 && response.type === "basic") {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
-      }).catch(() => cached);
-
-      return cached || fetched;
+      });
     })
   );
 });
