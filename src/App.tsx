@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Navbar } from "@/components/Navbar";
+import { RouteSeo } from "@/components/RouteSeo";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
@@ -58,6 +59,7 @@ const App = () => {
         <AuthProvider>
           <Navbar />
           <PageShell>
+          <RouteSeo />
           <Suspense fallback={<div className="min-h-screen" />}>
           <Routes>
             <Route path="/" element={<Index />} />

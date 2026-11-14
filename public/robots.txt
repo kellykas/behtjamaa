@@ -1,14 +1,9 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+
+# Private screens: no value in search results.
+Disallow: /admin
+Disallow: /auth
+Disallow: /reset-password
+
+Sitemap: https://behtjamaa.vercel.app/sitemap.xml
