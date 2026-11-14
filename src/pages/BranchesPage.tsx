@@ -34,7 +34,7 @@ const BranchCard = ({ branch, to }: { branch: BranchWithStats; to: string }) => 
     className="group rounded-3xl overflow-hidden bg-white shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-slate-100"
   >
     {/* Banner */}
-    <div className="h-[280px] relative overflow-hidden">
+    <div className="h-48 sm:h-[280px] relative overflow-hidden">
       {branch.banner_url ? (
         <img
           src={optimizedImageUrl(branch.banner_url, 800)}
@@ -44,8 +44,17 @@ const BranchCard = ({ branch, to }: { branch: BranchWithStats; to: string }) => 
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-600 flex items-center justify-center">
-          <Building2 className="h-16 w-16 text-white/25" />
+        <div className="relative w-full h-full bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 flex items-center justify-center">
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+              backgroundSize: "18px 18px",
+            }}
+          />
+          <div className="relative h-16 w-16 rounded-2xl bg-white/15 border border-white/25 backdrop-blur-sm flex items-center justify-center">
+            <Building2 className="h-8 w-8 text-white/90" />
+          </div>
         </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />

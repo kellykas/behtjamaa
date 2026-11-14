@@ -2,8 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Navbar } from "@/components/Navbar";
 import Index from "./pages/Index";
@@ -29,6 +29,25 @@ const EventDetailPage = lazy(() => import("./pages/EventDetailPage"));
 
 const queryClient = new QueryClient();
 
+/**
+ * Resets scroll on navigation and plays a short entrance transition. The class
+ * is toggled rather than the tree re-keyed, so page state (open tabs, forms)
+ * survives a navigation that keeps the same screen mounted.
+ */
+const PageShell = ({ children }: { children: ReactNode }) => {
+  const { pathname } = useLocation();
+  const [entering, setEntering] = useState(false);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setEntering(true);
+    const timer = window.setTimeout(() => setEntering(false), 460);
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
+
+  return <div className={entering ? "page-transition" : undefined}>{children}</div>;
+};
+
 const App = () => {
   return (
   <QueryClientProvider client={queryClient}>
@@ -38,6 +57,7 @@ const App = () => {
       <BrowserRouter>
         <AuthProvider>
           <Navbar />
+          <PageShell>
           <Suspense fallback={<div className="min-h-screen" />}>
           <Routes>
             <Route path="/" element={<Index />} />
@@ -62,6 +82,7 @@ const App = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </PageShell>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

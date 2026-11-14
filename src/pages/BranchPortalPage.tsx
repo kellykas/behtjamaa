@@ -450,7 +450,7 @@ const BranchPortalPage = () => {
               <p className="text-2xl font-bold">${totalDonations.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">Donations</p>
             </CardContent></Card>
-            <Card><CardContent className="pt-4 pb-3 text-center">
+            <Card className="col-span-2 md:col-span-1"><CardContent className="pt-4 pb-3 text-center">
               <Package className="h-5 w-5 mx-auto mb-1 text-rose-500" />
               <p className="text-2xl font-bold">{storeItems.length}</p>
               <p className="text-xs text-muted-foreground">Store Items</p>
@@ -462,7 +462,7 @@ const BranchPortalPage = () => {
       {/* Tabs */}
       <div className="max-w-6xl mx-auto px-4 pb-12">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6 flex-wrap h-auto gap-1">
+          <TabsList className="mb-6 w-full flex-nowrap justify-start overflow-x-auto no-scrollbar h-auto gap-1 md:w-auto md:flex-wrap md:justify-center md:overflow-visible [&_[role=tab]]:shrink-0">
             <TabsTrigger value="overview"><Building2 className="h-4 w-4 mr-1" />Overview</TabsTrigger>
             <TabsTrigger value="members"><Users className="h-4 w-4 mr-1" />{canManageMembers ? "Members" : "Join Us"}</TabsTrigger>
             <TabsTrigger value="events"><Calendar className="h-4 w-4 mr-1" />Events</TabsTrigger>

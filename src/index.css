@@ -87,11 +87,47 @@
   }
 }
 
-/* Mobile bottom padding for fixed navbar */
+/* Mobile bottom padding for the floating dock (plus the iOS home-bar inset) */
 @media (max-width: 767px) {
   body {
-    padding-bottom: 5rem;
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
   }
+}
+
+/* ── Route change transition ─────────────────────────────────── */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.page-transition {
+  animation: page-enter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Horizontal tab strips: swipeable, no visible scrollbar */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Respect the OS "reduce motion" setting, but keep loading spinners readable */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin):not(.animate-pulse),
+  *:not(.animate-spin):not(.animate-pulse)::before,
+  *:not(.animate-spin):not(.animate-pulse)::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Smooth anchor scrolling for in-page links */
+html {
+  scroll-behavior: smooth;
 }
 
 /* Navbar hover micro-interactions */
@@ -228,7 +264,7 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.7) 100%);
+    background: linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.32) 45%, rgba(0,0,0,0.68) 100%);
     z-index: 0;
   }
   .hero-bg-image > * {

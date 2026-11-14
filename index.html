@@ -39,6 +39,40 @@
 
   <body>
     <div id="root"></div>
+    <!-- Shown only when the app bundle fails before React can mount, so a
+         broken build is never an unexplained white page. -->
+    <div id="boot-error" hidden style="max-width: 34rem; margin: 12vh auto; padding: 1.5rem; font-family: system-ui, -apple-system, sans-serif; color: #111827; line-height: 1.55;">
+      <h1 style="margin: 0 0 0.75rem; font-size: 1.25rem;">BEHT JAMAA could not start</h1>
+      <p style="margin: 0 0 0.75rem;">The page loaded but its application code did not run.</p>
+      <p id="boot-error-detail" style="margin: 0 0 0.75rem; font-family: ui-monospace, monospace; font-size: 0.8125rem; color: #b91c1c; word-break: break-word;"></p>
+      <p style="margin: 0; font-size: 0.875rem; color: #4b5563;">If this is a fresh deployment, the build is most likely missing the Supabase settings <code>VITE_SUPABASE_URL</code>, <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> and <code>VITE_SUPABASE_PROJECT_ID</code>. Please contact the site administrator.</p>
+    </div>
+    <script>
+      (function () {
+        var reported = false;
+        function show(detail) {
+          var root = document.getElementById("root");
+          var box = document.getElementById("boot-error");
+          if (reported || !root || !box || root.childElementCount > 0) return;
+          reported = true;
+          document.getElementById("boot-error-detail").textContent = detail || "";
+          box.hidden = false;
+        }
+        window.addEventListener("error", function (event) {
+          var target = event.target;
+          var isScript = target && target !== window && target.tagName === "SCRIPT";
+          if (target && target !== window && !isScript) return;
+          show(event.message || (isScript ? "Failed to load " + target.src : ""));
+        });
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event.reason;
+          show(String((reason && reason.message) || reason || ""));
+        });
+        document.addEventListener("DOMContentLoaded", function () {
+          setTimeout(function () { show(""); }, 8000);
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

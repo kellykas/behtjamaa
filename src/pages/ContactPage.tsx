@@ -89,8 +89,7 @@ const ContactPage = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  123 Faith Avenue<br />
-                  City, State 12345
+                  Serving young people across the USA and Africa. See our Branches page for the community nearest you.
                 </p>
               </CardContent>
             </Card>

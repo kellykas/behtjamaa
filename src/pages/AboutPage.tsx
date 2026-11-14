@@ -3,11 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/PageStates";
-import { ArrowLeft, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound, HeartHandshake, Trophy, Music, Mic, Star, Sparkles } from "lucide-react";
+import { ArrowLeft, Camera, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound, HeartHandshake, Trophy, Music, Mic, Star, Sparkles, Loader2 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTeamFounders } from "@/hooks/useContent";
-import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useRef } from "react";
 import { optimizedImageUrl } from "@/lib/utils";
+import { buildImagePath, validateImageFile } from "@/lib/imageUpload";
 
 const stats = [
   { value: "2011", label: "Year Established", icon: Star },
@@ -60,7 +64,70 @@ const initialsFor = (name: string) =>
 
 const AboutPage = () => {
   const navigate = useNavigate();
-  const { founders, loading: foundersLoading } = useTeamFounders();
+  const { isSuperAdmin } = useAuth();
+  const { toast } = useToast();
+  const { founders, loading: foundersLoading, refetch } = useTeamFounders();
+
+  // Leaders get a picture right here on the About page: the super admin picks a
+  // file for one card and it is stored on that founder's row. Visitors and
+  // branch admins never see the control, and the handlers refuse them too.
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [pickingId, setPickingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Rows the hook falls back to when the table is unavailable are not real
+  // records, so they cannot hold a picture.
+  const isSavedFounder = (founderId: string) => !founderId.startsWith("fallback-");
+
+  const pickPicture = (founderId: string) => {
+    if (!isSuperAdmin) return;
+    setPickingId(founderId);
+    fileInputRef.current?.click();
+  };
+
+  const uploadPicture = async (file: File | undefined) => {
+    const founderId = pickingId;
+    setPickingId(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    // Only the super admin may set a leader's picture, even if the input fires.
+    if (!isSuperAdmin || !founderId || !file) return;
+
+    const problem = validateImageFile(file);
+    if (problem) {
+      toast({ title: "Cannot use that picture", description: problem, variant: "destructive" });
+      return;
+    }
+
+    setUploadingId(founderId);
+    try {
+      // A fresh path each time, so the CDN never serves the previous photo.
+      const path = buildImagePath(file.name, "team-founders");
+      const { error: uploadError } = await supabase.storage
+        .from("profile-avatars")
+        .upload(path, file, { cacheControl: "3600" });
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
+      if (!data?.publicUrl) throw new Error("Could not build a public link for that picture.");
+
+      const { error: saveError } = await supabase
+        .from("team_founders")
+        .update({ avatar_url: data.publicUrl })
+        .eq("id", founderId);
+      if (saveError) throw saveError;
+
+      toast({ title: "Leader picture updated" });
+      refetch();
+    } catch (err: unknown) {
+      toast({
+        title: "Could not upload that picture",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   return (
     <div className="min-h-screen gradient-subtle">
@@ -207,7 +274,7 @@ const AboutPage = () => {
               {[1, 2, 3].map((i) => (
                 <Card key={i}>
                   <CardContent className="pt-6 text-center space-y-3">
-                    <Skeleton className="w-16 h-16 rounded-full mx-auto" />
+                    <Skeleton className="w-56 h-56 rounded-2xl mx-auto" />
                     <Skeleton className="h-4 w-3/4 mx-auto" />
                     <Skeleton className="h-3 w-1/2 mx-auto" />
                   </CardContent>
@@ -222,33 +289,59 @@ const AboutPage = () => {
             />
           ) : (
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {isSuperAdmin && (
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => uploadPicture(e.target.files?.[0])}
+              />
+            )}
             {founders.map((m) => (
-              <Card key={m.id} className="group relative hover:shadow-md transition-shadow">
-                <CardContent className="pt-6 text-center">
-                  <div className="relative inline-flex items-center justify-center mb-3">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto">
-                      {m.avatar_url ? (
-                        <img
-                          src={optimizedImageUrl(m.avatar_url, 240)}
-                          alt={m.name}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-lg font-bold text-primary-foreground">{initialsFor(m.name)}</span>
-                      )}
-                    </div>
-                    <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Link to={`/admin/founders/${m.id}`} className="p-1.5 rounded-full bg-white/80 text-primary hover:bg-white transition-colors" title="Edit founder">
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </div>
+              <Card key={m.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                <div className="group mt-6 mx-auto w-56 max-w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+                  {m.avatar_url ? (
+                    <img
+                      src={optimizedImageUrl(m.avatar_url, 480)}
+                      alt={m.name}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.04]"
+                    />
+                  ) : (
+                    <span className="text-6xl font-bold tracking-wide text-primary-foreground">{initialsFor(m.name)}</span>
+                  )}
+                </div>
+                <CardContent className="p-5 text-center flex flex-1 flex-col">
                   <h3 className="font-bold">{m.name}</h3>
                   {m.subtitle && <p className="text-xs text-muted-foreground italic">{m.subtitle}</p>}
                   <p className="text-sm text-primary font-medium">{m.role}</p>
                   {m.bio && <p className="text-xs text-muted-foreground mt-2">{m.bio}</p>}
+                  {isSuperAdmin && isSavedFounder(m.id) && (
+                    <div className="mt-auto pt-4 flex items-center justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => pickPicture(m.id)}
+                        disabled={uploadingId === m.id}
+                      >
+                        {uploadingId === m.id ? (
+                          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Camera className="mr-2 h-3.5 w-3.5" />
+                        )}
+                        {m.avatar_url ? "Change picture" : "Add picture"}
+                      </Button>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link to={`/admin/founders/${m.id}`}>
+                          <Eye className="mr-2 h-3.5 w-3.5" />
+                          Edit
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
