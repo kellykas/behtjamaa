@@ -1,4 +1,4 @@
-const CACHE_NAME = "behtjamaa-v5";
+const CACHE_NAME = "behtjamaa-v6";
 const PRECACHE_URLS = [
   "/",
   "/index.html",
@@ -13,6 +13,12 @@ self.addEventListener("install", (event) => {
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
   );
   self.skipWaiting();
+});
+
+// The page asks a freshly installed worker to take over straight away, so a
+// new deployment never leaves a tab running code whose asset files are gone.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
@@ -42,12 +48,14 @@ self.addEventListener("fetch", (event) => {
   if (request.headers.has("range")) return;
 
   // Pages: go to the network so a fresh deploy is picked up immediately, and
-  // fall back to the cached shell when offline.
+  // fall back to the cached shell when offline. A navigation response is only
+  // stored when it really is this app's shell (an offline fallback must never
+  // be a login redirect or an error page).
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.status === 200) {
+          if (response.status === 200 && response.type === "basic") {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put("/index.html", clone));
           }
@@ -61,18 +69,22 @@ self.addEventListener("fetch", (event) => {
   }
 
   // Static files are content-hashed by the build, so a cache hit is always the
-  // right answer and revalidating in the background only wasted bandwidth.
+  // right answer for them. Everything else is fetched from the network first,
+  // because a stale unhashed file (sw.js, manifest, icons) would otherwise
+  // survive a deployment.
   event.respondWith(
     caches.match(request).then((cached) => {
-      if (cached) return cached;
+      if (cached && /\/assets\/.+-[A-Za-z0-9_-]{8}\./.test(url.pathname)) return cached;
 
-      return fetch(request).then((response) => {
-        if (response.status === 200 && response.type === "basic") {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        }
-        return response;
-      });
+      return fetch(request)
+        .then((response) => {
+          if (response.status === 200 && response.type === "basic") {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch(() => cached || Response.error());
     })
   );
 });
