@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import seoConfig from "@/content/seo-routes.json";
 
-/** Canonical origin for every indexable URL. */
-const SITE_URL = "https://behtjamaa.vercel.app";
-const SITE_NAME = "BEHT JAMAA";
+/** Canonical origin and name, shared with the build-time prerender step. */
+const SITE_URL = seoConfig.siteUrl;
+const SITE_NAME = seoConfig.siteName;
 
 type RouteMeta = {
   title: string;
@@ -11,61 +12,29 @@ type RouteMeta = {
   noIndex?: boolean;
 };
 
-const STATIC_ROUTES: Record<string, RouteMeta> = {
-  "/": {
-    title: "BEHT JAMAA — Youth Evangelistic Ministry | Reach and Preach",
-    description:
-      "BEHT JAMAA (Boyz Evangelists of the Holy Trinity) is a youth evangelistic ministry founded in 2011, winning souls for Christ through the arts, discipleship and community across the USA and Africa.",
-  },
-  "/about": {
-    title: "About BEHT JAMAA — Founders, Story and Mission",
-    description:
-      "Meet the founders of BEHT JAMAA, learn how the ministry began in 2011 and what it stands for today.",
-  },
-  "/live": {
-    title: "Live Broadcast — BEHT JAMAA",
-    description: "Watch BEHT JAMAA live broadcasts, worship and ministry sessions.",
-  },
-  "/prayer": {
-    title: "Prayer Requests — BEHT JAMAA",
-    description: "Submit a prayer request and pray for others in the BEHT JAMAA community.",
-  },
-  "/services": {
-    title: "Ministry Services — BEHT JAMAA",
-    description:
-      "The ministries of BEHT JAMAA: worship, discipleship, outreach and the creative arts.",
-  },
-  "/contact": {
-    title: "Contact BEHT JAMAA",
-    description: "Get in touch with BEHT JAMAA by email or phone, or find your nearest branch.",
-  },
-  "/donate": {
-    title: "Support the Mission — BEHT JAMAA",
-    description:
-      "Support BEHT JAMAA with a gift that funds ministry content, community outreach and discipleship.",
+/**
+ * Public routes, from the same table scripts/prerender-meta.mjs turns into
+ * static HTML, so the shell and the prerendered files always agree.
+ */
+const PUBLIC_ROUTES: Record<string, RouteMeta> = Object.fromEntries(
+  seoConfig.routes.map((route) => [
+    route.path,
+    { title: route.title, description: route.description },
+  ])
+);
+
+/** Screens that are reachable but should never appear in a search result. */
+const PRIVATE_ROUTES: Record<string, RouteMeta> = {
+  "/admin": { title: "Admin — BEHT JAMAA", description: "BEHT JAMAA administration.", noIndex: true },
+  "/auth": { title: "Sign In — BEHT JAMAA", description: "Sign in to BEHT JAMAA.", noIndex: true },
+  "/reset-password": {
+    title: "Reset Password — BEHT JAMAA",
+    description: "Set a new password for your BEHT JAMAA account.",
+    noIndex: true,
   },
   "/members": {
     title: "Become a Member — BEHT JAMAA",
     description: "Join BEHT JAMAA as a member and take part in the ministry.",
-  },
-  "/branches": {
-    title: "Branches Worldwide — BEHT JAMAA",
-    description:
-      "Find a BEHT JAMAA branch near you and join a community transforming lives for Jesus Christ.",
-  },
-  "/admin": {
-    title: "Admin — BEHT JAMAA",
-    description: "BEHT JAMAA administration.",
-    noIndex: true,
-  },
-  "/auth": {
-    title: "Sign In — BEHT JAMAA",
-    description: "Sign in to BEHT JAMAA.",
-    noIndex: true,
-  },
-  "/reset-password": {
-    title: "Reset Password — BEHT JAMAA",
-    description: "Set a new password for your BEHT JAMAA account.",
     noIndex: true,
   },
 };
@@ -85,10 +54,10 @@ const titleCase = (slug: string) =>
     .join(" ");
 
 const metaFor = (pathname: string): RouteMeta => {
-  const exact = STATIC_ROUTES[pathname];
-  if (exact) return exact;
+  const known = PUBLIC_ROUTES[pathname] ?? PRIVATE_ROUTES[pathname];
+  if (known) return known;
 
-  // Branch portals and branch events: derive a readable name from the slug.
+  // Branch pages added after the last deploy still get a sensible title.
   if (pathname.startsWith("/branches/")) {
     const segments = pathname.split("/").filter(Boolean);
     const isEvent = segments.includes("events");
@@ -131,8 +100,8 @@ const setCanonical = (href: string) => {
 
 /**
  * Keeps the document title, description, canonical URL and social tags in step
- * with the current route. The SPA cannot serve per-page HTML without a render
- * step, so this covers browsers, tabs, bookmarks and crawlers that execute JS.
+ * with the current route. Public routes already arrive with their tags in the
+ * HTML thanks to the prerender step; this covers client-side navigation.
  */
 export const RouteSeo = () => {
   const { pathname } = useLocation();
