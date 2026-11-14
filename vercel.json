@@ -2,6 +2,12 @@
   "framework": "vite",
   "buildCommand": "bun run build",
   "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(admin|auth|reset-password)",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    }
+  ],
   "rewrites": [
     {
       "source": "/((?!assets/).*)",
