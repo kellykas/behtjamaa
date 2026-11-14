@@ -145,37 +145,34 @@ const BranchesPage = () => {
     }
 
     if (branchData) {
-      // One query per table for the whole list, tallied here. The previous
-      // version sent a pair of count requests for every single branch, so a
-      // directory of twenty branches made forty round trips.
+      // One request for the whole list: the branch_stats view groups the
+      // member and event totals in Postgres, instead of a pair of count
+      // requests per branch.
       const ids = branchData.map((branch) => branch.id);
-      let memberRows: { branch_id: string }[] = [];
-      let eventRows: { branch_id: string }[] = [];
+      const counts = new Map<string, { member_count: number; event_count: number }>();
 
       if (ids.length > 0) {
-        const [memberRes, eventRes] = await Promise.all([
-          supabase.from("branch_members").select("branch_id").in("branch_id", ids),
-          supabase.from("branch_events").select("branch_id").in("branch_id", ids),
-        ]);
-        memberRows = memberRes.data ?? [];
-        eventRows = eventRes.data ?? [];
-      }
+        const { data: stats, error: statsError } = await supabase
+          .from("branch_stats")
+          .select("branch_id, member_count, event_count")
+          .in("branch_id", ids);
 
-      const tally = (rows: { branch_id: string }[]) => {
-        const counts: Record<string, number> = {};
-        for (const row of rows) {
-          counts[row.branch_id] = (counts[row.branch_id] ?? 0) + 1;
+        if (statsError) console.error("Branch counts failed:", statsError.message);
+
+        for (const row of stats ?? []) {
+          if (!row.branch_id) continue;
+          counts.set(row.branch_id, {
+            member_count: row.member_count ?? 0,
+            event_count: row.event_count ?? 0,
+          });
         }
-        return counts;
-      };
-      const memberCounts = tally(memberRows);
-      const eventCounts = tally(eventRows);
+      }
 
       setBranches(
         branchData.map((branch) => ({
           ...branch,
-          member_count: memberCounts[branch.id] ?? 0,
-          event_count: eventCounts[branch.id] ?? 0,
+          member_count: counts.get(branch.id)?.member_count ?? 0,
+          event_count: counts.get(branch.id)?.event_count ?? 0,
         }))
       );
     }

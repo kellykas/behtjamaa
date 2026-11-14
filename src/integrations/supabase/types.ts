@@ -852,7 +852,14 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      branch_stats: {
+        Row: {
+          branch_id: string | null
+          event_count: number | null
+          member_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       branch_admin_can: {
