@@ -145,26 +145,39 @@ const BranchesPage = () => {
     }
 
     if (branchData) {
-      const branchesWithStats = await Promise.all(
-        branchData.map(async (branch) => {
-          const [memberRes, eventRes] = await Promise.all([
-            supabase
-              .from("branch_members")
-              .select("id", { count: "exact", head: true })
-              .eq("branch_id", branch.id),
-            supabase
-              .from("branch_events")
-              .select("id", { count: "exact", head: true })
-              .eq("branch_id", branch.id),
-          ]);
-          return {
-            ...branch,
-            member_count: memberRes.count || 0,
-            event_count: eventRes.count || 0,
-          };
-        })
+      // One query per table for the whole list, tallied here. The previous
+      // version sent a pair of count requests for every single branch, so a
+      // directory of twenty branches made forty round trips.
+      const ids = branchData.map((branch) => branch.id);
+      let memberRows: { branch_id: string }[] = [];
+      let eventRows: { branch_id: string }[] = [];
+
+      if (ids.length > 0) {
+        const [memberRes, eventRes] = await Promise.all([
+          supabase.from("branch_members").select("branch_id").in("branch_id", ids),
+          supabase.from("branch_events").select("branch_id").in("branch_id", ids),
+        ]);
+        memberRows = memberRes.data ?? [];
+        eventRows = eventRes.data ?? [];
+      }
+
+      const tally = (rows: { branch_id: string }[]) => {
+        const counts: Record<string, number> = {};
+        for (const row of rows) {
+          counts[row.branch_id] = (counts[row.branch_id] ?? 0) + 1;
+        }
+        return counts;
+      };
+      const memberCounts = tally(memberRows);
+      const eventCounts = tally(eventRows);
+
+      setBranches(
+        branchData.map((branch) => ({
+          ...branch,
+          member_count: memberCounts[branch.id] ?? 0,
+          event_count: eventCounts[branch.id] ?? 0,
+        }))
       );
-      setBranches(branchesWithStats);
     }
     setLoading(false);
   };
