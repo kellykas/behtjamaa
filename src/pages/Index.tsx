@@ -1,9 +1,10 @@
-import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned, Search, Cross, Image as ImageIcon } from "lucide-react";
+import { Calendar, Heart, Users, Bell, Play, LogIn, LogOut, Menu, X, Pause, Eye, Target, BookOpen, Handshake, Theater, UsersRound, Globe, HeartHandshake, ExternalLink, Mail, Building2, MapPin, Music, ChevronLeft, ChevronRight, SkipBack, SkipForward, Volume2, ArrowRight, Star, Clock, MapPinned, Search, Cross, Camera, Loader2, Image as ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/PageStates";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -12,6 +13,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
 import { useSiteSettings, useTeamMembers, useTeamMember, useTeamFounders } from "@/hooks/useContent";
 import { findPersonByName } from "@/lib/people";
+import { buildImagePath, CROP_SOURCE_MAX_BYTES, IMAGE_ACCEPT, validateImageFile } from "@/lib/imageUpload";
 import { toast } from "@/hooks/use-toast";
 import { firstImageUrl, optimizedImageUrl } from "@/lib/utils";
 
@@ -1110,6 +1112,7 @@ const getInitials = (name: string) =>
     .toUpperCase();
 
 const TeamSection = () => {
+  const { isSuperAdmin } = useAuth();
   const { members } = useTeamMembers();
   // Photos are uploaded from the About page, which stores them on
   // team_founders. Borrow the matching founder's photo so a leader who was
@@ -1117,8 +1120,89 @@ const TeamSection = () => {
   const { founders } = useTeamFounders({ fallback: false });
   // Admin-editable members come from the team_members table; fall back while loading.
   const team = members.length > 0 ? members : defaultTeam;
-  const photoFor = (member: { name: string; avatar_url: string | null }) =>
-    member.avatar_url || findPersonByName(member.name, founders)?.avatar_url || null;
+
+  // Leaders get a picture right here too: the super admin picks a file for one
+  // card, frames it in the square, and the small JPEG is stored on that
+  // member's row. Placeholder cards (shown before the table loads) have no row
+  // to save to, so they never offer the control.
+  const [savedPhotos, setSavedPhotos] = useState<Record<string, string>>({});
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [pickingId, setPickingId] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isSavedMember = (memberId: string) => members.some((member) => member.id === memberId);
+
+  const pickPicture = (memberId: string) => {
+    if (!isSuperAdmin) return;
+    setPickingId(memberId);
+    fileInputRef.current?.click();
+  };
+
+  const uploadPicture = (file: File | undefined) => {
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    // Only the super admin may set a leader's picture, even if the input fires.
+    if (!isSuperAdmin || !pickingId || !file) {
+      setPickingId(null);
+      return;
+    }
+
+    const problem = validateImageFile(file, CROP_SOURCE_MAX_BYTES);
+    if (problem) {
+      toast({ title: "Cannot use that picture", description: problem, variant: "destructive" });
+      setPickingId(null);
+      return;
+    }
+
+    // The card is a circle showing a square, so frame it before uploading.
+    setPendingFile(file);
+    setCropOpen(true);
+  };
+
+  const cancelCrop = () => {
+    setCropOpen(false);
+    setPendingFile(null);
+    setPickingId(null);
+  };
+
+  const saveCroppedPicture = async (blob: Blob) => {
+    const memberId = pickingId;
+    setCropOpen(false);
+    setPendingFile(null);
+    setPickingId(null);
+    if (!isSuperAdmin || !memberId) return;
+
+    setUploadingId(memberId);
+    try {
+      // A fresh key each time, so the CDN never serves the previous photo.
+      const path = buildImagePath("team.jpg", "team-members");
+      const { error: uploadError } = await supabase.storage
+        .from("profile-avatars")
+        .upload(path, blob, { cacheControl: "3600", contentType: "image/jpeg" });
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
+      if (!data?.publicUrl) throw new Error("Could not build a public link for that picture.");
+
+      const { error: saveError } = await supabase
+        .from("team_members")
+        .update({ avatar_url: data.publicUrl })
+        .eq("id", memberId);
+      if (saveError) throw saveError;
+
+      setSavedPhotos((photos) => ({ ...photos, [memberId]: data.publicUrl }));
+      toast({ title: "Team picture updated" });
+    } catch (err: unknown) {
+      toast({
+        title: "Could not upload that picture",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   return (
   <section className="py-20 px-4 bg-background">
@@ -1132,7 +1216,9 @@ const TeamSection = () => {
       </div>
       <div className="grid sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
         {team.map((member) => {
-          const photo = photoFor(member);
+          const photo =
+            savedPhotos[member.id] || member.avatar_url || findPersonByName(member.name, founders)?.avatar_url || null;
+          const uploading = uploadingId === member.id;
           return (
           <Card key={member.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
             <CardContent className="pt-8 pb-6 text-center">
@@ -1149,6 +1235,18 @@ const TeamSection = () => {
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center mx-auto">
                     <span className="text-xl font-bold text-primary-foreground">{getInitials(member.name)}</span>
                   </div>
+                )}
+                {isSuperAdmin && isSavedMember(member.id) && (
+                  <button
+                    type="button"
+                    onClick={() => pickPicture(member.id)}
+                    disabled={uploading}
+                    title={photo ? "Change or crop this picture" : "Add a picture"}
+                    aria-label={`${photo ? "Change" : "Add"} the picture for ${member.name}`}
+                    className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+                  </button>
                 )}
                 <div className="absolute inset-0 rounded-full bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <div className="flex gap-2">
@@ -1187,6 +1285,23 @@ const TeamSection = () => {
           );
         })}
       </div>
+      {isSuperAdmin && (
+        <>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={IMAGE_ACCEPT}
+            className="hidden"
+            onChange={(e) => uploadPicture(e.target.files?.[0])}
+          />
+          <ImageCropDialog
+            open={cropOpen}
+            file={pendingFile}
+            onCancel={cancelCrop}
+            onCropped={saveCroppedPicture}
+          />
+        </>
+      )}
     </div>
   </section>
   );
