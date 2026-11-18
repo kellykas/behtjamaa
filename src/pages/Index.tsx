@@ -13,6 +13,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
 import { useSiteSettings, useTeamMembers, useTeamMember, useTeamFounders } from "@/hooks/useContent";
 import { findPersonByName } from "@/lib/people";
+import { saveLeaderPhoto } from "@/lib/leaderPhotos";
 import { buildImagePath, CROP_SOURCE_MAX_BYTES, IMAGE_ACCEPT, validateImageFile } from "@/lib/imageUpload";
 import { toast } from "@/hooks/use-toast";
 import { firstImageUrl, optimizedImageUrl } from "@/lib/utils";
@@ -1185,14 +1186,14 @@ const TeamSection = () => {
       const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
       if (!data?.publicUrl) throw new Error("Could not build a public link for that picture.");
 
-      const { error: saveError } = await supabase
-        .from("team_members")
-        .update({ avatar_url: data.publicUrl })
-        .eq("id", memberId);
-      if (saveError) throw saveError;
+      // Write both leadership rows for this person, so the About page shows the
+      // same picture without a second upload.
+      const member = members.find((row) => row.id === memberId);
+      if (!member) throw new Error("Could not find that team member. Reload the page and try again.");
+      await saveLeaderPhoto(member.name, data.publicUrl);
 
       setSavedPhotos((photos) => ({ ...photos, [memberId]: data.publicUrl }));
-      toast({ title: "Team picture updated" });
+      toast({ title: "Leader picture updated" });
     } catch (err: unknown) {
       toast({
         title: "Could not upload that picture",
@@ -1259,17 +1260,29 @@ const TeamSection = () => {
                         className="p-1.5 rounded-full text-red-600 hover:bg-red-50 transition-colors"
                         title="Remove avatar"
                         aria-label={`Remove avatar for ${member.name}`}
-                        onClick={() => {
+                        onClick={async () => {
                           const path = `team-members/${member.id}${assetExt(member.avatar_url)}`;
-                          supabase.storage.from("profile-avatars").remove([path]).then(({ error }) => {
-                            if (error && !(error as any).message.includes("No files found")) {
-                              toast({ title: "Could not remove avatar", description: (error as any).message, variant: "destructive" });
-                              return;
-                            }
-                            supabase.from("team_members").update({ avatar_url: null }).eq("id", member.id).then(() => {
-                              toast({ title: "Avatar removed" });
+                          const { error } = await supabase.storage.from("profile-avatars").remove([path]);
+                          if (error && !(error as any).message.includes("No files found")) {
+                            toast({ title: "Could not remove avatar", description: (error as any).message, variant: "destructive" });
+                            return;
+                          }
+                          try {
+                            // Clear both leadership rows, so the About page drops it too.
+                            await saveLeaderPhoto(member.name, null);
+                            setSavedPhotos((photos) => {
+                              const next = { ...photos };
+                              delete next[member.id];
+                              return next;
                             });
-                          });
+                            toast({ title: "Avatar removed" });
+                          } catch (err: unknown) {
+                            toast({
+                              title: "Could not remove avatar",
+                              description: err instanceof Error ? err.message : "Please try again.",
+                              variant: "destructive",
+                            });
+                          }
                         }}
                       >
                         <ImageIcon className="w-4 h-4" />

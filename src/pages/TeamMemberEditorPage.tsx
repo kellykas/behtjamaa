@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { CROP_SOURCE_MAX_BYTES, validateImageFile } from "@/lib/imageUpload";
+import { saveLeaderPhoto } from "@/lib/leaderPhotos";
 import {
   ArrowLeft,
   Image as ImageIcon,
@@ -153,6 +154,8 @@ export default function TeamMemberEditorPage() {
       });
       return;
     }
+    // Clear this person's rows in both leadership tables.
+    await saveLeaderPhoto(name, null);
     await supabase
       .from("team_members")
       .update({ avatar_url: null })
@@ -179,6 +182,8 @@ export default function TeamMemberEditorPage() {
         .from("team_members")
         .update({ avatar_url: data.publicUrl })
         .eq("id", id);
+      // Same picture on the About page: write the person's rows in both tables.
+      await saveLeaderPhoto(name, data.publicUrl);
       setAvatarFile(null);
       toast({ title: "Avatar updated" });
     } catch (err: any) {

@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { CROP_SOURCE_MAX_BYTES, validateImageFile } from "@/lib/imageUpload";
+import { saveLeaderPhoto } from "@/lib/leaderPhotos";
 import {
   ArrowLeft,
   Image as ImageIcon,
@@ -151,6 +152,8 @@ export default function FounderEditorPage() {
       });
       return;
     }
+    // Clear this person's rows in both leadership tables.
+    await saveLeaderPhoto(name, null);
     await supabase.from("team_founders").update({ avatar_url: null }).eq("id", id);
     setAvatarFile(null);
     setAvatarUrl(null);
@@ -166,6 +169,8 @@ export default function FounderEditorPage() {
       await supabase.storage.from("profile-avatars").upload(fileName, avatarFile, { upsert: true });
       const { data } = supabase.storage.from("profile-avatars").getPublicUrl(fileName);
       await supabase.from("team_founders").update({ avatar_url: data.publicUrl }).eq("id", id);
+      // Same picture on the home cards: write the person's rows in both tables.
+      await saveLeaderPhoto(name, data.publicUrl);
       setAvatarFile(null);
       setAvatarUrl(data.publicUrl);
       toast({ title: "Avatar updated" });

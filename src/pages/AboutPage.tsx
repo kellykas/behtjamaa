@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef } from "react";
 import { optimizedImageUrl } from "@/lib/utils";
 import { CROP_SOURCE_MAX_BYTES, buildImagePath, validateImageFile } from "@/lib/imageUpload";
+import { saveLeaderPhoto } from "@/lib/leaderPhotos";
 
 const stats = [
   { value: "2011", label: "Year Established", icon: Star },
@@ -140,6 +141,11 @@ const AboutPage = () => {
         .update({ avatar_url: data.publicUrl })
         .eq("id", founderId);
       if (saveError) throw saveError;
+
+      // Write both leadership rows for this person, so the home cards show the
+      // same picture without a second upload.
+      const founder = founders.find((row) => row.id === founderId);
+      if (founder) await saveLeaderPhoto(founder.name, data.publicUrl);
 
       toast({ title: "Leader picture updated" });
       refetch();
