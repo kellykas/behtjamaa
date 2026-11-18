@@ -1249,6 +1249,10 @@ const TeamSection = () => {
                     {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                   </button>
                 )}
+                {/* Admin-only controls: keep them out of the page entirely for viewers,
+                    who would otherwise find a hidden link to the admin editor sitting
+                    on the photo. */}
+                {isSuperAdmin && (
                 <div className="absolute inset-0 rounded-full bg-white/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                   <div className="flex gap-2">
                     <Link to={`/admin/team/${member.id}`} className="p-1.5 rounded-full text-amber-700 hover:bg-amber-100 transition-colors" title="View / edit team member">
@@ -1290,6 +1294,7 @@ const TeamSection = () => {
                     ) : null}
                   </div>
                 </div>
+                )}
               </div>
               <h3 className="font-bold text-lg">{member.name}</h3>
               <p className="text-sm text-primary font-medium">{member.role}</p>
