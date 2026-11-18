@@ -43,6 +43,12 @@ const WIDTH_STEPS = [64, 96, 160, 240, 320, 480, 640, 800, 1024, 1280, 1600];
  * Only public object URLs are rewritten: signed URLs carry a token the render
  * endpoint would reject, and anything not hosted here (an external CDN, a data
  * URL) has to stay as it is.
+ *
+ * The resize mode has to be stated. Left out, the renderer keeps the picture's
+ * full height and squeezes it into the requested width, so a 800x800 photo came
+ * back as 240x800 and looked stretched and over-zoomed once `object-cover` cut
+ * it to a square or a banner. `contain` fits it inside the width and keeps the
+ * proportions.
  */
 export function optimizedImageUrl(url: string, width: number, quality = 70): string {
   if (!url || !url.includes(SUPABASE_PUBLIC_OBJECT)) return url;
@@ -53,6 +59,7 @@ export function optimizedImageUrl(url: string, width: number, quality = 70): str
   const snappedWidth = WIDTH_STEPS.find((step) => step >= width) ?? WIDTH_STEPS[WIDTH_STEPS.length - 1];
   const params = new URLSearchParams(search);
   params.set("width", String(snappedWidth));
+  params.set("resize", "contain");
   params.set("quality", String(quality));
   params.set("format", "webp");
 

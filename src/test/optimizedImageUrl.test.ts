@@ -6,8 +6,14 @@ const hero = "https://oanwtlbhejghtstryefe.supabase.co/storage/v1/object/public/
 describe("optimizedImageUrl", () => {
   it("rewrites a public storage URL to a resized WebP variant", () => {
     expect(optimizedImageUrl(hero, 800)).toBe(
-      "https://oanwtlbhejghtstryefe.supabase.co/storage/v1/render/image/public/profile-avatars/hero.jpg?width=800&quality=70&format=webp",
+      "https://oanwtlbhejghtstryefe.supabase.co/storage/v1/render/image/public/profile-avatars/hero.jpg?width=800&resize=contain&quality=70&format=webp",
     );
+  });
+
+  it("asks for a contained resize, so the renderer keeps the aspect ratio", () => {
+    // Without resize=contain the renderer keeps the original height and squeezes
+    // the picture into the requested width, which distorted square avatars.
+    expect(optimizedImageUrl(hero, 240)).toContain("resize=contain");
   });
 
   it("snaps the requested width to the next shared step", () => {
