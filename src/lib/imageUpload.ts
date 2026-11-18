@@ -9,6 +9,12 @@
 /** Largest picture we accept. Kept in one place so every control agrees. */
 export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
+/**
+ * Largest source photo the crop dialog accepts. The cropped result is resized
+ * to a small JPEG, so the original can be much bigger than a plain upload.
+ */
+export const CROP_SOURCE_MAX_BYTES = 25 * 1024 * 1024;
+
 /** Passed straight to `<input type="file">`. */
 export const IMAGE_ACCEPT = "image/*";
 
@@ -35,7 +41,10 @@ export interface ImageFileLike {
  * Why this file cannot be uploaded, or `null` when it is fine.
  * Returning the reason (instead of a boolean) keeps the toast messages in one place.
  */
-export const validateImageFile = (file: ImageFileLike | null | undefined): string | null => {
+export const validateImageFile = (
+  file: ImageFileLike | null | undefined,
+  maxBytes: number = IMAGE_MAX_BYTES,
+): string | null => {
   if (!file) return "Choose an image first.";
   const type = (file.type || "").toLowerCase();
   if (!type.startsWith("image/")) {
@@ -44,8 +53,8 @@ export const validateImageFile = (file: ImageFileLike | null | undefined): strin
   if (typeof file.size === "number" && file.size <= 0) {
     return "That image looks empty — try another file.";
   }
-  if (typeof file.size === "number" && file.size > IMAGE_MAX_BYTES) {
-    return `Image must be under ${formatBytes(IMAGE_MAX_BYTES)}.`;
+  if (typeof file.size === "number" && file.size > maxBytes) {
+    return `Image must be under ${formatBytes(maxBytes)}.`;
   }
   return null;
 };

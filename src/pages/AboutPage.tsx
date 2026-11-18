@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef } from "react";
 import { optimizedImageUrl } from "@/lib/utils";
-import { buildImagePath, validateImageFile } from "@/lib/imageUpload";
+import { CROP_SOURCE_MAX_BYTES, buildImagePath, validateImageFile } from "@/lib/imageUpload";
 
 const stats = [
   { value: "2011", label: "Year Established", icon: Star },
@@ -97,7 +97,7 @@ const AboutPage = () => {
       return;
     }
 
-    const problem = validateImageFile(file);
+    const problem = validateImageFile(file, CROP_SOURCE_MAX_BYTES);
     if (problem) {
       toast({ title: "Cannot use that picture", description: problem, variant: "destructive" });
       setPickingId(null);
