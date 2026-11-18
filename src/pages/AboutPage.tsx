@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/PageStates";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { ArrowLeft, Camera, Eye, Target, BookOpen, Globe, Theater, Handshake, UsersRound, HeartHandshake, Trophy, Music, Mic, Star, Sparkles, Loader2 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTeamFounders } from "@/hooks/useContent";
@@ -73,6 +74,9 @@ const AboutPage = () => {
   // branch admins never see the control, and the handlers refuse them too.
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [pickingId, setPickingId] = useState<string | null>(null);
+  // The chosen file waits here until the uploader has framed it in the square.
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Rows the hook falls back to when the table is unavailable are not real
@@ -85,26 +89,47 @@ const AboutPage = () => {
     fileInputRef.current?.click();
   };
 
-  const uploadPicture = async (file: File | undefined) => {
-    const founderId = pickingId;
-    setPickingId(null);
+  const uploadPicture = (file: File | undefined) => {
     if (fileInputRef.current) fileInputRef.current.value = "";
     // Only the super admin may set a leader's picture, even if the input fires.
-    if (!isSuperAdmin || !founderId || !file) return;
+    if (!isSuperAdmin || !pickingId || !file) {
+      setPickingId(null);
+      return;
+    }
 
     const problem = validateImageFile(file);
     if (problem) {
       toast({ title: "Cannot use that picture", description: problem, variant: "destructive" });
+      setPickingId(null);
       return;
     }
+
+    // Frame it before uploading: the card is square, so the uploader decides
+    // which part of the photo stays visible instead of a fixed crop.
+    setPendingFile(file);
+    setCropOpen(true);
+  };
+
+  const cancelCrop = () => {
+    setCropOpen(false);
+    setPendingFile(null);
+    setPickingId(null);
+  };
+
+  const saveCroppedPicture = async (blob: Blob) => {
+    const founderId = pickingId;
+    setCropOpen(false);
+    setPendingFile(null);
+    setPickingId(null);
+    if (!isSuperAdmin || !founderId) return;
 
     setUploadingId(founderId);
     try {
       // A fresh path each time, so the CDN never serves the previous photo.
-      const path = buildImagePath(file.name, "team-founders");
+      const path = buildImagePath("leader.jpg", "team-founders");
       const { error: uploadError } = await supabase.storage
         .from("profile-avatars")
-        .upload(path, file, { cacheControl: "3600" });
+        .upload(path, blob, { cacheControl: "3600", contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage.from("profile-avatars").getPublicUrl(path);
@@ -347,6 +372,13 @@ const AboutPage = () => {
             ))}
           </div>
           )}
+
+          <ImageCropDialog
+            open={cropOpen}
+            file={pendingFile}
+            onCancel={cancelCrop}
+            onCropped={saveCroppedPicture}
+          />
         </section>
 
         {/* CTA */}
