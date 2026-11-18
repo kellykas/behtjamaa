@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
   buildImagePath,
+  CROP_SOURCE_MAX_BYTES,
   DEFAULT_IMAGE_BUCKET,
   IMAGE_ACCEPT,
   validateImageFile,
@@ -35,6 +37,14 @@ const PREVIEW_CLASS: Record<PreviewShape, string> = {
   card: "h-40 w-full rounded-lg",
 };
 
+/** Frame the cropper offers, matched to the shape the picture is shown at. */
+const PREVIEW_ASPECT: Record<PreviewShape, number> = {
+  avatar: 1,
+  thumbnail: 1,
+  banner: 16 / 9,
+  card: 16 / 9,
+};
+
 interface ImageUploadProps {
   /** Current public URL, or "" when there is no picture yet. */
   value: string;
@@ -51,6 +61,11 @@ interface ImageUploadProps {
   id?: string;
   /** Hide the link toggle when a field should only ever hold an upload. */
   allowUrl?: boolean;
+  /**
+   * Frame the picture before uploading it. Big phone photos are accepted and
+   * saved at the shape the field shows, so the 5MB limit disappears here.
+   */
+  crop?: boolean;
 }
 
 export const ImageUpload = ({
@@ -65,26 +80,23 @@ export const ImageUpload = ({
   className,
   id,
   allowUrl = true,
+  crop = false,
 }: ImageUploadProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [showUrl, setShowUrl] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const { toast } = useToast();
 
-  const upload = async (file: File | null | undefined) => {
-    if (disabled || uploading) return;
-    const problem = validateImageFile(file);
-    if (problem) {
-      toast({ title: "Cannot use that image", description: problem, variant: "destructive" });
-      return;
-    }
+  const upload = async (file: File) => {
     setUploading(true);
     try {
-      const path = buildImagePath(file!.name, folder);
+      const path = buildImagePath(file.name, folder);
       const { error } = await supabase.storage
         .from(bucket)
-        .upload(path, file!, { cacheControl: "3600", upsert: false });
+        .upload(path, file, { cacheControl: "3600", upsert: false });
       if (error) throw error;
       const { data } = supabase.storage.from(bucket).getPublicUrl(path);
       if (!data?.publicUrl) throw new Error("Could not build a public link for that image.");
@@ -102,7 +114,37 @@ export const ImageUpload = ({
     }
   };
 
-  const pick = () => inputRef.current?.click();
+  const pick = async (file: File | null | undefined) => {
+    if (disabled || uploading) return;
+    const problem = validateImageFile(file, crop ? CROP_SOURCE_MAX_BYTES : undefined);
+    if (problem) {
+      toast({ title: "Cannot use that image", description: problem, variant: "destructive" });
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+    // A big photo goes through the cropper first; the saved file is small.
+    if (crop) {
+      setPendingFile(file!);
+      setCropOpen(true);
+      return;
+    }
+    await upload(file!);
+  };
+
+  const uploadCropped = async (blob: Blob) => {
+    setCropOpen(false);
+    setPendingFile(null);
+    if (inputRef.current) inputRef.current.value = "";
+    await upload(new File([blob], "picture.jpg", { type: "image/jpeg" }));
+  };
+
+  const cancelCrop = () => {
+    setCropOpen(false);
+    setPendingFile(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const openPicker = () => inputRef.current?.click();
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -114,7 +156,7 @@ export const ImageUpload = ({
         type="file"
         accept={IMAGE_ACCEPT}
         className="hidden"
-        onChange={(e) => upload(e.target.files?.[0])}
+        onChange={(e) => pick(e.target.files?.[0])}
         disabled={disabled || uploading}
       />
 
@@ -129,7 +171,7 @@ export const ImageUpload = ({
             )}
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={pick} disabled={disabled || uploading}>
+            <Button type="button" size="sm" variant="outline" onClick={openPicker} disabled={disabled || uploading}>
               <RefreshCw className="mr-2 h-3.5 w-3.5" />
               Replace
             </Button>
@@ -149,7 +191,7 @@ export const ImageUpload = ({
       ) : (
         <button
           type="button"
-          onClick={pick}
+          onClick={openPicker}
           onDragOver={(e) => {
             e.preventDefault();
             if (!disabled && !uploading) setDragging(true);
@@ -158,7 +200,7 @@ export const ImageUpload = ({
           onDrop={(e) => {
             e.preventDefault();
             setDragging(false);
-            upload(e.dataTransfer?.files?.[0]);
+            pick(e.dataTransfer?.files?.[0]);
           }}
           disabled={disabled || uploading}
           className={cn(
@@ -179,7 +221,8 @@ export const ImageUpload = ({
               </span>
               <span className="text-sm font-medium">Upload a picture</span>
               <span className="text-xs text-muted-foreground">
-                Click to choose a file, or drop one here — PNG, JPG, GIF or WebP up to 5MB
+                Click to choose a file, or drop one here — PNG, JPG, GIF or WebP up to{" "}
+                {crop ? `${Math.round(CROP_SOURCE_MAX_BYTES / (1024 * 1024))}MB, then frame it` : "5MB"}
               </span>
             </>
           )}
@@ -187,6 +230,16 @@ export const ImageUpload = ({
       )}
 
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+
+      {crop && (
+        <ImageCropDialog
+          open={cropOpen}
+          file={pendingFile}
+          aspect={PREVIEW_ASPECT[preview]}
+          onCancel={cancelCrop}
+          onCropped={uploadCropped}
+        />
+      )}
 
       {allowUrl && (
         <div className="space-y-2">

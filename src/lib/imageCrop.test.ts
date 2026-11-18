@@ -104,3 +104,37 @@ describe("cropSourceRect", () => {
     expect(source.height).toBeCloseTo(450);
   });
 });
+
+describe("wide frames", () => {
+  // 320x180 is the 16:9 frame the banner and card fields use.
+  const frame = { stage: 320, stageHeight: 180 };
+
+  it("covers the frame instead of a square", () => {
+    const geometry = cropGeometry({ imageWidth: 1600, imageHeight: 900, ...frame, zoom: 1, offset: { x: 0, y: 0 } });
+
+    // The photo is already 16:9, so it fills the frame exactly.
+    expect(geometry.width).toBeCloseTo(320);
+    expect(geometry.height).toBeCloseTo(180);
+  });
+
+  it("clamps the offset against the frame's height, not its width", () => {
+    const geometry = cropGeometry({ imageWidth: 900, imageHeight: 1600, ...frame, zoom: 1, offset: { x: -5000, y: -5000 } });
+
+    // A portrait photo is scaled until its width covers 320px.
+    expect(geometry.width).toBeCloseTo(320);
+    expect(geometry.height).toBeCloseTo(568.89, 1);
+    expect(geometry.x).toBeCloseTo(0);
+    expect(geometry.y).toBeCloseTo(180 - 568.89, 1);
+  });
+
+  it("takes a 16:9 area from the picture for the saved file", () => {
+    const input = { imageWidth: 1600, imageHeight: 1200, ...frame, zoom: 1 };
+    const source = cropSourceRect({ ...input, offset: centredOffset(input) });
+
+    // Scaled to cover the width, so a 900px tall strip is kept and centred.
+    expect(source.width / source.height).toBeCloseTo(16 / 9, 3);
+    expect(source.width).toBeCloseTo(1600);
+    expect(source.height).toBeCloseTo(900);
+    expect(source.y).toBeCloseTo(150);
+  });
+});

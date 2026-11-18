@@ -55,6 +55,8 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import BranchMembersPanel from "@/components/BranchMembersPanel";
 import { ImageUpload } from "@/components/ImageUpload";
+import { CROP_SOURCE_MAX_BYTES, IMAGE_ACCEPT, validateImageFile } from "@/lib/imageUpload";
+import { downscaleImageFile } from "@/lib/imageResize";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Branch = Tables<"branches">;
@@ -602,36 +604,36 @@ const BranchPortalPage = () => {
                       <div className="space-y-2"><Label>Title</Label><Input value={evForm.title} onChange={(e) => setEvForm({ ...evForm, title: e.target.value })} /></div>
                       <div className="space-y-2"><Label>Description</Label><Textarea value={evForm.description || ""} onChange={(e) => setEvForm({ ...evForm, description: e.target.value })} rows={3} /></div>
                       <div className="space-y-2">
-                        <Label>Event Image (Optional)</Label>
-                        <input type="file" accept="image/*" onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          if (file.size > 5 * 1024 * 1024) { toast({ title: 'Image too large', description: 'Max 5MB', variant: 'destructive' }); return; }
-                          const ext = file.name.split('.').pop();
-                          const path = `events/${Date.now()}.${ext}`;
-                          const { error } = await supabase.storage.from('profile-avatars').upload(path, file, { upsert: true });
-                          if (error) { toast({ title: 'Upload failed', description: error.message, variant: 'destructive' }); return; }
-                          const { data } = supabase.storage.from('profile-avatars').getPublicUrl(path);
-                          setEvForm({ ...evForm, image_url: data.publicUrl });
-                          toast({ title: 'Image uploaded' });
-                        }} className="w-full text-sm" />
-                        {evForm.image_url && <img src={evForm.image_url} alt="Event" className="w-full h-32 object-cover rounded-md mt-2" />}
+                        <ImageUpload
+                          id="event-image"
+                          label="Event Image (Optional)"
+                          value={evForm.image_url || ""}
+                          onChange={(image_url) => setEvForm({ ...evForm, image_url })}
+                          folder="events"
+                          preview="banner"
+                          crop
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Additional Images (Optional)</Label>
-                        <input type="file" accept="image/*" multiple onChange={async (e) => {
+                        <input type="file" accept={IMAGE_ACCEPT} multiple onChange={async (e) => {
                           const files = e.target.files;
                           if (!files) return;
-                          for (const file of Array.from(files)) {
-                            if (file.size > 5 * 1024 * 1024) { toast({ title: 'Image too large', description: 'Max 5MB each', variant: 'destructive' }); continue; }
-                            const ext = file.name.split('.').pop();
-                            const path = `events/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-                            const { error } = await supabase.storage.from('profile-avatars').upload(path, file, { upsert: true });
+                          let added = 0;
+                          for (const picked of Array.from(files)) {
+                            const problem = validateImageFile(picked, CROP_SOURCE_MAX_BYTES);
+                            if (problem) { toast({ title: 'Cannot use that image', description: problem, variant: 'destructive' }); continue; }
+                            // Several can be picked at once, so each is scaled down instead of cropped.
+                            const file = await downscaleImageFile(picked);
+                            const path = `events/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+                            const { error } = await supabase.storage.from('profile-avatars').upload(path, file, { upsert: true, contentType: 'image/jpeg' });
                             if (error) { toast({ title: 'Upload failed', description: error.message, variant: 'destructive' }); continue; }
                             const { data } = supabase.storage.from('profile-avatars').getPublicUrl(path);
                             setEventImages(prev => [...prev, data.publicUrl]);
+                            added += 1;
                           }
-                          toast({ title: 'Images uploaded' });
+                          if (added > 0) toast({ title: added === 1 ? 'Image uploaded' : 'Images uploaded' });
+                          e.target.value = "";
                         }} className="w-full text-sm" />
                         {eventImages.length > 0 && (
                           <div className="flex gap-2 mt-2 flex-wrap">
@@ -763,6 +765,7 @@ const BranchPortalPage = () => {
                         onChange={(thumbnail_url) => setEpForm({ ...epForm, thumbnail_url })}
                         folder="episodes"
                         preview="thumbnail"
+                        crop
                       />
                       <div className="space-y-2"><Label>Category</Label><Input value={epForm.category || "sermon"} onChange={(e) => setEpForm({ ...epForm, category: e.target.value })} /></div>
                       <div className="flex items-center gap-2"><Switch checked={epForm.published || false} onCheckedChange={(v) => setEpForm({ ...epForm, published: v })} /><Label>Published</Label></div>
@@ -930,6 +933,7 @@ const BranchPortalPage = () => {
                         onChange={(image_url) => setStForm({ ...stForm, image_url })}
                         folder="store"
                         preview="card"
+                        crop
                       />
                       <div className="space-y-2"><Label>Category</Label><Input value={stForm.category || ""} onChange={(e) => setStForm({ ...stForm, category: e.target.value })} placeholder="e.g. Merch, Books" /></div>
                       <div className="space-y-2"><Label>Stock</Label><Input type="number" value={stForm.stock || 0} onChange={(e) => setStForm({ ...stForm, stock: parseInt(e.target.value) || 0 })} /></div>

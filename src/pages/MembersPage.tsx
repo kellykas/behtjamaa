@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
+import { CROP_SOURCE_MAX_BYTES, validateImageFile } from "@/lib/imageUpload";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, User, Save, Heart, CalendarDays, Mail, Camera, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -22,6 +24,8 @@ const MembersPage = () => {
   const [bio, setBio] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -56,21 +60,37 @@ const MembersPage = () => {
     }
   }, [user]);
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast({ title: "Invalid file type", description: "Please upload an image file", variant: "destructive" });
+    // A phone photo is usually far bigger than the avatar needs, so it is
+    // framed first and only the small square is uploaded.
+    const problem = validateImageFile(file, CROP_SOURCE_MAX_BYTES);
+    if (problem) {
+      toast({ title: "Cannot use that image", description: problem, variant: "destructive" });
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
+    setPendingFile(file);
+    setCropOpen(true);
+  };
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Please upload an image under 5MB", variant: "destructive" });
-      return;
-    }
+  const cancelCrop = () => {
+    setCropOpen(false);
+    setPendingFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const saveCroppedAvatar = async (blob: Blob) => {
+    setCropOpen(false);
+    setPendingFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    await uploadAvatarFile(new File([blob], "avatar.jpg", { type: "image/jpeg" }));
+  };
+
+  const uploadAvatarFile = async (file: File) => {
+    if (!user) return;
 
     setUploading(true);
     try {
@@ -164,6 +184,12 @@ const MembersPage = () => {
                   accept="image/*"
                   onChange={handleAvatarUpload}
                   className="hidden"
+                />
+                <ImageCropDialog
+                  open={cropOpen}
+                  file={pendingFile}
+                  onCancel={cancelCrop}
+                  onCropped={saveCroppedAvatar}
                 />
               </div>
               <h3 className="font-semibold text-lg">{displayName || "Member"}</h3>

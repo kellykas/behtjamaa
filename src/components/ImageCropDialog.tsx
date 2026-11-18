@@ -12,30 +12,42 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { centredOffset, cropGeometry, cropSourceRect, MIN_ZOOM, MAX_ZOOM } from "@/lib/imageCrop";
 
-/** Saved square size. The card shows it at ~224px, so this stays sharp on retina. */
-const OUTPUT_SIZE = 800;
+/** Saved width. Cards show these at a few hundred pixels, so this stays sharp on retina. */
+const OUTPUT_WIDTH = 800;
 
 interface ImageCropDialogProps {
   open: boolean;
   file: File | null;
   onCancel: () => void;
   onCropped: (blob: Blob) => void | Promise<void>;
+  /** Frame shape, width / height. 1 is square; 16 / 9 suits a banner. */
+  aspect?: number;
+  /** Width of the saved JPEG; the height follows `aspect`. */
+  outputWidth?: number;
 }
 
 /**
- * Square crop editor for a leader picture.
+ * Crop editor for an uploaded picture.
  *
- * A photo straight from a phone is rarely framed for the square card, so the
- * uploader drags the picture to choose what sits in the square and zooms in when
- * the face is too small. The saved file is exactly the square shown here — the
- * preview and the canvas share `cropGeometry`.
+ * A photo straight from a phone is rarely framed for the card, banner or avatar
+ * it will fill, so the uploader drags the picture to choose what sits in the
+ * frame and zooms in when the subject is too small. The saved file is exactly
+ * the frame shown here — the preview and the canvas share `cropGeometry`.
  */
-export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDialogProps) => {
+export const ImageCropDialog = ({
+  open,
+  file,
+  onCancel,
+  onCropped,
+  aspect = 1,
+  outputWidth = OUTPUT_WIDTH,
+}: ImageCropDialogProps) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [stage, setStage] = useState(288);
+  const frameHeight = Math.round(stage / (aspect > 0 ? aspect : 1));
   const [saving, setSaving] = useState(false);
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -56,15 +68,22 @@ export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDi
       setImage(img);
       const width = img.naturalWidth;
       const height = img.naturalHeight;
+      const measured = Number(stageRef.current?.clientWidth) || 288;
       setOffset(
-        centredOffset({ imageWidth: width, imageHeight: height, stage: Number(stageRef.current?.clientWidth) || 288, zoom: MIN_ZOOM })
+        centredOffset({
+          imageWidth: width,
+          imageHeight: height,
+          stage: measured,
+          stageHeight: Math.round(measured / aspect),
+          zoom: MIN_ZOOM,
+        })
       );
     };
     img.onerror = () => setError("That picture could not be opened. Try another file.");
     img.src = url;
 
     return () => URL.revokeObjectURL(url);
-  }, [open, file]);
+  }, [open, file, aspect]);
 
   // Keep the stage square and measured, so drag bounds match what is on screen.
   useEffect(() => {
@@ -82,6 +101,7 @@ export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDi
         imageWidth: image.naturalWidth,
         imageHeight: image.naturalHeight,
         stage,
+        stageHeight: frameHeight,
         zoom,
         offset,
       })
@@ -96,18 +116,20 @@ export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDi
       imageWidth: image.naturalWidth,
       imageHeight: image.naturalHeight,
       stage,
+      stageHeight: frameHeight,
       zoom: nextZoom,
       offset,
     });
     if (before && after) {
       const centreX = stage / 2;
-      const centreY = stage / 2;
+      const centreY = frameHeight / 2;
       const ratioX = before.width ? after.width / before.width : 1;
       const ratioY = before.height ? after.height / before.height : 1;
       const scaled = cropGeometry({
         imageWidth: image.naturalWidth,
         imageHeight: image.naturalHeight,
         stage,
+        stageHeight: frameHeight,
         zoom: nextZoom,
         offset: {
           x: centreX - (centreX - offset.x) * ratioX,
@@ -139,6 +161,7 @@ export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDi
       imageWidth: image.naturalWidth,
       imageHeight: image.naturalHeight,
       stage,
+      stageHeight: frameHeight,
       zoom,
       offset: {
         x: drag.originX + (event.clientX - drag.startX),
@@ -155,7 +178,15 @@ export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDi
   const resetFraming = () => {
     if (!image) return;
     setZoom(MIN_ZOOM);
-    setOffset(centredOffset({ imageWidth: image.naturalWidth, imageHeight: image.naturalHeight, stage, zoom: MIN_ZOOM }));
+    setOffset(
+      centredOffset({
+        imageWidth: image.naturalWidth,
+        imageHeight: image.naturalHeight,
+        stage,
+        stageHeight: frameHeight,
+        zoom: MIN_ZOOM,
+      })
+    );
   };
 
   const save = async () => {
@@ -164,21 +195,23 @@ export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDi
       imageWidth: image.naturalWidth,
       imageHeight: image.naturalHeight,
       stage,
+      stageHeight: frameHeight,
       zoom,
       offset,
     });
+    const savedHeight = Math.max(1, Math.round(outputWidth / (aspect > 0 ? aspect : 1)));
     const canvas = document.createElement("canvas");
-    canvas.width = OUTPUT_SIZE;
-    canvas.height = OUTPUT_SIZE;
+    canvas.width = outputWidth;
+    canvas.height = savedHeight;
     const context = canvas.getContext("2d");
     if (!context) {
       setError("This browser cannot crop the picture. Try another browser.");
       return;
     }
     context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+    context.fillRect(0, 0, outputWidth, savedHeight);
     context.imageSmoothingQuality = "high";
-    context.drawImage(image, source.x, source.y, source.width, source.height, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+    context.drawImage(image, source.x, source.y, source.width, source.height, 0, 0, outputWidth, savedHeight);
 
     setSaving(true);
     try {
@@ -201,7 +234,7 @@ export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDi
             <Crop className="h-4 w-4 text-primary" /> Frame the picture
           </DialogTitle>
           <DialogDescription>
-            Drag the picture to move it and use the slider to zoom. The square is exactly how it will appear on the card.
+            Drag the picture to move it and use the slider to zoom. The frame shows exactly what will be kept.
           </DialogDescription>
         </DialogHeader>
 
@@ -211,7 +244,8 @@ export const ImageCropDialog = ({ open, file, onCancel, onCropped }: ImageCropDi
           onPointerMove={moveDrag}
           onPointerUp={endDrag}
           onPointerCancel={endDrag}
-          className="relative mx-auto aspect-square w-full max-w-[288px] touch-none select-none overflow-hidden rounded-2xl bg-slate-900 cursor-grab active:cursor-grabbing"
+          style={{ aspectRatio: String(aspect > 0 ? aspect : 1) }}
+          className="relative mx-auto w-full max-w-[320px] touch-none select-none overflow-hidden rounded-2xl bg-slate-900 cursor-grab active:cursor-grabbing"
         >
           {image && geometry ? (
             <img

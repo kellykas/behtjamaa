@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
+import { CROP_SOURCE_MAX_BYTES, validateImageFile } from "@/lib/imageUpload";
 import {
   ArrowLeft,
   Image as ImageIcon,
@@ -44,6 +46,8 @@ export default function FounderEditorPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const [name, setName] = useState("");
@@ -257,7 +261,31 @@ export default function FounderEditorPage() {
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) setAvatarFile(file);
+                    if (!file) return;
+                    const problem = validateImageFile(file, CROP_SOURCE_MAX_BYTES);
+                    if (problem) {
+                      toast({ title: "Cannot use that image", description: problem, variant: "destructive" });
+                      e.target.value = "";
+                      return;
+                    }
+                    // Frame the face first; only the small square is uploaded.
+                    setPendingFile(file);
+                    setCropOpen(true);
+                  }}
+                />
+                <ImageCropDialog
+                  open={cropOpen}
+                  file={pendingFile}
+                  onCancel={() => {
+                    setCropOpen(false);
+                    setPendingFile(null);
+                    if (avatarInputRef.current) avatarInputRef.current.value = "";
+                  }}
+                  onCropped={(blob) => {
+                    setCropOpen(false);
+                    setPendingFile(null);
+                    if (avatarInputRef.current) avatarInputRef.current.value = "";
+                    setAvatarFile(new File([blob], "avatar.jpg", { type: "image/jpeg" }));
                   }}
                 />
               </div>
