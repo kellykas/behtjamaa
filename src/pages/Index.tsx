@@ -10,7 +10,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { getDailyVerse } from "@/lib/dailyScripture";
-import { useSiteSettings, useTeamMembers, useTeamMember } from "@/hooks/useContent";
+import { useSiteSettings, useTeamMembers, useTeamMember, useTeamFounders } from "@/hooks/useContent";
+import { findPersonByName } from "@/lib/people";
 import { toast } from "@/hooks/use-toast";
 import { firstImageUrl, optimizedImageUrl } from "@/lib/utils";
 
@@ -1110,8 +1111,14 @@ const getInitials = (name: string) =>
 
 const TeamSection = () => {
   const { members } = useTeamMembers();
+  // Photos are uploaded from the About page, which stores them on
+  // team_founders. Borrow the matching founder's photo so a leader who was
+  // given a picture on one page is not shown as initials on the other.
+  const { founders } = useTeamFounders({ fallback: false });
   // Admin-editable members come from the team_members table; fall back while loading.
   const team = members.length > 0 ? members : defaultTeam;
+  const photoFor = (member: { name: string; avatar_url: string | null }) =>
+    member.avatar_url || findPersonByName(member.name, founders)?.avatar_url || null;
 
   return (
   <section className="py-20 px-4 bg-background">
@@ -1124,13 +1131,15 @@ const TeamSection = () => {
         </p>
       </div>
       <div className="grid sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
-        {team.map((member) => (
+        {team.map((member) => {
+          const photo = photoFor(member);
+          return (
           <Card key={member.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
             <CardContent className="pt-8 pb-6 text-center">
               <div className="relative inline-flex items-center justify-center mb-4">
-                {member.avatar_url ? (
+                {photo ? (
                   <img
-                    src={optimizedImageUrl(member.avatar_url, 240)}
+                    src={optimizedImageUrl(photo, 240)}
                     alt={member.name}
                     loading="lazy"
                     decoding="async"
@@ -1175,7 +1184,8 @@ const TeamSection = () => {
               <p className="text-sm text-primary font-medium">{member.role}</p>
             </CardContent>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   </section>
